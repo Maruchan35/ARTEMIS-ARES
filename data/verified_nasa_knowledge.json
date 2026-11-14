@@ -1,0 +1,165 @@
+{
+  "metadata": {
+    "project": "AstroCopilot - Junior Astronaut Mission Trainer (NASA Space Apps Challenge - Challenge 2)",
+    "target_model": "unsloth/gemma-4-E4B-it",
+    "languages": ["en", "es"],
+    "compliance": "100% US/Western open-science sources (NASA NTRS, NASA-STD-3001, NASA BVAD, NASA OSDR, NASA RadLab, NASA EDA, NSSDCA). Zero Chinese-origin models or unverified sources.",
+    "verified_sources": [
+      {
+        "id": "NASA-BVAD",
+        "title": "Life Support Baseline Values and Assumptions Document (NASA/TP-2015-218570 / REV 2)",
+        "url": "https://ntrs.nasa.gov/",
+        "scope": "ECLSS metabolic rates, O2/CO2/H2O mass balances, Sabatier, OGA, WRS, LiOH, crop O2/food yields"
+      },
+      {
+        "id": "NASA-STD-3001",
+        "title": "NASA Space Flight Human-System Standard, Volumes 1 & 2",
+        "url": "https://ntrs.nasa.gov/",
+        "scope": "Cabin ppO2 (20-30 kPa), ppCO2 (<0.5 kPa), hypoxia (<16 kPa), temperature (18-27 C), relative humidity (25-70%), career radiation (<600 mSv), sleep & exercise requirements"
+      },
+      {
+        "id": "NASA-NSSDCA",
+        "title": "NASA Space Science Data Coordinated Archive - Planetary Fact Sheets (Moon & Mars)",
+        "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/",
+        "scope": "Surface gravity, synodic day/sol duration, surface pressure, temperature extremes, solar irradiance, light delay"
+      },
+      {
+        "id": "NASA-RadLab-OSDR",
+        "title": "NASA Open Science Data Repository (OSDR) - RadLab & Environmental Data Application (EDA)",
+        "url": "https://visualization.osdr.nasa.gov/radlab/",
+        "scope": "ISS & deep-space radiation telemetry, LRO/CRaTER lunar dosimetry, MSL Curiosity/RAD Martian surface dosimetry, solar particle event (SPE) storm shelter shielding"
+      },
+      {
+        "id": "NASA-MOXIE-ISRU",
+        "title": "Mars 2020 Perseverance MOXIE (Mars Oxygen In-Situ Resource Utilization Experiment) & LCROSS Lunar Polar Ice",
+        "url": "https://data.nasa.gov/",
+        "scope": "Atmospheric CO2 solid-oxide electrolysis on Mars (~40 kWh/kg O2) and polar regolith water-ice extraction on the Moon"
+      },
+      {
+        "id": "NASA-NTRS-FSP-ESM-BLSS-M2M",
+        "title": "NASA NTRS Technical Reports: FSP 40 kWe (20220004670, 20230003735), ESM (20040015099, PMC10505218), BLSS (19850021219), Moon to Mars ESDMD-001 Rev C (20250010956), Radiation (20240009831), Consumables (20190027563, 20190028339, 20160005782)",
+        "url": "https://ntrs.nasa.gov/",
+        "scope": "40 kWe Fission Surface Power (5,800-7,334 kg, 26.1% Stirling, 133.4 m2 polar vs 216.2 m2 equatorial radiators, 1 km shadow shield), Equivalent System Mass formula, 25 m2/person BLSS crop area, Mars dust optical depth Tau (up to 99.9998% solar blockage)"
+      },
+      {
+        "id": "NASA-DONKI-OSDR-TREKS-HORIZONS",
+        "title": "NASA DONKI Space Weather API, NASA OSDR/GeneLab (VEG-05, Lunar LEAF, AstroRegolith), Solar System Treks, JPL Horizons/SPICE, NASA POWER & NASA-AMMOS AERIE",
+        "url": "https://api.nasa.gov/",
+        "scope": "Real-time FLR/SEP/CME/IPS/GST/WSA-ENLIL space weather alerts, spaceflight plant & crew biology, lunar/Martian DEM slope cartography, 3D ephemerides, and mission scheduling"
+      },
+      {
+        "id": "CHALLENGE2-UNIVERSITY-DATASETS",
+        "title": "University & Academic Datasets: WESAD, PAMAP2, PPG-DaLiA, MHEALTH, DREAMER, DEAP, AMIGOS, UNL/UNL-3D, OPPD, MSU-PID, Nutrition5k, Urbino/Limassol/Munich/Aalborg Microclimate",
+        "url": "https://archive.ics.uci.edu/dataset/231/pamap2+physical+activity+monitoring",
+        "scope": "Wearable IMU/PPG/ECG/EDA/EEG physical activity, heart rate, stress, group synchronization, crop phenotyping, nutritional estimation, and indoor CO2/temp/VOC anomaly detection (with strict 1.0g-to-microgravity extrapolation safeguards)"
+      }
+    ]
+  },
+  "celestial_bodies": {
+    "moon": {
+      "name_en": "Moon (Lunar South Pole & Mare Tranquillitatis)",
+      "name_es": "Luna (Polo Sur Lunar y Mar de la Tranquilidad)",
+      "gravity_ms2": 1.62,
+      "gravity_g": 0.165,
+      "synodic_day_hours": 708.7,
+      "equator_night_hours": 354.0,
+      "south_pole_shadow_windows_hours": [48, 60],
+      "temp_min_c": -173,
+      "temp_max_c": 127,
+      "surface_pressure_pa": 3e-10,
+      "solar_flux_wm2": 1361,
+      "solar_factor_vs_moon": 1.0,
+      "radiation_msv_per_day": 1.37,
+      "radiation_source": "NASA LRO/CRaTER & lunar surface dosimetry",
+      "distance_km_range": [363300, 405500],
+      "light_delay_sec_range": [1.21, 1.35],
+      "isru_available": ["ice_mine"]
+    },
+    "mars": {
+      "name_en": "Mars (Jezero Crater)",
+      "name_es": "Marte (Cráter Jezero)",
+      "gravity_ms2": 3.71,
+      "gravity_g": 0.379,
+      "sol_hours": 24.66,
+      "night_hours_per_sol": 12.0,
+      "temp_min_c": -153,
+      "temp_max_c": 20,
+      "surface_pressure_pa": 610,
+      "solar_flux_wm2": 590,
+      "solar_factor_vs_moon": 0.43,
+      "radiation_msv_per_day": 0.64,
+      "radiation_source": "NASA Curiosity Rover / RAD (Hassler et al., Science 2014)",
+      "distance_km_range": [54600000, 401000000],
+      "light_delay_sec_range": [182, 1338],
+      "isru_available": ["ice_mine", "moxie"]
+    }
+  },
+  "human_physiology_bvad": {
+    "crew_size": 4,
+    "per_crew_per_day": {
+      "o2_consumed_kg": 0.84,
+      "co2_exhaled_kg": 1.0,
+      "water_vapor_respired_perspired_kg": 1.8,
+      "potable_water_kg": 2.6,
+      "dry_food_kg": 0.75,
+      "metabolic_heat_kw": 0.13,
+      "hygiene_water_wipes_kg": 0.5,
+      "hygiene_water_showers_kg": 4.0
+    },
+    "habitat_200m3_4crew_timelines": {
+      "no_co2_removal_to_0_5kpa_hours": 11.0,
+      "no_o2_generation_to_16kpa_days": 4.0,
+      "water_depletion_window": "days to weeks depending on tank and WRS",
+      "food_depletion_window": "weeks"
+    },
+    "environmental_limits": {
+      "ppo2_nominal_kpa": 21.0,
+      "ppo2_safe_min_kpa": 20.0,
+      "ppo2_safe_max_kpa": 30.0,
+      "ppo2_hypoxia_kpa": 16.0,
+      "ppco2_nominal_kpa": 0.3,
+      "ppco2_safe_max_kpa": 0.5,
+      "ppco2_danger_kpa": 1.0,
+      "temp_nominal_c": 22.0,
+      "temp_safe_range_c": [18.0, 27.0],
+      "temp_crop_stress_c": 30.0,
+      "temp_shed_tier1_c": 32.0,
+      "temp_shed_tier2_c": 35.0,
+      "humidity_safe_pct_range": [25, 70],
+      "career_radiation_limit_msv": 600
+    }
+  },
+  "eclss_hardware_catalog": {
+    "lander_max_payload_kg": 12000,
+    "habitat_shell_kg": 4000,
+    "habitat_volume_m3": 200,
+    "base_load_kw": 1.5,
+    "reactor_min_safe_gap_tiles": 6,
+    "modules": {
+      "lioh": {"mass_kg": 20, "kg_per_kg_co2": 1.5, "type": "open_loop_consumable"},
+      "co2_amine": {"mass_kg": 250, "power_kw": 0.8, "max_kg_co2_day": 6.0, "mtbf_hours": 8000, "type": "regenerative"},
+      "oga": {"mass_kg": 400, "kwh_per_kg_o2": 8.0, "max_kg_o2_day": 6.0, "mtbf_hours": 6000, "type": "water_electrolysis"},
+      "sabatier": {"mass_kg": 150, "power_kw": 0.3, "requires": "oga", "mtbf_hours": 8000, "reaction": "CO2 + 4H2 -> CH4 + 2H2O"},
+      "wrs93": {"mass_kg": 500, "power_kw": 0.5, "recovery_ratio": 0.93, "max_kg_day": 40, "mtbf_hours": 5000},
+      "wrs98": {"mass_kg": 700, "power_kw": 0.7, "recovery_ratio": 0.98, "max_kg_day": 40, "mtbf_hours": 4000},
+      "salad_garden": {"area_m2": 4, "mass_kg": 200, "led_kw": 0.8, "o2_kg_day": 0.14, "food_kg_day": 0.06, "morale_bonus": 8},
+      "hydroponics_greenhouse": {"area_m2": 40, "mass_kg": 2000, "led_kw": 8.0, "o2_kg_day": 1.4, "food_kg_day": 0.6, "morale_bonus": 8},
+      "fission_reactor": {"mass_kg": 1800, "power_kw": 10.0, "min_distance_tiles": 6},
+      "moxie": {"mass_kg": 450, "power_kw": 2.5, "kwh_per_kg_o2": 40.0, "world": "mars"},
+      "ice_mine": {"mass_kg": 600, "power_kw": 1.5, "water_kg_day": 12.0}
+    }
+  },
+  "crew_specialists": [
+    {"name": "Valentina Ríos", "role_en": "Flight & ECLSS Engineer", "role_es": "Ingeniera de Vuelo y Soporte Vital", "bonus": "Repairs take 2/3 time (8h instead of 12h)"},
+    {"name": "Kenji Mori", "role_en": "Astrobotanist", "role_es": "Astrobotánico", "bonus": "+20% crop O2 and food yield"},
+    {"name": "Amara Okafor", "role_en": "Aerospace Physician", "role_es": "Médica Aeroespacial", "bonus": "2x crew health recovery rate"},
+    {"name": "Lucas Ferreira", "role_en": "Planetary Scientist", "role_es": "Científico Planetario", "bonus": "+25% science points and EVA sample value"}
+  ],
+  "physics_laws_never_violate": [
+    "Mass and inertia NEVER decrease in low gravity or microgravity (F = m * a). Weight decreases (W = m * g), not mass or momentum.",
+    "Tsiolkovsky rocket equation: delta_v = Isp * g0 * ln(m0 / mf). Every kilogram added to the habitat exponentially increases propellant required.",
+    "In a 200 m3 habitat with 4 crew, CO2 toxic buildup (~11 hours to 0.5 kPa without scrubbing) kills MUCH faster than O2 depletion (~4 days to 16 kPa hypoxia) or starvation (weeks).",
+    "Thermal cascade: if radiators fail, habitat temperature rises -> at >30 C crops suffer damage -> at 32 C Tier 1 loads (crop LEDs + Sabatier) shed -> at 35 C Tier 2 loads (OGA electrolysis + WRS water recycler) shed -> total life-support collapse.",
+    "Hydrogen-rich materials (water tanks, polyethylene, food bags) shield against solar energetic protons (SPE) better than bare aluminum hulls because heavy metals produce secondary Bremsstrahlung/neutron radiation."
+  ]
+}

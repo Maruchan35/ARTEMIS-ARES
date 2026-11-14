@@ -1,0 +1,46 @@
+{
+  "total_train": 2304,
+  "total_eval": 16,
+  "language_counts": {
+    "en": 2304
+  },
+  "category_counts": {
+    "science_flight": 6,
+    "medical_mental": 6,
+    "personality_humor_chat": 6,
+    "safety_boundaries": 6,
+    "eclss_life_support": 27,
+    "emergencies_cascades": 21,
+    "physical_health": 21,
+    "nutrition_food": 4,
+    "mental_health": 619,
+    "radiation_radlab": 18,
+    "training_science_flight": 1119,
+    "teamwork_humor_comms": 451
+  },
+  "format_counts": {
+    "dialogue": 2214,
+    "multi_turn": 3,
+    "telemetry_json": 82,
+    "vision_telemetry": 5
+  },
+  "source_counts": {
+    "golden_seed_nasa": 24,
+    "nasa_bvad_std3001_verified": 35,
+    "nasa_bvad_radlab_synthesizer": 80,
+    "nasa_multimodal_sim": 5,
+    "live_pdf_links_nasa_univ": 23,
+    "patrickfleith/AstroChat": 200,
+    "patrickfleith/NASA-History-MCQ": 200,
+    "patrickfleith/Astro-mcqa": 200,
+    "patrickfleith/synthgenai-space-engineering-instruct-1k": 200,
+    "quantaRoche/nasa-smd-qa-benchmark-cleaned": 87,
+    "allenai/sciq": 200,
+    "dair-ai/emotion": 200,
+    "ShenLab/MentalChat16K": 200,
+    "facebook/empathetic_dialogues": 200,
+    "google/Synthetic-Persona-Chat": 200,
+    "nolabs/deepfabric-character-roleplay": 50,
+    "Fraser/short-jokes": 200
+  }
+}

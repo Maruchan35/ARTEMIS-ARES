@@ -1,0 +1,72 @@
+[
+  {
+    "ntrs_id": "20210024855",
+    "title": "Life Support Baseline Values and Assumptions Document",
+    "center": "Johnson Space Center",
+    "pub_date": "2022-02-01T05:00:00.0000000+00:00",
+    "abstract": "The Life Support Baseline Values and Assumptions Document (BVAD) provides analysts, modelers, and other life support researchers with a common set of values and assumptions which can be used as a baseline in their studies.  This baseline, in turn, provides a common point of origin from which many studies in the community may depart, making research results easier to compare and providing researchers with reasonable values to assume for areas outside their experience. With the ability to accurately compare different technologies’ performance for the same function, managers will be able to make better decisions regarding technology development."
+  },
+  {
+    "ntrs_id": "20190027563",
+    "title": "Astronaut Mass Balance for Long Duration Missions",
+    "center": "Johnson Space Center",
+    "pub_date": "2019-07-07T00:00:00.0000000+00:00",
+    "abstract": "Human spaceflight logistics requirements are strongly driven by the daily living needs of the astronauts, including their biological functions. Oxygen, water and food are absolute requirements to sustain life and must be supplied at adequate rates. However, these rates can vary from day to day and from person to person. Beyond the body's immediate physical needs, water is also required for important health and hygiene functions within the spacecraft. Undesirable weight loss or gain aside, human waste product mass outputs will equal the inputs over time, resulting in an average astronaut mass balance. Best values, as well as range of variability for inputs and outputs are explored at both the individual physiological level and the spacecraft level. These values are important for design of life support and habitability systems as well as for mission planning of consumables. Current spacecraft life support systems are not fully closed loop, but the International Space Station (ISS) does recycle most of its air and water. The astronaut mass balances at the personal and vehicle level can have different impacts at different levels of system closure. Recommendations are made for a consistent set of values representing a realistic average astronaut mass balance over reasonable durations for exploration missions."
+  },
+  {
+    "ntrs_id": "20190028339",
+    "title": "Cost-Effective High Reliability for Space Life Support Requires Using Storage",
+    "center": "Ames Research Center",
+    "pub_date": "2019-07-07T00:00:00.0000000+00:00",
+    "abstract": "Cost-effective high reliability can be achieved in future space life support systems through careful systems analysis and design. This paper outlines a comprehensive approach. Potential future human space missions are described. The mission parameter impacts on life support system design and reliability requirements are discussed. Not all human space missions require high reliability life support. The potential reliability and cost of storage and of recycling life support systems are investigated. Simple storage systems can provide cost-effective high reliability life support where it is needed. More complex recycling systems with lower reliability and higher cost can be used when suitable."
+  },
+  {
+    "ntrs_id": "20160005782",
+    "title": "Design and Analysis of a Flexible, Reliable Deep Space Life Support System",
+    "center": "Ames Research Center",
+    "pub_date": "2012-07-15T00:00:00.0000000+00:00",
+    "abstract": "This report describes a flexible, reliable, deep space life support system design approach that uses either storage or recycling or both together. The design goal is to provide the needed life support performance with the required ultra reliability for the minimum Equivalent System Mass (ESM). Recycling life support systems used with multiple redundancy can have sufficient reliability for deep space missions but they usually do not save mass compared to mixed storage and recycling systems. The best deep space life support system design uses water recycling with sufficient water storage to prevent loss of crew if recycling fails. Since the amount of water needed for crew survival is a small part of the total water requirement, the required amount of stored water is significantly less than the total to be consumed. Water recycling with water, oxygen, and carbon dioxide removal material storage can achieve the high reliability of full storage systems with only half the mass of full storage and with less mass than the highly redundant recycling systems needed to achieve acceptable reliability. Improved recycling systems with lower mass and higher reliability could perform better than systems using storage."
+  },
+  {
+    "ntrs_id": "20250010956",
+    "title": "ESDMD-001: Moon to Mars Architecture Definition Document | Revision C - 2025",
+    "center": "Headquarters",
+    "pub_date": "2025-12-12T05:00:00.0000000+00:00",
+    "abstract": "The NASA oIice of primary responsibility for this document is the Exploration Systems Development Mission Directorate (ESDMD) Strategy and Architecture Office (SAO). Visit the Moon to Mars Architecture homepage for the latest version of this document and for more detail on NASA’s Moon to Mars exploration campaign."
+  },
+  {
+    "ntrs_id": "20220004670",
+    "title": "A Deployable 40 kWe Lunar Fission Surface Power Concept",
+    "center": "Glenn Research Center",
+    "pub_date": "",
+    "abstract": "Continuous power at the kilowatt level will be imperative for future lunar users including crew infrastructure, future science, and in-situ resource utilization (ISRU). The Compass Team explored both 10 kWe and 40 kWe concepts, assuming planned lander and rover capabilities. Both concepts found that a crew pressurized rover chassis, repurposed for deploying reactor power components, could place a fission surface power system (FSPS) at least one km from users. While the 10 kWe fission power system (FPS) could be deployed as a single unit, the 40 kWe system was too large and had to be deployed in multiple trips with the same rover. Key technologies and design approaches included a high-assay low-enriched uranium (HALEU), yttrium hydride (YH) moderated heat pipe reactor, Stirling convertors, deployable radiators based on International Space Station (ISS) designs, and power conversion/transmission at ±2800 VDC for a one km remote distance. "
+  },
+  {
+    "ntrs_id": "20230003735",
+    "title": "Overview of NASA Fission Surface Power",
+    "center": "Glenn Research Center",
+    "pub_date": "",
+    "abstract": ""
+  },
+  {
+    "ntrs_id": "20040015099",
+    "title": "Equivalent Mass versus Life Cycle Cost for Life Support Technology Selection",
+    "center": "Ames Research Center",
+    "pub_date": "2003-01-01T00:00:00.0000000+00:00",
+    "abstract": "The decision to develop a particular life support technology or to select it for flight usually depends on the cost to develop and fly it. Other criteria such as performance, safety, reliability, crew time, and technical and schedule risk are considered, but cost is always an important factor. Because launch cost would account for much of the cost of a future planetary mission, and because launch cost is directly proportional to the mass launched, equivalent mass has been used instead of cost to select advanced life support technology. The equivalent mass of a life support system includes the estimated mass of the hardware and of the spacecraft pressurized volume, power supply, and cooling system that the hardware requires. The equivalent mass of a system is defined as the total payload launch mass needed to provide and support the system. An extension of equivalent mass, Equivalent System Mass (ESM), has been established for use in the Advanced Life Support project. ESM adds a mass-equivalent of crew time and possibly other cost factors to equivalent mass. Traditional equivalent mass is strictly based on flown mass and reflects only the launch cost. ESM includes other important cost factors, but it complicates the simple flown mass definition of equivalent mass by adding a non-physical mass penalty for crew time that may exceed the actual flown mass. Equivalent mass is used only in life support analysis. Life Cycle Cost (LCC) is much more commonly used. LCC includes DDT&E, launch, and operations costs. For Earth orbit rather than planetary missions, the launch cost is less than the cost of Design, Development, Test, and Evaluation (DDTBE). LCC is a more inclusive cost estimator than equivalent mass. The relative costs of development, launch, and operations vary depending on the mission destination and duration. Since DDTBE or operations may cost more than launch, LCC gives a more accurate relative cost ranking than equivalent mass. To select the lowest cost technology for a particular application we should use LCC rather than equivalent mass."
+  },
+  {
+    "ntrs_id": "19850021219",
+    "title": "Controlled Ecological Life Support System. Life Support Systems in Space Travel",
+    "center": "Legacy CDMS",
+    "pub_date": "1985-06-01T00:00:00.0000000+00:00",
+    "abstract": "Life support systems in space travel, in closed ecological systems were studied. Topics discussed include: (1) problems of life support and the fundamental concepts of bioregeneration; (2) technology associated with physical/chemical regenerative life support; (3) projection of the break even points for various life support techniques; (4) problems of controlling a bioregenerative life support system; (5) data on the operation of an experimental algal/mouse life support system; (6) industrial concepts of bioregenerative life support; and (7) Japanese concepts of bioregenerative life support and associated biological experiments to be conducted in the space station."
+  },
+  {
+    "ntrs_id": "20240009831",
+    "title": "The Martian Radiation Environment and Human Health Risks",
+    "center": "Headquarters",
+    "pub_date": "",
+    "abstract": ""
+  }
+]

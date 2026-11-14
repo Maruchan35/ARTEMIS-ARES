@@ -1,0 +1,5 @@
+# Agrega aqui las librerias de Python que necesite tu proyecto (una por linea).
+# Ejemplo:
+# fastapi
+# uvicorn
+# transformers

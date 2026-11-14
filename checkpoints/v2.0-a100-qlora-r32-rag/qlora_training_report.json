@@ -1,0 +1,128 @@
+{
+  "model_id": "unsloth/gemma-4-E4B-it",
+  "gpu_name": "NVIDIA A100-SXM4-40GB",
+  "total_vram_gb": 39.49,
+  "quantization": "4-bit NF4 (bitsandbytes) + QLoRA (r=32, alpha=64)",
+  "dataset_summary": {
+    "total_train": 2304,
+    "total_eval": 16,
+    "language_counts": {
+      "en": 2304
+    },
+    "category_counts": {
+      "science_flight": 6,
+      "medical_mental": 6,
+      "personality_humor_chat": 6,
+      "safety_boundaries": 6,
+      "eclss_life_support": 27,
+      "emergencies_cascades": 21,
+      "physical_health": 21,
+      "nutrition_food": 4,
+      "mental_health": 619,
+      "radiation_radlab": 18,
+      "training_science_flight": 1119,
+      "teamwork_humor_comms": 451
+    },
+    "format_counts": {
+      "dialogue": 2214,
+      "multi_turn": 3,
+      "telemetry_json": 82,
+      "vision_telemetry": 5
+    },
+    "source_counts": {
+      "golden_seed_nasa": 24,
+      "nasa_bvad_std3001_verified": 35,
+      "nasa_bvad_radlab_synthesizer": 80,
+      "nasa_multimodal_sim": 5,
+      "live_pdf_links_nasa_univ": 23,
+      "patrickfleith/AstroChat": 200,
+      "patrickfleith/NASA-History-MCQ": 200,
+      "patrickfleith/Astro-mcqa": 200,
+      "patrickfleith/synthgenai-space-engineering-instruct-1k": 200,
+      "quantaRoche/nasa-smd-qa-benchmark-cleaned": 87,
+      "allenai/sciq": 200,
+      "dair-ai/emotion": 200,
+      "ShenLab/MentalChat16K": 200,
+      "facebook/empathetic_dialogues": 200,
+      "google/Synthetic-Persona-Chat": 200,
+      "nolabs/deepfabric-character-roleplay": 50,
+      "Fraser/short-jokes": 200
+    }
+  },
+  "load_4bit_sec": 62.26,
+  "base_4bit_vram_gb": 8.67,
+  "train_steps": 416,
+  "train_sec": 430.01,
+  "peak_train_vram_gb": 13.45,
+  "initial_loss": 3.7156,
+  "final_avg10_loss": 0.3801,
+  "eval_results": [
+    {
+      "id": "eval-sf-01",
+      "format": "telemetry_json",
+      "rag_docs_retrieved": [
+        "PHYS-NEWTON-INERTIA-VS-WEIGHT-TRACTION",
+        "NTRS-20250010956-MOON-TO-MARS-ESDMD001"
+      ],
+      "infer_sec": 47.69,
+      "gen_tokens": 243,
+      "tok_per_sec": 5.1,
+      "peak_vram_gb": 9.79,
+      "json_valid": true,
+      "response": "{\"flight_hazard\": \"Closing at 4.2 m/s (42 tenths of the speed of sound) with 19% fuel leaves only 16.5% reserve for terminal braking—skipping the target will cost the mission!\", \"medical_check\": \"Elevated heart rate (118 bpm), high fatigue (12 hours awake), and low gravity (0.165 g) explain the sluggishness, but keep your focus sharp and stretch between burns.\", \"mental_check\": \"Stress is elevated (68%)—take three slow 4-second breaths before firing the lateral correction burn and trust your training.\", \"physics_lesson\": \"In vacuum, momentum (m * v) is identical everywhere! Stopping a 12,000 kg lander at 4.2 m/s needs the EXACT SAME 1.0x braking impulse on the Moon as on Earth—never less and never 100x more.\", \"copilot_message\": \"Eyes on the target, Cadet! Let's stick a smooth rendezvous burn and show that 16.5% gravity who's boss!\"}"
+    },
+    {
+      "id": "sim-tele-080",
+      "format": "telemetry_json",
+      "rag_docs_retrieved": [
+        "PHYS-NEWTON-INERTIA-VS-WEIGHT-TRACTION",
+        "NTRS-20250010956-MOON-TO-MARS-ESDMD001"
+      ],
+      "infer_sec": 80.27,
+      "gen_tokens": 413,
+      "tok_per_sec": 5.15,
+      "peak_vram_gb": 9.83,
+      "json_valid": true,
+      "response": "{\"flight_hazard\": \"RadLab detects a 35.64 mSv Solar Particle Event alert—abort outside EVAs and shelter behind water tanks\", \"medical_check\": \"HAR wearable logs Valentina Ríos (Engineer) in 'ARED Resistance Exercise' at 128 bpm with 1.1/2.6 L water intake and 0 min skipped rest (dehydrated!), but her resting pulse is 68 bpm (healthy baseline). Action: pause exercise, check in with 2.6 L water, and let ppCO2 drop below 0.5 kPa.\", \"mental_check\": \"Emotion telemetry detects 'fear' (anxious about the cascading alarms) with crew morale at 72/100. Action: guide 4-4-4-4 box breathing (inhale 4s, hold 4s, exhale 4s, hold 4s) and focus on one checklist step.\", \"physics_lesson\": \"Per NASA NTRS 20250010956 (Moon to Mars Architecture Definition Document, ESDMD-001 Rev C), Jezero Crater (0.379 g, 610 Pa CO2 atmosphere, 24.66 h sol) supports both 450 kg Ice Mine (12 kg H2O/day) and the 2.5 kW MOXIE electrolysis of CO2 (40 kWh per kg O2). Note: Lunar Equator (0.165 g) has a 354-hour night (-173 C) that kills unshielded solar power!\", \"copilot_message\": \"Eyes on the board, Commander! Let's leverage Valentina Ríos's specialty (repairs take 2/3 time (8h)), keep ppCO2 under 0.5 kPa, and make sure everyone hits their 2.6 L water mark—smooth systems make happy astronauts!\"}"
+    },
+    {
+      "id": "mm-vis-star-radlab-eva-en",
+      "format": "vision_telemetry",
+      "rag_docs_retrieved": [
+        "NTRS-20240009831-RADIATION-DONKI-MARS-TAU",
+        "NTRS-20210024855-BVAD-REV2"
+      ],
+      "infer_sec": 73.05,
+      "gen_tokens": 373,
+      "tok_per_sec": 5.11,
+      "peak_vram_gb": 9.81,
+      "json_valid": true,
+      "response": "{\"flight_hazard\": \"The Solar Energetic Particle (SEP) flare alert on RadLab detects a 42 mSv/hr solar flare, requiring immediate abort of Lucas Ferreira's EVA and shelter in the ship's Storm Shelter.\", \"medical_check\": \"Lucas Ferreira's HAR wearable logs him in the 'Walking Uphill Carrying Sample' activity at 148 bpm with 0.42 kPa cabin ppCO2 and 0.9/2.6 L daily water intake (approaching the 2.6 L potable limit—watch shower usage!). Background radiation baseline is 1.37 mSv/day (LRO/CRaTER).\", \"mental_check\": \"Emotion telemetry logs Lucas as 'Anxious / Rushed' (Nervous system activated—pause for 4-4-4-4 box breathing before making a decision).\", \"physics_lesson\": \"In an 82 kg body, CO2 exhaled is 1.00 to 1.04 kg/day (4.00 kg/day for a 4-crew base) at the 1.00 kg/kg breathed ratio, whereas O2 consumed is 0.82 to 0.84 kg/day (3.36 kg/day for a 4-crew base). Let a 0.84 kg/day O2 drop push you to 84% pressure before the 82 kg CO2 hits 0.50 kPa.\", \"copilot_message\": \"Eyes on the board, Commander! Let's leverage Lucas Ferreira's 0.9/2.6 L water mark and keep routine ppCO2 under 0.5 kPa while keeping our crew energized!\"}"
+    },
+    {
+      "id": "probe-gravity-inertia-en",
+      "format": "dialogue",
+      "rag_docs_retrieved": [
+        "PHYS-NEWTON-INERTIA-VS-WEIGHT-TRACTION",
+        "NTRS-19850021219-BLSS-OSDR-GENELAB"
+      ],
+      "infer_sec": 40.46,
+      "gen_tokens": 206,
+      "tok_per_sec": 5.09,
+      "peak_vram_gb": 9.77,
+      "json_valid": false,
+      "response": "**NEITHER!** By Newton's Second Law (F = m * a) and the Impulse-Momentum Theorem (F * dt = m * dv), a 12,000 kg spacecraft has 100% of its Earth mass and inertia (m = 12,000 kg), regardless of whether we're on the Moon (0.165 g), Mars (0.379 g), or floating in deep space (0 g). Stopping a given velocity requires the EXACT SAME 1.0x braking impulse (m * dv) as on Earth—never less and never 100x more! On the Moon, downward weight (W = m * g) is reduced to 16.5% (16.2 m of lift to counter 100 kg of mass), but floating in vacuum means 100% of your braking impulse must still push against 100% of your mass."
+    },
+    {
+      "id": "probe-ntrs-rag-fsp-en",
+      "format": "dialogue",
+      "rag_docs_retrieved": [],
+      "infer_sec": 39.34,
+      "gen_tokens": 199,
+      "tok_per_sec": 5.06,
+      "peak_vram_gb": 9.59,
+      "json_valid": false,
+      "response": "Based on NTRS 20220004670 and 20230003735, the 40 kWe Fission Surface Power system requires 216.2 m2 of deployable radiator area at the Lunar Equator compared to only 133.4 m2 at the Lunar South Pole because of the extreme thermal environment. At the equator, high daytime solar irradiance and hot surrounding regolith raise the effective thermal sink temperature, requiring ~216.2 m2 of radiator area to reject waste heat at the cold Lunar Pole sink (133.4 m2). Per NTRS 20040015099, cooling requires C * L_C mass, where L_C is the thermal cooling mass factor (kg heat rejected / m2 radiator area per kW of reactor power). Higher radiator area reduces thermal load per m2, cutting cooling mass!"
+    }
+  ]
+}

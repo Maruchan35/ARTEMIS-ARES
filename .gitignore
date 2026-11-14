@@ -1,0 +1,13 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local Drive mapping
+.drive_ids.json
+
+# Large binary weights (>100MB, published via GitHub Releases)
+*.safetensors
+*.bin
+*.pt
+*.pth

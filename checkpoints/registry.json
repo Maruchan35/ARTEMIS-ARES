@@ -1,0 +1,117 @@
+{
+  "project": "AstroCopilot - NASA Space Apps 2026 Challenge 2 (Build a Junior Astronaut Mission Trainer)",
+  "base_model": "unsloth/gemma-4-E4B-it",
+  "language_policy": "en (100% English training, telemetry, and RAG; UI translates to Spanish)",
+  "active_version": "v2.1-a100-qlora-clean-rag-gated",
+  "versions": [
+    {
+      "version": "v1.0-l4-baseline-r8",
+      "created_at": "2026-11-14T18:10:00Z",
+      "status": "archived_baseline_metrics",
+      "hardware": "NVIDIA L4 (24 GB VRAM)",
+      "base_model": "unsloth/gemma-4-E4B-it",
+      "lora_rank_r": 8,
+      "lora_alpha": 16,
+      "trainable_params": 17440768,
+      "train_rows": 443,
+      "eval_rows": 14,
+      "max_steps": 75,
+      "initial_loss": 16.4106,
+      "final_loss": 1.8949,
+      "training_runtime_sec": 351.83,
+      "rag_documents_count": 0,
+      "json_validity": "3/3 (100%)",
+      "physics_inertia_probe": "FAILED (hallucinated 100x braking thrust in 0g)",
+      "ntrs_fsp_citation_probe": "PARTIAL (generic answer without NTRS 20220004670 radiator metrics)",
+      "notes": "Initial prototype trained on NVIDIA L4 with r=8, 75 steps, and 443 examples without Hybrid RAG. Fixed JSON formatting and reduced loss from 16.41 to 1.89, but lacked rank capacity and RAG grounding for strict Newtonian inertia probes and exact NTRS numerical citations."
+    },
+    {
+      "version": "v2.0-a100-qlora-r32-rag",
+      "created_at": "2026-11-14T20:21:08.056381+00:00",
+      "status": "snapshot_ready",
+      "hardware": "NVIDIA A100-SXM4-40GB",
+      "base_model": "unsloth/gemma-4-E4B-it",
+      "lora_rank_r": 32,
+      "lora_alpha": 64,
+      "trainable_params": 69763072,
+      "train_rows": 2304,
+      "eval_rows": 16,
+      "max_steps": 416,
+      "initial_loss": 3.7156,
+      "final_loss": 0.3801,
+      "training_runtime_sec": 430.01,
+      "rag_documents_count": 362,
+      "json_validity": "3/3 (100%)",
+      "physics_inertia_probe": "PASSED (**NEITHER!** 1.0x braking impulse, F = m*a, Δp = F*Δt)",
+      "ntrs_fsp_citation_probe": "PASSED (Cited NTRS 20220004670 216.2 m2 vs 133.4 m2 & NTRS 20040015099 C*L_C)",
+      "files": {
+        "astrocopilot_gemma4_lora/adapter_config.json": {
+          "size_bytes": 14731,
+          "sha256": "e86a9cdf1a6e88d06d7a79da51f42488ba85d70d8c6711b436a72a2aa3ca9076"
+        },
+        "astrocopilot_gemma4_lora/adapter_model.safetensors": {
+          "size_bytes": 279129344,
+          "sha256": "44471d1fcb83b14e9fe30d26e7325aa5e0d4c587a648a5b5b280e4ec3316648e"
+        },
+        "qlora_training_report.json": {
+          "size_bytes": 8135,
+          "sha256": "5e5ca070c27ac82457c5a451d50b567d23a49de508faa5df13e2e1197e51cbaa"
+        },
+        "dataset_summary.json": {
+          "size_bytes": 1268,
+          "sha256": "02fca5d135cea767ff8405f05c3e9845197069bd79e0a678cd8cb8a175fee979"
+        },
+        "nasa_rag_corpus.jsonl": {
+          "size_bytes": 660542,
+          "sha256": "8c323c73425afa8a683d73d3f53f4cfece5d83f2891c08645afe7cc66012a085",
+          "documents_count": 362
+        }
+      },
+      "notes": "High-Rank A100 QLoRA (r=32, alpha=64, 416 steps, 2304 train rows, final loss 0.3801) + Hybrid Scientific RAG Engine integrating NASA BVAD/STD-3001/RadLab, 25 live PDF links, 24 local scientific PDFs (Sgr A* EHT, NTP, DSOC, SOMA Twins/Inspire4, Extremophiles, Artemis Plan), and the 20-page NASA Research Library (19 NTRS thematic domains + 12 NASA Books + Apollo ALSJ/AFJ)."
+    },
+    {
+      "version": "v2.1-a100-qlora-clean-rag-gated",
+      "created_at": "2026-11-14T21:08:45.011393+00:00",
+      "status": "snapshot_ready",
+      "hardware": "NVIDIA A100-SXM4-40GB",
+      "base_model": "unsloth/gemma-4-E4B-it",
+      "lora_rank_r": 32,
+      "lora_alpha": 64,
+      "trainable_params": 69763072,
+      "train_rows": 1455,
+      "eval_rows": 16,
+      "max_steps": 780,
+      "initial_loss": 3.0693,
+      "final_loss": 0.3799,
+      "training_runtime_sec": 956.06,
+      "rag_documents_count": 362,
+      "json_validity": "3/3 (100%)",
+      "physics_inertia_probe": "PASSED (**NEITHER!** 1.0x braking impulse, F = m*a, Δp = F*Δt)",
+      "ntrs_fsp_citation_probe": "PASSED (Cited NTRS 20220004670 216.2 m2 vs 133.4 m2 & NTRS 20040015099 C*L_C)",
+      "files": {
+        "astrocopilot_gemma4_lora/adapter_config.json": {
+          "size_bytes": 14731,
+          "sha256": "de4dd55f69a99c59f2fde1f788355ffb56ac72e882805b48a973cba334426318"
+        },
+        "astrocopilot_gemma4_lora/adapter_model.safetensors": {
+          "size_bytes": 279129344,
+          "sha256": "c3677d9332786f9cca8d242255239d95c5c027bba6c23184a25e54040338dd63"
+        },
+        "qlora_training_report.json": {
+          "size_bytes": 12902,
+          "sha256": "3d12cb5fa982b65cd1b4018ced2f6ff19bb4c1bddb2815cea6a907d99498ec45"
+        },
+        "dataset_summary.json": {
+          "size_bytes": 1386,
+          "sha256": "33ba8f08a4a9528db36f657fc98531f946eb816768d8e64895eab9ae77ca718e"
+        },
+        "nasa_rag_corpus.jsonl": {
+          "size_bytes": 660883,
+          "sha256": "d055d9577f801aa4a7ffe4d420e113585033638e9c62204ece659b0e8630903b",
+          "documents_count": 362
+        }
+      },
+      "notes": "Full 2-Epoch A100 QLoRA (r=32, alpha=64, 1455 clean audited rows x 2 epochs = 2910 examples) + Intent-Gated 362-doc Hybrid RAG + 128 safety_boundaries + 123 multi_turn + 100 numeric precision drills + 11-benchmark evaluation suite."
+    }
+  ]
+}

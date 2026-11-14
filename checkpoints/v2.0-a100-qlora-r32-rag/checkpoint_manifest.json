@@ -1,0 +1,44 @@
+{
+  "version": "v2.0-a100-qlora-r32-rag",
+  "created_at": "2026-11-14T20:21:08.056381+00:00",
+  "status": "snapshot_ready",
+  "hardware": "NVIDIA A100-SXM4-40GB",
+  "base_model": "unsloth/gemma-4-E4B-it",
+  "lora_rank_r": 32,
+  "lora_alpha": 64,
+  "trainable_params": 69763072,
+  "train_rows": 2304,
+  "eval_rows": 16,
+  "max_steps": 416,
+  "initial_loss": 3.7156,
+  "final_loss": 0.3801,
+  "training_runtime_sec": 430.01,
+  "rag_documents_count": 362,
+  "json_validity": "3/3 (100%)",
+  "physics_inertia_probe": "PASSED (**NEITHER!** 1.0x braking impulse, F = m*a, Δp = F*Δt)",
+  "ntrs_fsp_citation_probe": "PASSED (Cited NTRS 20220004670 216.2 m2 vs 133.4 m2 & NTRS 20040015099 C*L_C)",
+  "files": {
+    "astrocopilot_gemma4_lora/adapter_config.json": {
+      "size_bytes": 14731,
+      "sha256": "e86a9cdf1a6e88d06d7a79da51f42488ba85d70d8c6711b436a72a2aa3ca9076"
+    },
+    "astrocopilot_gemma4_lora/adapter_model.safetensors": {
+      "size_bytes": 279129344,
+      "sha256": "44471d1fcb83b14e9fe30d26e7325aa5e0d4c587a648a5b5b280e4ec3316648e"
+    },
+    "qlora_training_report.json": {
+      "size_bytes": 8135,
+      "sha256": "5e5ca070c27ac82457c5a451d50b567d23a49de508faa5df13e2e1197e51cbaa"
+    },
+    "dataset_summary.json": {
+      "size_bytes": 1268,
+      "sha256": "02fca5d135cea767ff8405f05c3e9845197069bd79e0a678cd8cb8a175fee979"
+    },
+    "nasa_rag_corpus.jsonl": {
+      "size_bytes": 660542,
+      "sha256": "8c323c73425afa8a683d73d3f53f4cfece5d83f2891c08645afe7cc66012a085",
+      "documents_count": 362
+    }
+  },
+  "notes": "High-Rank A100 QLoRA (r=32, alpha=64, 416 steps, 2304 train rows, final loss 0.3801) + Hybrid Scientific RAG Engine integrating NASA BVAD/STD-3001/RadLab, 25 live PDF links, 24 local scientific PDFs (Sgr A* EHT, NTP, DSOC, SOMA Twins/Inspire4, Extremophiles, Artemis Plan), and the 20-page NASA Research Library (19 NTRS thematic domains + 12 NASA Books + Apollo ALSJ/AFJ)."
+}

@@ -1,0 +1,21 @@
+{
+  "version": "v1.0-l4-baseline-r8",
+  "created_at": "2026-11-14T18:10:00Z",
+  "status": "archived_baseline_metrics",
+  "hardware": "NVIDIA L4 (24 GB VRAM)",
+  "base_model": "unsloth/gemma-4-E4B-it",
+  "lora_rank_r": 8,
+  "lora_alpha": 16,
+  "trainable_params": 17440768,
+  "train_rows": 443,
+  "eval_rows": 14,
+  "max_steps": 75,
+  "initial_loss": 16.4106,
+  "final_loss": 1.8949,
+  "training_runtime_sec": 351.83,
+  "rag_documents_count": 0,
+  "json_validity": "3/3 (100%)",
+  "physics_inertia_probe": "FAILED (hallucinated 100x braking thrust in 0g)",
+  "ntrs_fsp_citation_probe": "PARTIAL (generic answer without NTRS 20220004670 radiator metrics)",
+  "notes": "Initial prototype trained on NVIDIA L4 with r=8, 75 steps, and 443 examples without Hybrid RAG. Fixed JSON formatting and reduced loss from 16.41 to 1.89, but lacked rank capacity and RAG grounding for strict Newtonian inertia probes and exact NTRS numerical citations."
+}

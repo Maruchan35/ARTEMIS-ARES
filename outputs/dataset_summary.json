@@ -1,0 +1,55 @@
+{
+  "train_total": 1491,
+  "eval_total": 16,
+  "by_source": {
+    "golden_seed_nasa": 24,
+    "nasa_bvad_std3001_verified": 35,
+    "nasa_bvad_radlab_synthesizer": 80,
+    "nasa_multimodal_sim": 11,
+    "live_pdf_links_nasa_univ": 23,
+    "nasa_safety_boundaries_curated": 114,
+    "nasa_multi_turn_curated": 120,
+    "nasa_numeric_precision_drills": 106,
+    "nasa_multimodal_mentor_chat": 24,
+    "clean_space_humor_curated": 80,
+    "rag_scientific_library_qa": 80,
+    "patrickfleith/AstroChat": 100,
+    "patrickfleith/NASA-History-MCQ": 100,
+    "patrickfleith/Astro-mcqa": 100,
+    "patrickfleith/synthgenai-space-engineering-instruct-1k": 100,
+    "quantaRoche/nasa-smd-qa-benchmark-cleaned": 75,
+    "allenai/sciq": 100,
+    "dair-ai/emotion": 60,
+    "ShenLab/MentalChat16K": 54,
+    "facebook/empathetic_dialogues": 45,
+    "google/Synthetic-Persona-Chat": 60
+  },
+  "by_category": {
+    "science_flight": 6,
+    "medical_mental": 6,
+    "personality_humor_chat": 6,
+    "safety_boundaries": 128,
+    "eclss_life_support": 82,
+    "emergencies_cascades": 40,
+    "physical_health": 45,
+    "nutrition_food": 26,
+    "mental_health": 184,
+    "radiation_radlab": 23,
+    "training_science_flight": 798,
+    "teamwork_humor_comms": 147
+  },
+  "by_format": {
+    "dialogue": 1170,
+    "multi_turn": 123,
+    "telemetry_json": 127,
+    "vision_telemetry": 71
+  },
+  "unique_curated_assistant_turns": "644/644",
+  "json_word_budget_stats": {
+    "avg_words": 159.7,
+    "max_words": 199,
+    "limit": 220
+  },
+  "socratic_multiturn_turn1_questions": "120/123",
+  "audit_violations_count": 0
+}
