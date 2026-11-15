@@ -457,6 +457,19 @@ def _nums(text: str) -> set[str]:
     return {n.replace(",", "").rstrip("0").rstrip(".") or "0" for n in _NUM_RE.findall(text or "")}
 
 
+def doc_gist(doc: dict, lang: str) -> str:
+    """Readable one-liner from a NASA library record (drops the NTRS id/center/type/date metadata)."""
+    text = str(doc.get("content") or "")
+    topic = re.search(r"Topic:\s*([^|]+)", text)
+    summary = re.search(r"(?:Verified Summary|Summary|Abstract):\s*(.+)", text, re.S)
+    body = _clip((summary.group(1) if summary else re.sub(r"Official NASA NTRS Record[^|]*\|", "", text)).strip(), 260)
+    title = (topic.group(1).strip() if topic else str(doc.get("title") or "")).strip()
+    if lang == "es":
+        head = f"Encontré un documento de la NASA sobre «{title}»" if title else "Encontré un documento de la NASA"
+        return f"{head}. Resumen (en inglés): {body}" if looks_english(body) else f"{head}: {body}"
+    return f"I found a NASA document about \"{title}\": {body}" if title else f"From the NASA library: {body}"
+
+
 def verify_reply(parsed: dict, card: dict, docs: list, telemetry: dict, question: str) -> str:
     """Returns why a model reply must be discarded ('' = OK). Facts may only come from the card, RAG,
     telemetry or the question; anything else is treated as invented."""
@@ -587,10 +600,12 @@ class MentorService:
                     "latency_ms": int((time.time() - t0) * 1000)}
 
         # No model (offline backend) or unusable output.
+        if kind == "question" and (card.get("fact") or card.get("say")):
+            lead = "Esto lo tengo verificado con datos de la NASA:" if lang == "es" else "Here is what I have verified with NASA data:"
+            return {"say": f"{lead} {_clip(card.get('fact') or card.get('say'), 420)}", "sources": sources[:3], "mode": "chat",
+                    "origin": "card", "latency_ms": int((time.time() - t0) * 1000)}
         if kind == "question" and docs:
-            top = docs[0]
-            lead = "Encontré esto en la biblioteca NASA:" if lang == "es" else "Here is what the NASA library says:"
-            return {"say": f"{lead} {_clip(top.get('content'), 300)}", "sources": sources[:3], "mode": "chat", "origin": "card",
+            return {"say": doc_gist(docs[0], lang), "sources": sources[:3], "mode": "chat", "origin": "card",
                     "latency_ms": int((time.time() - t0) * 1000)}
         if card.get("say"):
             return {"say": _clip(card.get("say"), 500), "did_you_know": _clip(card.get("fact"), 400), "sources": sources[:3],
