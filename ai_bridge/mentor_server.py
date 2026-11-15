@@ -626,6 +626,8 @@ class MentorService:
         parsed = parse_model_json(raw)
         if parsed and parsed["say"]:
             problem = verify_reply(parsed, card, docs, req.get("telemetry") or {}, text)
+            if not problem and lang == "es" and looks_english(parsed["say"]):
+                problem = "answered in English for a Spanish player"
             if problem:
                 print(f"[verify] model reply rejected ({problem}); using the verified card.", flush=True)
                 parsed = None
@@ -633,6 +635,8 @@ class MentorService:
             dyk = parsed["did_you_know"]
             if lang == "es" and looks_english(dyk):  # copied straight from an English RAG doc
                 dyk = ""
+            if lang == "es" and looks_english(parsed["check_question"]):
+                parsed["check_question"] = ""
             if not dyk and kind != "explain_again":
                 dyk = _clip(card.get("fact"), 320)  # fall back to the verified card fact
             return {"say": parsed["say"], "did_you_know": dyk, "check_question": parsed["check_question"],
@@ -663,7 +667,8 @@ class MentorService:
         parsed = parse_model_json(raw) or {}
         verdict = parsed.get("verdict") if parsed.get("verdict") in ("good", "partial", "miss") else ""
         say = parsed.get("say", "")
-        if say and verify_reply(parsed, card, [], {}, str((req.get("event") or {}).get("text") or "")):
+        if say and (verify_reply(parsed, card, [], {}, str((req.get("event") or {}).get("text") or ""))
+                    or (str(req.get("lang") or "es") == "es" and looks_english(say))):
             say = ""  # feedback invented a number: keep only the verdict
         out: dict[str, Any] = {"say": say, "sources": [card["source"]] if card.get("source") else [], "mode": "socratic",
                                "origin": "model" if say else "card", "latency_ms": int((time.time() - t0) * 1000)}
