@@ -12,7 +12,7 @@
 // =============================================================================
 
 import type { Lang } from './mentorTypes';
-import { mentorServerUrl } from './mentorClient';
+import { checkMentorServer, mentorServerUrl } from './mentorClient';
 
 export type VoicePresetId = 'katherine_hud' | 'capcom_warm' | 'gnc_crisp' | 'deep_control' | 'apollo_calm';
 
@@ -280,6 +280,15 @@ async function speakNeural(text: string, lang: Lang, voice: string, myToken: num
   endSpeech();
 }
 
+let lastRefresh = 0;
+/** Probes the bridge (throttled) so HD voices also show up in the main-menu voice selector. */
+async function refreshNeural() {
+  if (Date.now() - lastRefresh < 10000) return;
+  lastRefresh = Date.now();
+  const st = await checkMentorServer();
+  mentorVoice.setNeural(st.online ? st.voice : null);
+}
+
 function stopAll() {
   token++;
   synth()?.cancel();
@@ -307,6 +316,8 @@ export const mentorVoice = {
   },
 
   subscribeVoices(cb: () => void): () => void {
+    // Settings screens live outside the game (main menu): ask the bridge which HD voices it offers.
+    void refreshNeural();
     voiceListeners.add(cb);
     return () => {
       voiceListeners.delete(cb);
