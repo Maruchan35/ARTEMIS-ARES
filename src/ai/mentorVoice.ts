@@ -1,35 +1,39 @@
 // =============================================================================
 // KATHERINE voice.
 //  · Neural HD voice: Supertonic 3 rendered by the mentor bridge (POST /api/tts).
-//    Same voice in Spanish and English, warm and natural. Needs the bridge running
-//    with `pip install supertonic` (ai_bridge/mentor_voice.py).
+//    Same warm voice in Spanish and English. Needs the bridge running with
+//    `pip install supertonic` (ai_bridge/mentor_voice.py). Listed first in the
+//    voice selector as "HD"; "Automática" uses it whenever the bridge offers it.
 //  · Browser voice: Web Speech API, ranked so the best installed voices win
 //    (Edge "Natural" voices > Google > Apple premium > the rest).
-// The player picks language, voice and speed in the panel; prefs live in localStorage.
+//  · Presets (CAPCOM, GNC, Apollo…) set rate/pitch for browser voices and the
+//    speaking speed of the HD voice.
 // Push-to-talk speech recognition (Chrome / Edge) lives in `mentorEars`.
 // =============================================================================
 
 import type { Lang } from './mentorTypes';
 import { mentorServerUrl } from './mentorClient';
 
-export interface VoicePrefs {
-  /** 'auto' = neural HD when the bridge offers it, otherwise the best browser voice. */
-  engine: 'auto' | 'neural' | 'browser';
-  neuralVoice: string;
-  /** Chosen browser voice (voiceURI) per language; empty = best ranked. */
-  browserVoice: Partial<Record<Lang, string>>;
-  /** 0.8 – 1.25 */
+export type VoicePresetId = 'katherine_hud' | 'capcom_warm' | 'gnc_crisp' | 'deep_control' | 'apollo_calm';
+
+export interface VoicePreset {
+  id: VoicePresetId;
+  labelEs: string;
+  labelEn: string;
   rate: number;
+  pitch: number;
+  volume: number;
 }
 
-export interface NeuralVoiceInfo {
-  status: string;
-  voices: string[];
-  default?: string;
-  hint?: string;
-}
+export const VOICE_PRESETS: VoicePreset[] = [
+  { id: 'katherine_hud', labelEs: 'KATHERINE Estándar (HUD)', labelEn: 'KATHERINE Standard (HUD)', rate: 1.02, pitch: 1.06, volume: 0.95 },
+  { id: 'capcom_warm', labelEs: 'CAPCOM Houston (Cálida)', labelEn: 'Houston CAPCOM (Warm)', rate: 0.94, pitch: 0.96, volume: 0.96 },
+  { id: 'gnc_crisp', labelEs: 'Computadora GNC (Precisa)', labelEn: 'GNC Computer (Crisp)', rate: 1.12, pitch: 1.14, volume: 0.95 },
+  { id: 'deep_control', labelEs: 'Control Orbital (Grave)', labelEn: 'Orbital Control (Deep)', rate: 0.96, pitch: 0.82, volume: 0.98 },
+  { id: 'apollo_calm', labelEs: 'Voz Histórica Apollo (Pausada)', labelEn: 'Historic Apollo (Measured)', rate: 0.88, pitch: 0.9, volume: 0.95 },
+];
 
-/** Supertonic 3 presets. Order and labels come from listening tests + measured pitch (F5 lowest/calmest female). */
+/** Supertonic 3 presets. Labels from listening tests + measured pitch (F5 = lowest, calmest female). */
 export const NEURAL_VOICES: { id: string; es: string; en: string }[] = [
   { id: 'F5', es: 'KATHERINE · cálida (recomendada)', en: 'KATHERINE · warm (recommended)' },
   { id: 'F3', es: 'Femenina · serena', en: 'Female · calm' },
@@ -42,30 +46,52 @@ export const NEURAL_VOICES: { id: string; es: string; en: string }[] = [
   { id: 'M2', es: 'Masculina · profunda', en: 'Male · low' },
   { id: 'M5', es: 'Masculina · narrador', en: 'Male · narrator' },
 ];
+const NEURAL_PREFIX = 'neural:';
+const DEFAULT_NEURAL = 'F5';
 
-export const VOICE_SAMPLE: Record<Lang, string> = {
-  es: 'Hola, cadete. Soy KATHERINE. Estaré contigo en cada paso de la misión.',
-  en: "Hi, cadet. I'm KATHERINE. I'll be with you every step of the mission.",
-};
-
-const PREFS_KEY = 'astro.voicePrefs';
-const DEFAULT_PREFS: VoicePrefs = { engine: 'auto', neuralVoice: 'F5', browserVoice: {}, rate: 1 };
-
-function loadPrefs(): VoicePrefs {
-  try {
-    const raw = localStorage.getItem(PREFS_KEY);
-    if (raw) return { ...DEFAULT_PREFS, ...(JSON.parse(raw) as Partial<VoicePrefs>) };
-  } catch {
-    /* storage blocked or bad JSON */
-  }
-  return { ...DEFAULT_PREFS };
+/** One entry of the voice selector (browser voice or HD neural voice). */
+export interface VoiceOption {
+  voiceURI: string;
+  name: string;
+  lang: string;
+  neural?: boolean;
 }
 
-let prefs = loadPrefs();
+export interface NeuralVoiceInfo {
+  status: string;
+  voices: string[];
+  default?: string;
+  hint?: string;
+}
+
+const KEY_URI_PREFIX = 'astro.mentorVoiceURI.';
+const KEY_PRESET = 'astro.mentorVoicePreset';
+
+function readLs(key: string, fallback: string): string {
+  try {
+    return localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeLs(key: string, val: string) {
+  try {
+    localStorage.setItem(key, val);
+  } catch {
+    /* ignore */
+  }
+}
+
 let neural: NeuralVoiceInfo = { status: 'off', voices: [] };
 let neuralFailures = 0;
-const listeners = new Set<() => void>();
-const notify = () => listeners.forEach((cb) => cb());
+const voiceListeners = new Set<() => void>();
+const notifyVoiceListeners = () => voiceListeners.forEach((cb) => cb());
+
+function activePreset(): VoicePreset {
+  const id = readLs(KEY_PRESET, 'capcom_warm') as VoicePresetId;
+  return VOICE_PRESETS.find((p) => p.id === id) ?? VOICE_PRESETS[0];
+}
 
 // ------------------------------------------------------------------ browser voices
 function synth(): SpeechSynthesis | null {
@@ -90,7 +116,7 @@ function scoreVoice(v: SpeechSynthesisVoice, lang: Lang): number {
   return s;
 }
 
-/** Installed voices for a language, best first. */
+/** Installed browser voices for a language, best first. */
 function browserVoices(lang: Lang): SpeechSynthesisVoice[] {
   const s = synth();
   if (!s) return [];
@@ -100,16 +126,32 @@ function browserVoices(lang: Lang): SpeechSynthesisVoice[] {
     .sort((a, b) => scoreVoice(b, lang) - scoreVoice(a, lang));
 }
 
-function chosenBrowserVoice(lang: Lang): SpeechSynthesisVoice | undefined {
+function pickBrowserVoice(lang: Lang): SpeechSynthesisVoice | undefined {
+  const saved = readLs(`${KEY_URI_PREFIX}${lang}`, '');
   const list = browserVoices(lang);
-  const uri = prefs.browserVoice[lang];
-  return (uri && list.find((v) => v.voiceURI === uri)) || list[0];
+  return (saved && !saved.startsWith(NEURAL_PREFIX) && synth()?.getVoices().find((v) => v.voiceURI === saved)) || list[0];
+}
+
+function neuralReady(): boolean {
+  return neural.status === 'ready' && neural.voices.length > 0;
+}
+
+/** HD voice id to use for `lang`, or null when the browser voice should speak. */
+function neuralVoiceFor(lang: Lang): string | null {
+  if (!neuralReady()) return null;
+  const saved = readLs(`${KEY_URI_PREFIX}${lang}`, '');
+  if (!saved) return neural.voices.includes(DEFAULT_NEURAL) ? DEFAULT_NEURAL : neural.voices[0];
+  if (saved.startsWith(NEURAL_PREFIX)) {
+    const id = saved.slice(NEURAL_PREFIX.length);
+    return neural.voices.includes(id) ? id : DEFAULT_NEURAL;
+  }
+  return null; // the player picked a browser voice
 }
 
 // Voices load asynchronously in Chromium.
-if (synth()) synth()!.addEventListener?.('voiceschanged', notify);
+if (synth()) synth()!.addEventListener?.('voiceschanged', notifyVoiceListeners);
 
-// ------------------------------------------------------------------ playback state
+// ------------------------------------------------------------------ playback
 let token = 0;
 let currentAudio: HTMLAudioElement | null = null;
 let finishCurrent: (() => void) | null = null;
@@ -138,14 +180,14 @@ function chunkText(text: string): string[] {
   return out.length ? out : [text];
 }
 
-async function fetchNeural(text: string, lang: Lang): Promise<Blob> {
+async function fetchNeural(text: string, lang: Lang, voice: string): Promise<Blob> {
   const ctrl = new AbortController();
   const timer = window.setTimeout(() => ctrl.abort(), 15000);
   try {
     const res = await fetch(`${mentorServerUrl}/api/tts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, lang, voice: prefs.neuralVoice, speed: prefs.rate }),
+      body: JSON.stringify({ text, lang, voice, speed: activePreset().rate }),
       signal: ctrl.signal,
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -159,7 +201,7 @@ function playBlob(blob: Blob): Promise<void> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
-    audio.volume = 0.95;
+    audio.volume = activePreset().volume;
     currentAudio = audio;
     const done = () => {
       audio.onended = null;
@@ -187,16 +229,17 @@ function speakBrowser(text: string, lang: Lang, myToken: number, onStart?: () =>
     .replace(/→/g, ', ')
     .replace(/[*_`#[\]{}|<>]/g, ' ')
     .replace(/\s+/g, ' ');
-  const v = chosenBrowserVoice(lang);
+  const v = pickBrowserVoice(lang);
+  const preset = activePreset();
   // Chrome cuts utterances longer than ~15 s: queue one per sentence.
   const chunks = chunkText(clean);
   chunks.forEach((chunk, i) => {
     const u = new SpeechSynthesisUtterance(chunk);
     if (v) u.voice = v;
     u.lang = v?.lang ?? (lang === 'es' ? 'es-MX' : 'en-US');
-    u.rate = prefs.rate;
-    u.pitch = 1.0;
-    u.volume = 0.95;
+    u.rate = preset.rate;
+    u.pitch = preset.pitch;
+    u.volume = preset.volume;
     if (i === 0) u.onstart = () => myToken === token && onStart?.();
     if (i === chunks.length - 1) {
       u.onend = () => myToken === token && endSpeech();
@@ -206,10 +249,10 @@ function speakBrowser(text: string, lang: Lang, myToken: number, onStart?: () =>
   });
 }
 
-async function speakNeural(text: string, lang: Lang, myToken: number, onStart?: () => void) {
+async function speakNeural(text: string, lang: Lang, voice: string, myToken: number, onStart?: () => void) {
   const chunks = chunkText(text);
   let started = false;
-  let next: Promise<Blob> | null = fetchNeural(chunks[0], lang);
+  let next: Promise<Blob> | null = fetchNeural(chunks[0], lang, voice);
   next.catch(() => undefined);
   for (let i = 0; i < chunks.length; i++) {
     let blob: Blob;
@@ -219,13 +262,13 @@ async function speakNeural(text: string, lang: Lang, myToken: number, onStart?: 
       if (myToken !== token) return;
       // Bridge hiccup: finish this line with the browser voice and back off after repeated failures.
       if (++neuralFailures >= 2) neural = { ...neural, status: 'error' };
-      notify();
+      notifyVoiceListeners();
       speakBrowser(chunks.slice(i).join(' '), lang, myToken, started ? undefined : onStart);
       return;
     }
     if (myToken !== token) return;
     neuralFailures = 0;
-    next = i + 1 < chunks.length ? fetchNeural(chunks[i + 1], lang) : null;
+    next = i + 1 < chunks.length ? fetchNeural(chunks[i + 1], lang, voice) : null;
     next?.catch(() => undefined);
     if (!started) {
       started = true;
@@ -245,13 +288,53 @@ function stopAll() {
   endSpeech();
 }
 
-function activeEngine(): 'neural' | 'browser' {
-  if (prefs.engine === 'browser') return 'browser';
-  return neural.status === 'ready' && neural.voices.includes(prefs.neuralVoice) ? 'neural' : 'browser';
-}
-
 export const mentorVoice = {
   supported: !!synth() || typeof Audio !== 'undefined',
+
+  /** Selector entries: HD neural voices first (when the bridge offers them), then browser voices, best first. */
+  getAvailableVoices(lang?: Lang): VoiceOption[] {
+    const l: Lang = lang ?? 'es';
+    const hd: VoiceOption[] = neuralReady()
+      ? NEURAL_VOICES.filter((v) => neural.voices.includes(v.id)).map((v) => ({
+          voiceURI: `${NEURAL_PREFIX}${v.id}`,
+          name: `✦ HD · ${v[l]}`,
+          lang: 'ES/EN',
+          neural: true,
+        }))
+      : [];
+    const browser = browserVoices(l).map((v) => ({ voiceURI: v.voiceURI, name: v.name, lang: v.lang }));
+    return [...hd, ...browser];
+  },
+
+  subscribeVoices(cb: () => void): () => void {
+    voiceListeners.add(cb);
+    return () => {
+      voiceListeners.delete(cb);
+    };
+  },
+
+  getSelectedVoiceURI(lang: Lang): string {
+    return readLs(`${KEY_URI_PREFIX}${lang}`, '');
+  },
+
+  setSelectedVoiceURI(lang: Lang, uri: string) {
+    writeLs(`${KEY_URI_PREFIX}${lang}`, uri);
+    notifyVoiceListeners();
+  },
+
+  getPresetId(): VoicePresetId {
+    return activePreset().id;
+  },
+
+  setPresetId(id: VoicePresetId) {
+    writeLs(KEY_PRESET, id);
+    notifyVoiceListeners();
+  },
+
+  /** 'neural' when the HD voice will speak `lang`, otherwise 'browser'. */
+  activeEngine(lang: Lang): 'neural' | 'browser' {
+    return neuralVoiceFor(lang) ? 'neural' : 'browser';
+  },
 
   speak(text: string, lang: Lang, onStart?: () => void, onEnd?: () => void) {
     stopAll();
@@ -261,29 +344,20 @@ export const mentorVoice = {
     }
     const myToken = ++token;
     pendingEnd = onEnd ?? null;
-    if (activeEngine() === 'neural') void speakNeural(text, lang, myToken, onStart);
+    const hd = neuralVoiceFor(lang);
+    if (hd) void speakNeural(text, lang, hd, myToken, onStart);
     else speakBrowser(text, lang, myToken, onStart);
   },
 
+  testSpeak(lang: Lang, onEnd?: () => void) {
+    const msg =
+      lang === 'es'
+        ? 'Hola, cadete. Soy KATHERINE, tu mentora. Presión de cabina 101.3 kilopascales: todos los sistemas nominales.'
+        : "Hi, cadet. I'm KATHERINE, your mentor. Cabin pressure 101.3 kilopascals: all systems nominal.";
+    mentorVoice.speak(msg, lang, undefined, onEnd);
+  },
+
   stop: stopAll,
-
-  activeEngine,
-  browserVoices,
-  chosenBrowserVoice,
-
-  getPrefs(): VoicePrefs {
-    return prefs;
-  },
-
-  setPrefs(patch: Partial<VoicePrefs>) {
-    prefs = { ...prefs, ...patch, browserVoice: { ...prefs.browserVoice, ...(patch.browserVoice ?? {}) } };
-    try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
-    } catch {
-      /* ignore */
-    }
-    notify();
-  },
 
   /** Called with the bridge's /api/health `voice` block (or null when the bridge is down). */
   setNeural(info: NeuralVoiceInfo | null | undefined) {
@@ -291,17 +365,11 @@ export const mentorVoice = {
     if (nextInfo.status === neural.status && nextInfo.voices.length === neural.voices.length) return;
     neural = nextInfo;
     neuralFailures = 0;
-    notify();
+    notifyVoiceListeners();
   },
 
   neural(): NeuralVoiceInfo {
     return neural;
-  },
-
-  /** Re-render hook for the settings UI (voices load late, prefs change). */
-  subscribe(cb: () => void): () => void {
-    listeners.add(cb);
-    return () => listeners.delete(cb);
   },
 };
 

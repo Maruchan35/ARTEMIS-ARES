@@ -15,18 +15,89 @@ export interface SpaceTextureSet {
   spaceBackdrop: THREE.CanvasTexture;
   medsGlassCockpit: THREE.CanvasTexture;
   aphBotanicalRack: THREE.CanvasTexture;
+  isprEclssRack: THREE.CanvasTexture;
+  cbmHatchPanel: THREE.CanvasTexture;
   dispose: () => void;
 }
 
-function makeCanvas(size: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
+// 4x4 Ordered Bayer matrix normalized [0..15] for crisp retro NASA Pixel Art shading
+const BAYER_4X4 = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5],
+] as const;
+
+function makeCanvas(width: number, height = width): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = Math.floor(width);
+  canvas.height = Math.floor(height);
   const ctx = canvas.getContext('2d');
   if (!ctx) {
     throw new Error('Could not acquire 2D canvas context for procedural PBR textures');
   }
+  ctx.imageSmoothingEnabled = false;
   return [canvas, ctx];
+}
+
+function pxRect(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+): void {
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.floor(x), Math.floor(y), Math.max(1, Math.floor(w)), Math.max(1, Math.floor(h)));
+}
+
+function ditherRect(
+  ctx: CanvasRenderingContext2D,
+  x0: number,
+  y0: number,
+  w: number,
+  h: number,
+  colA: string,
+  colB: string,
+  ratio: number,
+  pixelSize = 1
+): void {
+  const ix0 = Math.floor(x0);
+  const iy0 = Math.floor(y0);
+  const iw = Math.floor(w);
+  const ih = Math.floor(h);
+  const step = Math.max(1, Math.floor(pixelSize));
+  const threshold16 = Math.round(Math.max(0, Math.min(1, ratio)) * 16);
+  for (let py = 0; py < ih; py += step) {
+    const by = Math.floor(py / step) & 3;
+    for (let px = 0; px < iw; px += step) {
+      const bx = Math.floor(px / step) & 3;
+      ctx.fillStyle = BAYER_4X4[by][bx] < threshold16 ? colB : colA;
+      ctx.fillRect(ix0 + px, iy0 + py, step, step);
+    }
+  }
+}
+
+function pxCircle(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  color: string
+): void {
+  const icx = Math.floor(cx);
+  const icy = Math.floor(cy);
+  const r = Math.floor(radius);
+  const r2 = r * r;
+  ctx.fillStyle = color;
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      if (dx * dx + dy * dy <= r2) {
+        ctx.fillRect(icx + dx, icy + dy, 1, 1);
+      }
+    }
+  }
 }
 
 function finalizeTexture(
@@ -34,111 +105,78 @@ function finalizeTexture(
   isColor: boolean,
   repeatX: number,
   repeatY: number,
-  maxAnisotropy: number
+  _maxAnisotropy: number,
+  clampEdge = false
 ): THREE.CanvasTexture {
   const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
+  tex.wrapS = clampEdge ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
+  tex.wrapT = clampEdge ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   tex.repeat.set(repeatX, repeatY);
-  tex.anisotropy = maxAnisotropy;
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
   tex.colorSpace = isColor ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   tex.needsUpdate = true;
   return tex;
 }
 
+// Beta-Cloth NASA acoustic wall panels (128x128 Pixel Art, Bayer-dithered quilting, zero gradients)
 function createPaddedWallMaps(aniso: number): PbrMaterialMaps {
-  const S = 512;
+  const S = 128;
   const [cCol, xCol] = makeCanvas(S);
   const [cBmp, xBmp] = makeCanvas(S);
   const [cRgh, xRgh] = makeCanvas(S);
 
-  // Base Beta-Cloth NASA acoustic off-white / cool slate ivory
-  xCol.fillStyle = '#dde5ee';
-  xCol.fillRect(0, 0, S, S);
-  xBmp.fillStyle = '#d4d4d4';
-  xBmp.fillRect(0, 0, S, S);
-  xRgh.fillStyle = '#cfcfcf';
-  xRgh.fillRect(0, 0, S, S);
+  // Base Beta-Cloth NASA palette (#DDE5EE) + light Bayer weave
+  ditherRect(xCol, 0, 0, S, S, '#dde5ee', '#cfd9e6', 0.25, 1);
+  pxRect(xBmp, '#c8c8c8', 0, 0, S, S);
+  pxRect(xRgh, '#d2d2d2', 0, 0, S, S);
 
-  // Subtle vertical structural framing strips (2 panels per tile)
-  for (const px of [0, S / 2]) {
-    xCol.fillStyle = '#475569';
-    xCol.fillRect(px, 0, 14, S);
-    xCol.fillStyle = '#64748b';
-    xCol.fillRect(px + 14, 0, 4, S);
-
-    xBmp.fillStyle = '#555555';
-    xBmp.fillRect(px, 0, 16, S);
-    xRgh.fillStyle = '#5a5a5a';
-    xRgh.fillRect(px, 0, 16, S);
-  }
-
-  // Soft diamond acoustic pillowing inside each panel
-  const step = 64;
-  for (let row = 0; row <= S / step; row++) {
-    for (let col = 0; col <= S / step; col++) {
-      const cx = col * step;
-      const cy = row * step;
-      const grad = xCol.createRadialGradient(cx + step / 2, cy + step / 2, 2, cx + step / 2, cy + step / 2, step * 0.6);
-      grad.addColorStop(0, 'rgba(255,255,255,0.22)');
-      grad.addColorStop(1, 'rgba(148,163,184,0.16)');
-      xCol.fillStyle = grad;
-      xCol.fillRect(cx, cy, step, step);
+  // Diamond Bayer acoustic quilt cushions (32x32 cells)
+  const cell = 32;
+  for (let gy = 0; gy < S; gy += cell) {
+    for (let gx = 0; gx < S; gx += cell) {
+      ditherRect(xCol, gx + 4, gy + 4, cell - 8, cell - 8, '#eef3f8', '#dde5ee', 0.35, 1);
+      ditherRect(xBmp, gx + 4, gy + 4, cell - 8, cell - 8, '#ececec', '#c8c8c8', 0.3, 1);
+      // Pixelated diamond seam stitch lines
+      for (let d = 0; d < cell; d += 2) {
+        pxRect(xCol, '#94a3b8', gx + d, gy + d, 1, 1);
+        pxRect(xCol, '#94a3b8', gx + cell - 1 - d, gy + d, 1, 1);
+        pxRect(xBmp, '#646464', gx + d, gy + d, 1, 1);
+        pxRect(xBmp, '#646464', gx + cell - 1 - d, gy + d, 1, 1);
+      }
+      // Tufted fastener rivet in cell center
+      pxRect(xCol, '#64748b', gx + cell / 2 - 1, gy + cell / 2 - 1, 3, 3);
+      pxRect(xCol, '#cbd5e1', gx + cell / 2, gy + cell / 2, 1, 1);
+      pxRect(xBmp, '#ffffff', gx + cell / 2 - 1, gy + cell / 2 - 1, 3, 3);
     }
   }
 
-  xCol.strokeStyle = 'rgba(100, 116, 139, 0.45)';
-  xCol.lineWidth = 2;
-  xBmp.strokeStyle = '#686868';
-  xBmp.lineWidth = 3;
-
-  for (let i = -S; i <= S * 2; i += step) {
-    for (const ctx of [xCol, xBmp]) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i + S, S);
-      ctx.moveTo(i + S, 0);
-      ctx.lineTo(i, S);
-      ctx.stroke();
-    }
+  // Structural ribs separating two 0.5m modules per 128px tile
+  for (const rx of [0, 64]) {
+    pxRect(xCol, '#1e293b', rx, 0, 4, S);
+    pxRect(xCol, '#334155', rx + 4, 0, 2, S);
+    pxRect(xBmp, '#505050', rx, 0, 5, S);
+    pxRect(xRgh, '#686868', rx, 0, 5, S);
   }
 
-  // Tufted fastener rivets at intersections
-  for (let y = step / 2; y < S; y += step) {
-    for (let x = step / 2; x < S; x += step) {
-      if (Math.abs(x - 0) < 22 || Math.abs(x - S / 2) < 22) continue;
-      xCol.fillStyle = '#94a3b8';
-      xCol.beginPath();
-      xCol.arc(x, y, 4, 0, Math.PI * 2);
-      xCol.fill();
+  // Top Velcro + NASA utility rail (O2 green + 120VDC EVA orange/blue stripe)
+  pxRect(xCol, '#334155', 0, 0, S, 7);
+  pxRect(xCol, '#0b3d91', 0, 2, S, 2);
+  pxRect(xCol, '#ff4f00', 0, 5, S, 1);
 
-      xBmp.fillStyle = '#ffffff';
-      xBmp.beginPath();
-      xBmp.arc(x, y, 5, 0, Math.PI * 2);
-      xBmp.fill();
-    }
-  }
+  // Scuff baseboard flange at bottom with EVA orange interlock blocks
+  pxRect(xCol, '#0b3d91', 0, S - 12, S, 12);
+  pxRect(xCol, '#dde5ee', 0, S - 13, S, 1);
+  pxRect(xCol, '#ff4f00', 10, S - 8, 12, 3);
+  pxRect(xCol, '#ff4f00', 74, S - 8, 12, 3);
+  pxRect(xBmp, '#909090', 0, S - 12, S, 12);
 
-  // Bottom scuff bumper & top Velcro/handrail trim (Navy #0F2547 + Crimson #D93025 warning accents)
-  xCol.fillStyle = '#0F2547';
-  xCol.fillRect(0, S - 42, S, 42);
-  xCol.fillStyle = '#F4F6F8';
-  xCol.fillRect(0, S - 45, S, 3);
-  xCol.fillStyle = '#D93025';
-  xCol.fillRect(28, S - 30, 44, 10);
-  xCol.fillRect(S / 2 + 28, S - 30, 44, 10);
-  // Stencil module numbers '4' & '6' from MEDS/ISS hardware guidelines
-  xCol.fillStyle = '#080A0F';
-  xCol.font = 'bold 26px monospace';
-  xCol.fillText('04', 28, 42);
-  xCol.fillText('06', S / 2 + 28, 42);
-  // Exposed navy + red cable harness in top track
-  xCol.fillStyle = '#7A8288';
-  xCol.fillRect(0, 0, S, 16);
-  xCol.fillStyle = '#0F2547';
-  xCol.fillRect(0, 4, S, 5);
-  xCol.fillStyle = '#D93025';
-  xCol.fillRect(0, 10, S, 2);
+  // Stencil module pixel markers ('04' & '06')
+  pxRect(xCol, '#1e293b', 9, 10, 6, 8);
+  pxRect(xCol, '#dde5ee', 11, 12, 2, 4);
+  pxRect(xCol, '#1e293b', 73, 10, 6, 8);
+  pxRect(xCol, '#dde5ee', 75, 12, 2, 4);
 
   return {
     map: finalizeTexture(cCol, true, 1, 1, aniso),
@@ -147,84 +185,59 @@ function createPaddedWallMaps(aniso: number): PbrMaterialMaps {
   };
 }
 
+// Machine Room Aluminum Bulkhead (128x128 Pixel Art, color-coded NASA pipe stripes O2/H2O/ATCS/120VDC)
 function createMetalBulkheadMaps(aniso: number): PbrMaterialMaps {
-  const S = 512;
+  const S = 128;
   const [cCol, xCol] = makeCanvas(S);
   const [cBmp, xBmp] = makeCanvas(S);
   const [cRgh, xRgh] = makeCanvas(S);
 
-  xCol.fillStyle = '#3b485b';
-  xCol.fillRect(0, 0, S, S);
-  xBmp.fillStyle = '#a0a0a0';
-  xBmp.fillRect(0, 0, S, S);
-  xRgh.fillStyle = '#707070';
-  xRgh.fillRect(0, 0, S, S);
+  ditherRect(xCol, 0, 0, S, S, '#334155', '#1e293b', 0.35, 1);
+  pxRect(xBmp, '#989898', 0, 0, S, S);
+  pxRect(xRgh, '#686868', 0, 0, S, S);
 
-  // Subtle brushed aluminum horizontal grain
-  for (let y = 0; y < S; y += 3) {
-    const v = 50 + ((y * 37) % 18);
-    xCol.fillStyle = `rgba(${v + 40}, ${v + 55}, ${v + 75}, 0.14)`;
-    xCol.fillRect(0, y, S, 1);
+  // Pixel horizontal metal grain bands
+  for (let y = 0; y < S; y += 2) {
+    if ((y * 7) % 5 === 0) {
+      ditherRect(xCol, 0, y, S, 1, '#334155', '#475569', 0.45, 1);
+    }
   }
 
-  // Panel seam bevels
-  xCol.strokeStyle = '#1e293b';
-  xCol.lineWidth = 4;
-  xCol.strokeRect(4, 4, S - 8, S / 2 - 8);
-  xCol.strokeRect(4, S / 2 + 4, S - 8, S / 2 - 8);
-
-  xBmp.strokeStyle = '#303030';
-  xBmp.lineWidth = 5;
-  xBmp.strokeRect(4, 4, S - 8, S / 2 - 8);
-  xBmp.strokeRect(4, S / 2 + 4, S - 8, S / 2 - 8);
-
-  // Corner hex bolts
-  const bolts: [number, number][] = [
-    [20, 20], [S - 20, 20], [20, S / 2 - 20], [S - 20, S / 2 - 20],
-    [20, S / 2 + 20], [S - 20, S / 2 + 20], [20, S - 20], [S - 20, S - 20],
-  ];
-  for (const [bx, by] of bolts) {
-    xCol.fillStyle = '#94a3b8';
-    xCol.beginPath();
-    xCol.arc(bx, by, 5, 0, Math.PI * 2);
-    xCol.fill();
-    xBmp.fillStyle = '#ffffff';
-    xBmp.beginPath();
-    xBmp.arc(bx, by, 6, 0, Math.PI * 2);
-    xBmp.fill();
-    xRgh.fillStyle = '#383838';
-    xRgh.beginPath();
-    xRgh.arc(bx, by, 6, 0, Math.PI * 2);
-    xRgh.fill();
+  // Two stacked armored bulkhead cassettes with dark seams
+  for (const py of [2, 66]) {
+    pxRect(xCol, '#1e293b', 2, py, S - 4, 60);
+    ditherRect(xCol, 4, py + 2, S - 8, 56, '#334155', '#475569', 0.25, 1);
+    pxRect(xBmp, '#404040', 2, py, S - 4, 60);
+    pxRect(xBmp, '#b4b4b4', 4, py + 2, S - 8, 56);
+    // Corner hex rivets
+    for (const [bx, by] of [
+      [7, py + 5],
+      [S - 9, py + 5],
+      [7, py + 53],
+      [S - 9, py + 53],
+    ]) {
+      pxRect(xCol, '#94a3b8', bx, by, 3, 3);
+      pxRect(xBmp, '#ffffff', bx, by, 3, 3);
+      pxRect(xRgh, '#303030', bx, by, 3, 3);
+    }
   }
 
-  // Navy conduit harnesses & crimson valve stencil on bulkhead
-  xCol.fillStyle = '#0F2547';
-  xCol.fillRect(42, 34, S - 84, 10);
-  xCol.fillStyle = '#D93025';
-  xCol.fillRect(S - 96, 32, 36, 14);
-  xCol.fillStyle = '#F4F6F8';
-  xCol.font = 'bold 18px monospace';
-  xCol.fillText('NASA · ISS-RACK', 46, S / 2 - 26);
+  // NASA coded utility pipe bundle along upper flange:
+  // Green = O2 (OGA), Cyan = H2O (WRS), Amber = ATCS Ammonia, Orange = 120V DC MBSU/RPCM
+  pxRect(xCol, '#0f172a', 12, 9, S - 24, 14);
+  pxRect(xCol, '#22c55e', 14, 10, S - 28, 2); // O2 line
+  pxRect(xCol, '#38bdf8', 14, 13, S - 28, 2); // Potable H2O line
+  pxRect(xCol, '#f59e0b', 14, 16, S - 28, 2); // ATCS thermal loop
+  pxRect(xCol, '#ff4f00', 14, 19, S - 28, 2); // 120V DC RPCM power bus
+  pxRect(xBmp, '#dcdcdc', 12, 9, S - 24, 14);
 
-  // Caution stripe near bottom flange (Navy/Crimson/Black industrial trim)
-  xCol.save();
-  xCol.beginPath();
-  xCol.rect(0, S - 28, S, 24);
-  xCol.clip();
-  xCol.fillStyle = '#D93025';
-  xCol.fillRect(0, S - 28, S, 24);
-  xCol.fillStyle = '#080A0F';
-  for (let x = -40; x < S + 40; x += 32) {
-    xCol.beginPath();
-    xCol.moveTo(x, S - 28);
-    xCol.lineTo(x + 16, S - 28);
-    xCol.lineTo(x + 4, S - 4);
-    xCol.lineTo(x - 12, S - 4);
-    xCol.closePath();
-    xCol.fill();
+  // Diagonal EVA hazard stripe at bottom flange
+  for (let x = 0; x < S; x++) {
+    for (let y = 0; y < 8; y++) {
+      const band = Math.floor((x + y) / 8) % 2 === 0;
+      pxRect(xCol, band ? '#ff4f00' : '#1e293b', x, S - 9 + y, 1, 1);
+    }
   }
-  xCol.restore();
 
   return {
     map: finalizeTexture(cCol, true, 1, 1, aniso),
@@ -233,52 +246,50 @@ function createMetalBulkheadMaps(aniso: number): PbrMaterialMaps {
   };
 }
 
+// Perforated floor grate over under-deck O2/H2O/ATCS/120VDC subfloor conduits (128x128 Pixel Art)
 function createIsogridFloorMaps(aniso: number): PbrMaterialMaps {
-  const S = 512;
+  const S = 128;
   const [cCol, xCol] = makeCanvas(S);
   const [cBmp, xBmp] = makeCanvas(S);
   const [cRgh, xRgh] = makeCanvas(S);
 
-  // Non-slip dark slate blue/charcoal deck plating
-  xCol.fillStyle = '#1f2937';
-  xCol.fillRect(0, 0, S, S);
-  xBmp.fillStyle = '#707070';
-  xBmp.fillRect(0, 0, S, S);
-  xRgh.fillStyle = '#999999';
-  xRgh.fillRect(0, 0, S, S);
+  // Deep subfloor bay revealing utility ducts underneath perforated floor tiles
+  pxRect(xCol, '#0f172a', 0, 0, S, S);
+  pxRect(xBmp, '#383838', 0, 0, S, S);
+  pxRect(xRgh, '#999999', 0, 0, S, S);
 
-  // Raised machined floor tiles (2x2 grid)
+  // Subfloor utility pipes visible through deck grating slots
+  pxRect(xCol, '#0b3d91', 0, 22, S, 6);
+  pxRect(xCol, '#0284c7', 0, 30, S, 4);
+  pxRect(xCol, '#16a34a', 0, 86, S, 4);
+  pxRect(xCol, '#ff4f00', 0, 94, S, 3);
+
+  // 2x2 raised aluminum floor tiles (64x64 each)
   const half = S / 2;
   for (let gy = 0; gy < 2; gy++) {
     for (let gx = 0; gx < 2; gx++) {
       const ox = gx * half;
       const oy = gy * half;
-      xCol.fillStyle = '#283548';
-      xCol.fillRect(ox + 6, oy + 6, half - 12, half - 12);
-      xBmp.fillStyle = '#b8b8b8';
-      xBmp.fillRect(ox + 6, oy + 6, half - 12, half - 12);
-      xRgh.fillStyle = '#787878';
-      xRgh.fillRect(ox + 6, oy + 6, half - 12, half - 12);
+      pxRect(xCol, '#1e293b', ox + 1, oy + 1, half - 2, half - 2);
+      ditherRect(xCol, ox + 2, oy + 2, half - 4, half - 4, '#334155', '#1e293b', 0.3, 1);
+      pxRect(xBmp, '#b4b4b4', ox + 2, oy + 2, half - 4, half - 4);
+      pxRect(xRgh, '#646464', ox + 2, oy + 2, half - 4, half - 4);
 
-      // Machined anti-slip tread ribs
-      xCol.fillStyle = '#334155';
-      xBmp.fillStyle = '#ffffff';
-      for (let ry = oy + 24; ry < oy + half - 20; ry += 22) {
-        for (let rx = ox + 22; rx < ox + half - 24; rx += 34) {
-          xCol.fillRect(rx, ry, 20, 6);
-          xBmp.fillRect(rx, ry, 20, 6);
+      // Perforated grate slots letting colored underfloor ducts peek through
+      for (let sy = oy + 14; sy <= oy + half - 14; sy += 8) {
+        for (let sx = ox + 8; sx <= ox + half - 14; sx += 10) {
+          pxRect(xCol, '#0f172a', sx, sy, 6, 3);
+          if (sy >= 20 && sy <= 34) pxRect(xCol, '#0284c7', sx + 1, sy + 1, 4, 1);
+          if (sy >= 84 && sy <= 98) pxRect(xCol, sy < 90 ? '#22c55e' : '#ff4f00', sx + 1, sy + 1, 4, 1);
+          pxRect(xBmp, '#303030', sx, sy, 6, 3);
         }
       }
 
-      // Tie-down seat-track ring at center
-      xCol.strokeStyle = '#475569';
-      xCol.lineWidth = 3;
-      xCol.beginPath();
-      xCol.arc(ox + half / 2, oy + half / 2, 18, 0, Math.PI * 2);
-      xCol.stroke();
-
-      xCol.fillStyle = '#0ea5e9';
-      xCol.fillRect(ox + 14, oy + 14, 14, 3);
+      // Tie-down ring & blue seat-track alignment notch
+      pxRect(xCol, '#475569', ox + half / 2 - 4, oy + half / 2 - 4, 8, 8);
+      pxRect(xCol, '#1e293b', ox + half / 2 - 2, oy + half / 2 - 2, 4, 4);
+      pxRect(xCol, '#38bdf8', ox + 4, oy + 4, 5, 2);
+      pxRect(xCol, '#dde5ee', ox + half - 9, oy + half - 6, 5, 2);
     }
   }
 
@@ -290,45 +301,31 @@ function createIsogridFloorMaps(aniso: number): PbrMaterialMaps {
 }
 
 function createCeilingPanelMaps(aniso: number): PbrMaterialMaps {
-  const S = 512;
+  const S = 128;
   const [cCol, xCol] = makeCanvas(S);
   const [cBmp, xBmp] = makeCanvas(S);
   const [cRgh, xRgh] = makeCanvas(S);
 
-  xCol.fillStyle = '#cbd5e1';
-  xCol.fillRect(0, 0, S, S);
-  xBmp.fillStyle = '#c8c8c8';
-  xBmp.fillRect(0, 0, S, S);
-  xRgh.fillStyle = '#b4b4b4';
-  xRgh.fillRect(0, 0, S, S);
+  ditherRect(xCol, 0, 0, S, S, '#dde5ee', '#cbd5e1', 0.3, 1);
+  pxRect(xBmp, '#c0c0c0', 0, 0, S, S);
+  pxRect(xRgh, '#b4b4b4', 0, 0, S, S);
 
-  // Structural ribs
-  xCol.strokeStyle = '#475569';
-  xCol.lineWidth = 10;
-  xCol.strokeRect(5, 5, S - 10, S - 10);
-  xCol.beginPath();
-  xCol.moveTo(S / 2, 0);
-  xCol.lineTo(S / 2, S);
-  xCol.moveTo(0, S / 2);
-  xCol.lineTo(S, S / 2);
-  xCol.stroke();
+  // Crisp pixel structural grid ribs
+  pxRect(xCol, '#334155', 0, 0, S, 3);
+  pxRect(xCol, '#334155', 0, S - 3, S, 3);
+  pxRect(xCol, '#334155', 0, 0, 3, S);
+  pxRect(xCol, '#334155', S - 3, 0, 3, S);
+  pxRect(xCol, '#475569', S / 2 - 1, 0, 2, S);
+  pxRect(xCol, '#475569', 0, S / 2 - 1, S, 2);
 
-  xBmp.strokeStyle = '#505050';
-  xBmp.lineWidth = 12;
-  xBmp.strokeRect(5, 5, S - 10, S - 10);
-  xBmp.beginPath();
-  xBmp.moveTo(S / 2, 0);
-  xBmp.lineTo(S / 2, S);
-  xBmp.moveTo(0, S / 2);
-  xBmp.lineTo(S, S / 2);
-  xBmp.stroke();
+  pxRect(xBmp, '#505050', 0, 0, S, 3);
+  pxRect(xBmp, '#505050', S / 2 - 1, 0, 2, S);
+  pxRect(xBmp, '#505050', 0, S / 2 - 1, S, 2);
 
-  // Micro-ventilation louver slats in one quadrant
-  xCol.fillStyle = '#64748b';
-  xBmp.fillStyle = '#383838';
-  for (let y = 38; y < 220; y += 14) {
-    xCol.fillRect(36, y, 180, 6);
-    xBmp.fillRect(36, y, 180, 6);
+  // Ventilation louver slats in quadrant 1
+  for (let y = 10; y < 54; y += 5) {
+    pxRect(xCol, '#475569', 10, y, 44, 2);
+    pxRect(xBmp, '#383838', 10, y, 44, 2);
   }
 
   return {
@@ -339,42 +336,28 @@ function createCeilingPanelMaps(aniso: number): PbrMaterialMaps {
 }
 
 function createBedFabricMaps(aniso: number): PbrMaterialMaps {
-  const S = 512;
+  const S = 128;
   const [cCol, xCol] = makeCanvas(S);
   const [cBmp, xBmp] = makeCanvas(S);
   const [cRgh, xRgh] = makeCanvas(S);
 
-  // Rich quilted NASA sleep-station royal/slate blue textile
-  xCol.fillStyle = '#1e40af';
-  xCol.fillRect(0, 0, S, S);
-  xBmp.fillStyle = '#d0d0d0';
-  xBmp.fillRect(0, 0, S, S);
-  xRgh.fillStyle = '#dfdfdf';
-  xRgh.fillRect(0, 0, S, S);
+  // NASA royal/slate quilted crew sleeping bag with Bayer 4x4 baffles
+  pxRect(xCol, '#0b3d91', 0, 0, S, S);
+  pxRect(xBmp, '#c8c8c8', 0, 0, S, S);
+  pxRect(xRgh, '#dfdfdf', 0, 0, S, S);
 
-  // Thermal baffle channels
-  for (let y = 0; y < S; y += 64) {
-    const grad = xCol.createLinearGradient(0, y, 0, y + 64);
-    grad.addColorStop(0, '#1e3a8a');
-    grad.addColorStop(0.5, '#2563eb');
-    grad.addColorStop(1, '#1e3a8a');
-    xCol.fillStyle = grad;
-    xCol.fillRect(0, y, S, 64);
-
-    xCol.fillStyle = '#0f172a';
-    xCol.fillRect(0, y, S, 4);
-
-    xBmp.fillStyle = '#555555';
-    xBmp.fillRect(0, y, S, 5);
+  for (let y = 0; y < S; y += 16) {
+    ditherRect(xCol, 0, y + 1, S, 6, '#0b3d91', '#1d4ed8', 0.45, 1);
+    ditherRect(xCol, 0, y + 7, S, 8, '#1d4ed8', '#0b3d91', 0.35, 1);
+    pxRect(xCol, '#0f172a', 0, y, S, 1);
+    pxRect(xBmp, '#555555', 0, y, S, 2);
   }
 
-  // Nylon restraint strap running down center
-  xCol.fillStyle = '#cbd5e1';
-  xCol.fillRect(0, S / 2 - 18, S, 36);
-  xCol.fillStyle = '#334155';
-  xCol.fillRect(S / 2 - 22, S / 2 - 22, 44, 44);
-  xBmp.fillStyle = '#ffffff';
-  xBmp.fillRect(S / 2 - 22, S / 2 - 22, 44, 44);
+  // Nylon zero-g restraint belt & NASA buckle
+  pxRect(xCol, '#dde5ee', 0, S / 2 - 4, S, 8);
+  pxRect(xCol, '#334155', S / 2 - 6, S / 2 - 6, 12, 12);
+  pxRect(xCol, '#ff4f00', S / 2 - 2, S / 2 - 2, 4, 4);
+  pxRect(xBmp, '#ffffff', S / 2 - 6, S / 2 - 6, 12, 12);
 
   return {
     map: finalizeTexture(cCol, true, 1, 1, aniso),
@@ -384,202 +367,210 @@ function createBedFabricMaps(aniso: number): PbrMaterialMaps {
 }
 
 function createSpaceBackdropTexture(aniso: number): THREE.CanvasTexture {
-  const W = 1024;
-  const H = 512;
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2D context unavailable for space backdrop');
+  const W = 256;
+  const H = 128;
+  const [canvas, ctx] = makeCanvas(W, H);
 
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#020510');
-  bg.addColorStop(0.7, '#061229');
-  bg.addColorStop(1, '#0b1e3d');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
+  // Layered Bayer-dithered deep orbit gradient (no CanvasGradient)
+  pxRect(ctx, '#020510', 0, 0, W, H);
+  ditherRect(ctx, 0, 48, W, 38, '#020510', '#061229', 0.55, 2);
+  ditherRect(ctx, 0, 86, W, 42, '#061229', '#0b1e3d', 0.65, 2);
 
-  // Subtle Milky Way dust nebula
-  const neb = ctx.createRadialGradient(W * 0.72, H * 0.35, 10, W * 0.72, H * 0.35, 340);
-  neb.addColorStop(0, 'rgba(56, 189, 248, 0.20)');
-  neb.addColorStop(0.5, 'rgba(59, 130, 246, 0.08)');
-  neb.addColorStop(1, 'rgba(2, 6, 23, 0)');
-  ctx.fillStyle = neb;
-  ctx.fillRect(0, 0, W, H);
-
-  // Crisp stars (deterministic LCG)
+  // Crisp 1px & 2px stars
   let seed = 42069;
   const rand = () => {
     seed = (seed * 1664525 + 1013904223) >>> 0;
     return seed / 4294967296;
   };
-  for (let i = 0; i < 420; i++) {
-    const x = rand() * W;
-    const y = rand() * H * 0.85;
-    const r = rand() < 0.12 ? 1.9 : rand() < 0.4 ? 1.2 : 0.75;
-    const alpha = 0.45 + rand() * 0.55;
-    ctx.fillStyle = rand() < 0.18 ? `rgba(186,230,253,${alpha})` : `rgba(255,255,255,${alpha})`;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
+  for (let i = 0; i < 220; i++) {
+    const sx = Math.floor(rand() * W);
+    const sy = Math.floor(rand() * (H * 0.85));
+    const sz = rand() < 0.14 ? 2 : 1;
+    pxRect(ctx, rand() < 0.22 ? '#bae6fd' : '#dde5ee', sx, sy, sz, sz);
   }
 
-  // Earth / Blue Planet curved orbital limb at bottom-left
-  ctx.save();
-  const limbX = W * 0.38;
-  const limbY = H * 1.48;
-  const limbR = H * 0.95;
-  const atmo = ctx.createRadialGradient(limbX, limbY, limbR - 8, limbX, limbY, limbR + 36);
-  atmo.addColorStop(0, 'rgba(56, 189, 248, 0.95)');
-  atmo.addColorStop(0.45, 'rgba(96, 165, 250, 0.38)');
-  atmo.addColorStop(1, 'rgba(2, 6, 23, 0)');
-  ctx.fillStyle = atmo;
-  ctx.beginPath();
-  ctx.arc(limbX, limbY, limbR + 36, 0, Math.PI * 2);
-  ctx.fill();
+  // Pixelated Blue Earth limb + stepped orbital atmosphere halo
+  const limbX = Math.floor(W * 0.38);
+  const limbY = Math.floor(H * 1.48);
+  const limbR = Math.floor(H * 0.95);
+  pxCircle(ctx, limbX, limbY, limbR + 7, '#0b3d91');
+  pxCircle(ctx, limbX, limbY, limbR + 3, '#38bdf8');
+  pxCircle(ctx, limbX, limbY, limbR, '#1d4ed8');
+  // Earth cloud wisps in crisp pixel blocks
+  for (let cx = 24; cx < 165; cx += 9) {
+    const dy = Math.floor(H - 12 + Math.sin(cx * 0.14) * 5);
+    if (dy < H) pxRect(ctx, '#dde5ee', cx, dy, 6, 2);
+  }
 
-  const planetGrad = ctx.createRadialGradient(limbX - 120, limbY - 260, 40, limbX, limbY, limbR);
-  planetGrad.addColorStop(0, '#38bdf8');
-  planetGrad.addColorStop(0.45, '#1d4ed8');
-  planetGrad.addColorStop(1, '#082f49');
-  ctx.fillStyle = planetGrad;
-  ctx.beginPath();
-  ctx.arc(limbX, limbY, limbR, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  // Pixel Moon disc upper-right
+  const mx = Math.floor(W * 0.78);
+  const my = Math.floor(H * 0.28);
+  pxCircle(ctx, mx, my, 10, '#334155');
+  pxCircle(ctx, mx - 1, my - 1, 8, '#94a3b8');
+  pxCircle(ctx, mx - 2, my - 2, 5, '#dde5ee');
+  pxRect(ctx, '#64748b', mx + 2, my, 2, 2);
+  pxRect(ctx, '#64748b', mx - 3, my + 2, 2, 1);
 
-  // Small distant Moon sphere at upper-right
-  const mx = W * 0.78;
-  const my = H * 0.28;
-  const mGrad = ctx.createRadialGradient(mx - 10, my - 10, 4, mx, my, 36);
-  mGrad.addColorStop(0, '#f1f5f9');
-  mGrad.addColorStop(0.65, '#94a3b8');
-  mGrad.addColorStop(1, '#1e293b');
-  ctx.fillStyle = mGrad;
-  ctx.beginPath();
-  ctx.arc(mx, my, 36, 0, Math.PI * 2);
-  ctx.fill();
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = aniso;
-  tex.needsUpdate = true;
-  return tex;
+  return finalizeTexture(canvas, true, 1, 1, aniso, true);
 }
 
 function createMedsCockpitTexture(aniso: number): THREE.CanvasTexture {
-  const W = 512;
-  const H = 256;
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2D context unavailable for MEDS texture');
+  const W = 256;
+  const H = 128;
+  const [canvas, ctx] = makeCanvas(W, H);
 
-  ctx.fillStyle = '#7A8288';
-  ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = '#080A0F';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(4, 4, W - 8, H - 8);
+  pxRect(ctx, '#334155', 0, 0, W, H);
+  pxRect(ctx, '#1e293b', 3, 3, W - 6, H - 6);
+  pxRect(ctx, '#dde5ee', 10, 6, 62, 6); // MEDS header tag
+  pxRect(ctx, '#ff4f00', 78, 6, 20, 6);
+  pxRect(ctx, '#0b3d91', W - 72, 6, 62, 6);
 
-  // Top labels '4' and '6' + matte toggle switch rows
-  ctx.fillStyle = '#080A0F';
-  ctx.font = 'bold 20px monospace';
-  ctx.fillText('MEDS-04', 18, 28);
-  ctx.fillText('GLASS COCKPIT (11 LCD)', 135, 28);
-  ctx.fillText('MEDS-06', W - 102, 28);
-
-  // 5x2 primary LCD displays glowing deep navy (#0F2547) with cyan/white/crimson telemetry
+  // 5x2 NASA Glass Cockpit crisp pixel MFD displays
   for (let row = 0; row < 2; row++) {
     for (let col = 0; col < 5; col++) {
-      const dx = 18 + col * 96;
-      const dy = 42 + row * 94;
-      ctx.fillStyle = '#080A0F';
-      ctx.fillRect(dx, dy, 88, 76);
-      ctx.fillStyle = '#0F2547';
-      ctx.fillRect(dx + 5, dy + 5, 78, 66);
-
-      // Synthetic artificial horizon / orbit trace / bar graphs
-      ctx.strokeStyle = col === 2 && row === 0 ? '#D93025' : '#38bdf8';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(dx + 12, dy + 42);
-      ctx.lineTo(dx + 32, dy + 24);
-      ctx.lineTo(dx + 52, dy + 35);
-      ctx.lineTo(dx + 74, dy + 16);
-      ctx.stroke();
-
-      ctx.fillStyle = '#F4F6F8';
-      ctx.fillRect(dx + 10, dy + 54, 42, 6);
-      ctx.fillStyle = row === 1 && col >= 3 ? '#D93025' : '#22c55e';
-      ctx.fillRect(dx + 58, dy + 54, 18, 6);
+      const dx = 10 + col * 48;
+      const dy = 18 + row * 52;
+      pxRect(ctx, '#090d16', dx, dy, 44, 46);
+      pxRect(ctx, '#0b3d91', dx + 2, dy + 2, 40, 42);
+      // Artificial horizon / stepped orbital curve
+      const traceCol = col === 2 && row === 0 ? '#ef4444' : '#38bdf8';
+      pxRect(ctx, traceCol, dx + 5, dy + 24, 9, 2);
+      pxRect(ctx, traceCol, dx + 13, dy + 17, 10, 2);
+      pxRect(ctx, traceCol, dx + 22, dy + 21, 9, 2);
+      pxRect(ctx, traceCol, dx + 30, dy + 12, 8, 2);
+      // Telemetry bar readout + status square
+      pxRect(ctx, '#dde5ee', dx + 5, dy + 34, 21, 4);
+      pxRect(ctx, row === 1 && col >= 3 ? '#ff4f00' : '#22c55e', dx + 29, dy + 34, 10, 4);
     }
   }
 
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = aniso;
-  tex.needsUpdate = true;
-  return tex;
+  return finalizeTexture(canvas, true, 1, 1, aniso, true);
 }
 
 function createAphBotanicalTexture(aniso: number): THREE.CanvasTexture {
-  const S = 512;
+  const S = 128;
   const [canvas, ctx] = makeCanvas(S);
 
-  // Dark gray + navy frame
-  ctx.fillStyle = '#334155';
-  ctx.fillRect(0, 0, S, S);
-  ctx.fillStyle = '#0F2547';
-  ctx.fillRect(16, 16, S - 32, S - 32);
+  pxRect(ctx, '#334155', 0, 0, S, S);
+  pxRect(ctx, '#0b3d91', 4, 4, S - 8, S - 8);
 
-  // APH/Veggie chamber glowing magenta-purple (630 nm red + 450 nm blue)
-  const glow = ctx.createLinearGradient(0, 60, 0, 420);
-  glow.addColorStop(0, '#f0abfc');
-  glow.addColorStop(0.35, '#d946ef');
-  glow.addColorStop(0.75, '#6b21a8');
-  glow.addColorStop(1, '#1e1b4b');
-  ctx.fillStyle = glow;
-  ctx.fillRect(36, 56, S - 72, 340);
+  // 630nm + 450nm APH grow bay with Bayer 4x4 stepped spectral bands
+  ditherRect(ctx, 10, 14, S - 20, 32, '#f0abfc', '#d946ef', 0.45, 1);
+  ditherRect(ctx, 10, 46, S - 20, 34, '#d946ef', '#6b21a8', 0.55, 1);
+  ditherRect(ctx, 10, 80, S - 20, 18, '#6b21a8', '#1e1b4b', 0.65, 1);
 
-  // Porous clay pillows & gray fabric wicks + dwarf tomato silhouettes
-  for (let i = 0; i < 6; i++) {
-    const px = 56 + i * 68;
-    ctx.fillStyle = '#7A8288';
-    ctx.fillRect(px, 342, 52, 26); // clay pillow
-    ctx.fillStyle = '#cbd5e1';
-    ctx.fillRect(px + 20, 326, 12, 16); // gray wick
-    ctx.fillStyle = '#15803d';
-    ctx.beginPath();
-    ctx.arc(px + 26, 286 - (i % 2) * 18, 24, 0, Math.PI * 2);
-    ctx.fill();
-    // Dwarf VEG-05 tomatoes in crimson red
-    ctx.fillStyle = '#D93025';
-    ctx.beginPath();
-    ctx.arc(px + 18, 290 - (i % 2) * 18, 5, 0, Math.PI * 2);
-    ctx.arc(px + 34, 278 - (i % 2) * 18, 5, 0, Math.PI * 2);
-    ctx.fill();
+  // 5 Porous clay pillows + pixel dwarf tomato bushes + VEG-05 fruits
+  for (let i = 0; i < 5; i++) {
+    const px = 14 + i * 21;
+    pxRect(ctx, '#64748b', px, 84, 15, 7);
+    pxRect(ctx, '#dde5ee', px + 5, 80, 4, 4);
+    pxCircle(ctx, px + 7, 70 - (i % 2) * 5, 7, '#15803d');
+    pxCircle(ctx, px + 7, 68 - (i % 2) * 5, 4, '#22c55e');
+    // VEG-05 crimson tomatoes
+    pxRect(ctx, '#ef4444', px + 4, 70 - (i % 2) * 5, 2, 2);
+    pxRect(ctx, '#ef4444', px + 9, 66 - (i % 2) * 5, 2, 2);
   }
 
-  // White control strip with crimson indicators and blue water tubing
-  ctx.fillStyle = '#F4F6F8';
-  ctx.fillRect(24, 412, S - 48, 76);
-  ctx.fillStyle = '#0F2547';
-  ctx.fillRect(42, 434, 180, 14);
-  ctx.fillStyle = '#D93025';
-  ctx.fillRect(250, 430, 18, 18);
-  ctx.fillRect(280, 430, 18, 18);
-  ctx.fillStyle = '#22c55e';
-  ctx.fillRect(310, 430, 18, 18);
-  ctx.fillStyle = '#080A0F';
-  ctx.font = 'bold 16px monospace';
-  ctx.fillText('APH 630nm+450nm · 180 SENS', 42, 472);
+  // White control plate + telemetry indicators
+  pxRect(ctx, '#dde5ee', 6, 102, S - 12, 20);
+  pxRect(ctx, '#0b3d91', 12, 108, 48, 5);
+  pxRect(ctx, '#ff4f00', 68, 107, 6, 6);
+  pxRect(ctx, '#ef4444', 78, 107, 6, 6);
+  pxRect(ctx, '#22c55e', 88, 107, 6, 6);
 
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = aniso;
-  tex.needsUpdate = true;
-  return tex;
+  return finalizeTexture(canvas, true, 1, 1, aniso, true);
+}
+
+// Physical ISPR Rack texture (OGA / CDRA / Sabatier / WRS / MBSU-RPCM manifolds + dial gauges)
+function createIsprEclssRackTexture(aniso: number): THREE.CanvasTexture {
+  const W = 128;
+  const H = 256;
+  const [canvas, ctx] = makeCanvas(W, H);
+
+  pxRect(ctx, '#1e293b', 0, 0, W, H);
+  ditherRect(ctx, 4, 4, W - 8, H - 8, '#334155', '#1e293b', 0.35, 1);
+
+  // Top ISPR header bar + latches
+  pxRect(ctx, '#0b3d91', 6, 8, W - 12, 18);
+  pxRect(ctx, '#dde5ee', 12, 14, 52, 5);
+  pxRect(ctx, '#ff4f00', W - 26, 12, 14, 9);
+
+  // 4 stacked instrumentation bays: Manometer Gauges, OGA/CDRA piping, RPCM breakers, LEDs
+  for (let bay = 0; bay < 4; bay++) {
+    const by = 32 + bay * 54;
+    pxRect(ctx, '#0f172a', 8, by, W - 16, 48);
+    pxRect(ctx, '#334155', 10, by + 2, W - 20, 44);
+
+    // Circular pixel pressure manometer dial
+    pxCircle(ctx, 26, by + 24, 11, '#090d16');
+    pxCircle(ctx, 26, by + 24, 9, '#dde5ee');
+    pxRect(ctx, '#ef4444', 26, by + 17, 2, 7); // kPa dial needle
+    pxRect(ctx, '#1e293b', 25, by + 23, 3, 3);
+
+    // 4 vertical breaker/valve rockers + LEDs
+    for (let k = 0; k < 4; k++) {
+      const kx = 46 + k * 17;
+      pxRect(ctx, '#1e293b', kx, by + 14, 12, 22);
+      pxRect(ctx, k === 2 && bay === 2 ? '#ff4f00' : '#22c55e', kx + 3, by + 8, 6, 4);
+      pxRect(ctx, '#dde5ee', kx + 2, by + 18, 8, 9);
+    }
+
+    // Color-coded pipe bus across bay bottom
+    const pipeCol = ['#22c55e', '#38bdf8', '#f59e0b', '#ff4f00'][bay];
+    pxRect(ctx, pipeCol, 12, by + 40, W - 24, 4);
+  }
+
+  return finalizeTexture(canvas, true, 1, 1, aniso, true);
+}
+
+// ISS Common Berthing Mechanism (CBM) circular pressure hatch + handwheel (128x128 Pixel Art)
+function createCbmHatchTexture(aniso: number): THREE.CanvasTexture {
+  const S = 128;
+  const [canvas, ctx] = makeCanvas(S);
+
+  pxRect(ctx, '#1e293b', 0, 0, S, S);
+  ditherRect(ctx, 3, 3, S - 6, S - 6, '#334155', '#1e293b', 0.25, 1);
+
+  // Corner EVA caution stripes
+  pxRect(ctx, '#ff4f00', 4, 4, 18, 5);
+  pxRect(ctx, '#ff4f00', S - 22, 4, 18, 5);
+  pxRect(ctx, '#ff4f00', 4, S - 9, 18, 5);
+  pxRect(ctx, '#ff4f00', S - 22, S - 9, 18, 5);
+
+  // Circular CBM hatch ring + radial latching lugs
+  pxCircle(ctx, S / 2, S / 2, 52, '#0b3d91');
+  pxCircle(ctx, S / 2, S / 2, 46, '#dde5ee');
+  ditherRect(ctx, 26, 26, 76, 76, '#dde5ee', '#cbd5e1', 0.35, 1);
+
+  // Clip / frame outer pixels cleanly back to ring
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = x - S / 2;
+      const dy = y - S / 2;
+      const d = Math.hypot(dx, dy);
+      if (d > 46 && d <= 52) pxRect(ctx, '#0b3d91', x, y, 1, 1);
+      if (d > 52) {
+        const checker = ((x >> 2) + (y >> 2)) % 2 === 0;
+        pxRect(ctx, checker ? '#1e293b' : '#334155', x, y, 1, 1);
+      }
+    }
+  }
+
+  // 12 radial CBM perimeter bolts
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    pxRect(ctx, '#1e293b', S / 2 + Math.cos(a) * 48 - 2, S / 2 + Math.sin(a) * 48 - 2, 4, 4);
+  }
+
+  // Center viewport + bright orange hatch handwheel
+  pxCircle(ctx, S / 2, S / 2 - 16, 9, '#0b3d91');
+  pxCircle(ctx, S / 2, S / 2 - 16, 6, '#38bdf8');
+  pxCircle(ctx, S / 2, S / 2 + 12, 14, '#ff4f00');
+  pxCircle(ctx, S / 2, S / 2 + 12, 8, '#dde5ee');
+  pxRect(ctx, '#1e293b', S / 2 - 12, S / 2 + 11, 24, 3);
+  pxRect(ctx, '#1e293b', S / 2 - 1, S / 2, 3, 24);
+
+  return finalizeTexture(canvas, true, 1, 1, aniso, true);
 }
 
 export function createSpaceTextureSet(renderer?: THREE.WebGLRenderer): SpaceTextureSet {
@@ -592,6 +583,8 @@ export function createSpaceTextureSet(renderer?: THREE.WebGLRenderer): SpaceText
   const spaceBackdrop = createSpaceBackdropTexture(maxAniso);
   const medsGlassCockpit = createMedsCockpitTexture(maxAniso);
   const aphBotanicalRack = createAphBotanicalTexture(maxAniso);
+  const isprEclssRack = createIsprEclssRackTexture(maxAniso);
+  const cbmHatchPanel = createCbmHatchTexture(maxAniso);
 
   const disposeMaps = (m: PbrMaterialMaps) => {
     m.map.dispose();
@@ -608,6 +601,8 @@ export function createSpaceTextureSet(renderer?: THREE.WebGLRenderer): SpaceText
     spaceBackdrop,
     medsGlassCockpit,
     aphBotanicalRack,
+    isprEclssRack,
+    cbmHatchPanel,
     dispose: () => {
       disposeMaps(paddedWall);
       disposeMaps(metalBulkhead);
@@ -617,6 +612,8 @@ export function createSpaceTextureSet(renderer?: THREE.WebGLRenderer): SpaceText
       spaceBackdrop.dispose();
       medsGlassCockpit.dispose();
       aphBotanicalRack.dispose();
+      isprEclssRack.dispose();
+      cbmHatchPanel.dispose();
     },
   };
 }

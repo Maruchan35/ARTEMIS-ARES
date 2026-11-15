@@ -12,6 +12,7 @@ export const NASA_CONSTANTS = {
     MOON: { value: 1.62, unit: 'm/s²', source: 'NASA Moon to Mars ESDMD-001 (≈1/6 g · 0.165 g)' },
     MARS: { value: 3.70, unit: 'm/s²', source: 'NASA Moon to Mars ESDMD-001 (≈3/8 g · 0.377 g)' },
     JUPITER: { value: 24.79, unit: 'm/s²', source: 'NASA Planetary Fact Sheet (≈2.528 g cloud-top)' },
+    MICROGRAVITY_ORBIT: { value: 0.00001, unit: 'm/s²', source: 'NASA HIDH NASA/SP-2010-3407 (ISS LEO / Cislunar Free-Fall Microgravity ≈10⁻⁶ g₀)' },
   },
   ASTROPHYSICS_AND_COSMOS: {
     ASTRONOMICAL_UNIT_KM: 149597870.7, // 1 AU (IAU / NASA JPL)
@@ -236,6 +237,65 @@ export const NASA_CONSTANTS = {
     ORION_REENTRY_MACH: 32,
     ORION_REENTRY_MPH: 24581,
   },
+
+  QUEST_AIRLOCK_EVA: {
+    CABIN_NOMINAL_KPA: 101.3,
+    CABIN_NOMINAL_PSI: 14.7,
+    CAMPOUT_O2_PURGE_KPA: 70.3,
+    CAMPOUT_O2_PURGE_PSI: 10.2,
+    SCAVENGE_MID_KPA: 39.5,
+    EMU_SUIT_OP_KPA: 29.6,
+    EMU_SUIT_OP_PSI: 4.3,
+    SCAVENGE_CUTOFF_KPA: 14.0,
+    SCAVENGE_CUTOFF_PSI: 2.0,
+    MPEV_VENT_SAFE_KPA: 2.1,
+    SUIT_O2_DRAIN_PER_MIN_PCT: 0.45,
+    SOURCE: 'NASA SSP-50261 Quest Joint Airlock Depress/Repress & EMU 4.3 psi Operations Manual',
+  },
+
+  ISS_ECLSS_MBSU_RPCM: {
+    SOLAR_PRIMARY_BUS_VDC: 160,
+    SECONDARY_MBSU_RPCM_VDC: 120,
+    RPCM_BUS_TRIP_LIMIT_KWE: 6.2,
+    OGA_POWER_KWE: 1.35,
+    CDRA_POWER_KWE: 1.15,
+    WRS_POWER_KWE: 0.95,
+    ATCS_PUMP_POWER_KWE: 1.05,
+    SABATIER_REACTOR_TEMP_C: 400,
+    WRS_WATER_RECOVERY_PCT: 98.0,
+    CREW_HYDRATION_L_PER_DAY: 2.79,
+    CREW_HYDRATION_MIN_L_PER_DAY: 2.0,
+    ATCS_LOOP_HOT_K: 420,
+    ATCS_LOOP_NOMINAL_K: 277,
+    SOURCE: 'NASA ISS Power Architecture (160/120V DC MBSU-RPCM) & BVAD NASA/TP-2015-218570 Rev 2022',
+  },
+
+  APOLLO_13_AQUARIUS_1970: {
+    O2_TANK2_NOMINAL_PSIA: 1008,
+    O2_TANK2_FAULT_PSIA: 0,
+    O2_TANK1_LEAK_INIT_PSIA: 781.9,
+    MAIN_BUS_A_DROP_V: 28.5,
+    MAIN_BUS_B_DROP_V: 29.0,
+    AQUARIUS_LIFEBOAT_AMPS: 12,
+    AQUARIUS_LIFEBOAT_WATTS: 336,
+    CO2_PEAK_MMHG: 14.9,
+    CO2_SAFE_POST_MAILBOX_MMHG: 1.2,
+    WATER_RATION_L_PER_DAY: 0.2,
+    COLD_SOAK_CABIN_C: 3.3,
+    SOURCE: 'NASA Apollo 13 Mission Report MSC-02680 / NASA-TM-X-66449 (April 1970)',
+  },
+
+  STS_120_P6_4B_2007: {
+    TOTAL_ARRAY_SPAN_FT: 240,
+    SINGLE_WING_LENGTH_FT: 115,
+    TEAR_LENGTH_FT: 2.5,
+    TORN_BAYS_RANGE: '29-30',
+    CUFFLINKS_REQUIRED: 5,
+    REDEPLOY_HALF_BAY_STEPS: 5,
+    CANADARM2_PLUS_OBSS_FT: 90,
+    LIVE_ARRAY_VOLTAGE_VDC: 160,
+    SOURCE: 'NASA STS-120 / Expedition 16 EVA-4 P6-4B Solar Array Wing Repair Report (Nov 2007)',
+  },
 } as const;
 
 export const NASA_REFERENCES = [
@@ -287,5 +347,26 @@ export const NASA_REFERENCES = [
     url: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/',
     summaryEs: 'Gravedades reales (Tierra 9.81, Luna 1.62, Marte 3.70, Júpiter 24.79 m/s²), velocidades de escape, 1 UA e irradiancia solar 1361 W/m² (1/r²).',
     summaryEn: 'Official gravities (Earth 9.81, Moon 1.62, Mars 3.70, Jupiter 24.79 m/s²), escape velocities, 1 AU, and 1361 W/m² solar irradiance (1/r²).',
+  },
+  {
+    id: 'SSP-50261',
+    title: 'NASA ISS Quest Joint Airlock Operations & 160V/120V DC MBSU/RPCM Power Distribution',
+    url: 'https://ntrs.nasa.gov/',
+    summaryEs: 'Secuencia EVA real 101.3 → 70.3 → 39.5 → 29.6 → 14.0 → 2.1 kPa (MPEV), buses primarios 160V DC y secundarios 120V DC (RPCM).',
+    summaryEn: 'Real EVA depress sequence 101.3 → 70.3 → 39.5 → 29.6 → 14.0 → 2.1 kPa (MPEV), 160V DC primary truss & 120V DC MBSU/RPCM buses.',
+  },
+  {
+    id: 'MSC-02680',
+    title: 'Apollo 13 Mission Report (NASA MSC-02680 / NASA-TM-X-66449)',
+    url: 'https://ntrs.nasa.gov/',
+    summaryEs: 'Anomalía Tanque O2 #2 (1008→0 psia), Bus A 28.5V, bote salvavidas Aquarius 12 A (336 W), adaptador Mailbox (14.9→1.2 mmHg CO2) y 0.2 L/día agua.',
+    summaryEn: 'O2 Tank #2 failure (1008→0 psia), Bus A 28.5V, Aquarius 12 A (336 W) lifeboat, Mailbox CO2 adapter (14.9→1.2 mmHg), 0.2 L/day water.',
+  },
+  {
+    id: 'STS-120-EVA4',
+    title: 'STS-120 / Expedition 16 P6-4B Solar Array Wing Emergency EVA-4 Report',
+    url: 'https://www.nasa.gov/mission_pages/shuttle/shuttlemissions/sts120/',
+    summaryEs: 'Desgarro 2.5 ft entre bahías 29-30 del ala 240 ft (160V DC vivos), 5 mancuernillas (cufflinks) instaladas con Canadarm2 + OBSS.',
+    summaryEn: '2.5 ft tear between Bays 29-30 on 240 ft wing (live 160V DC), 5 improvised cufflinks installed via Canadarm2 + OBSS.',
   },
 ] as const;

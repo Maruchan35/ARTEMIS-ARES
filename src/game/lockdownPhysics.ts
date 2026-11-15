@@ -126,18 +126,35 @@ export function createInitialPlayerState(
 export function getThrowProfile(itemKey: string): ThrowProfile {
   let key: keyof typeof VERIFIED_THROW_TYPES = 'DA_Drop_Little';
   if (itemKey.includes('Sample') || itemKey.includes('Container')) key = 'DA_Drop_Sample';
-  else if (itemKey.includes('Gaz') || itemKey.includes('Bottle')) key = 'DA_Drop_Gaz';
-  else if (itemKey.includes('Rice') || itemKey.includes('Pizzushi') || itemKey.includes('Fish')) key = 'DA_Drop_Rice';
+  else if (
+    itemKey.includes('Gaz') ||
+    itemKey.includes('Bottle') ||
+    itemKey.includes('Extinguisher') ||
+    itemKey.includes('Valve') ||
+    itemKey.includes('Hose') ||
+    itemKey.includes('Pouch')
+  )
+    key = 'DA_Drop_Gaz';
+  else if (
+    itemKey.includes('Rice') ||
+    itemKey.includes('Pizzushi') ||
+    itemKey.includes('Fish') ||
+    itemKey.includes('Mailbox')
+  )
+    key = 'DA_Drop_Rice';
   else if (itemKey.includes('Package')) key = 'DA_Drop_Package';
   else if (itemKey.includes('Rifle') || itemKey.includes('Shotgun') || itemKey.includes('SMG')) key = 'DA_Drop_Rifles';
   else if (itemKey.includes('Pistol') || itemKey.includes('Revolver') || itemKey.includes('Shorty')) key = 'DA_Drop_Guns';
 
   const raw = VERIFIED_THROW_TYPES[key];
+  // Cap elastic restitution so dropped batteries/fuses/tools settle realistically instead of bouncing endlessly
+  const dampedRestitution = key === 'DA_Drop_Little' ? 0.22 : Math.min(0.26, raw.restitution * 0.35);
+  const cappedVertical = key === 'DA_Drop_Little' ? Math.min(1.45, raw.verticalForce / 100) : raw.verticalForce / 100;
   return {
     speedMs: raw.throwForce / 100,
-    verticalMs: raw.verticalForce / 100,
-    zOffsetM: raw.verticalOffset / 100,
-    restitution: raw.restitution,
+    verticalMs: cappedVertical,
+    zOffsetM: Math.min(0.28, raw.verticalOffset / 100),
+    restitution: dampedRestitution,
     radiusM: raw.radius / 100,
     gravityMs2: Math.abs(raw.gravity) / 100,
   };

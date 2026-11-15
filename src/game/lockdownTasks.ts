@@ -204,6 +204,17 @@ export function getItemDisplayName(itemKey: string, lang: 'es' | 'en'): string {
     DA_Rifle: 'Rifle de Asalto',
     DA_SMG: 'Subfusil SMG',
     DA_Shotgun: 'Escopeta Pesada',
+    DA_TorqueWrench: 'Llave Dinamométrica EVA',
+    DA_FireExtinguisher: 'Extintor CO₂ PFE (ISS)',
+    DA_PbaMask: 'Máscara O₂ PBA (Emergencia)',
+    DA_CryoValve: 'Válvula Criogénica LOX/LH₂',
+    DA_FlightPlanCard: 'Cartón Plan de Vuelo (Apollo 13)',
+    DA_SuitHose: 'Manguera Umbilical O₂/Traje',
+    DA_DuctTapeKit: 'Cinta Gris Duct Tape + Bolsa',
+    DA_MailboxAdapter: 'Adaptador LiOH "Mailbox"',
+    DA_CufflinkKit: 'Kit 5 Cufflinks Ala P6-4B',
+    DA_InsulatedCutter: 'Pinza Aislada HV (160V DC)',
+    DA_WaterPouch: 'Bolsa Agua Potable WRS (0.25 L)',
   };
   const enMap: Record<string, string> = {
     DA_Battery: 'Battery',
@@ -232,6 +243,17 @@ export function getItemDisplayName(itemKey: string, lang: 'es' | 'en'): string {
     DA_Rifle: 'Assault Rifle',
     DA_SMG: 'SMG',
     DA_Shotgun: 'Heavy Shotgun',
+    DA_TorqueWrench: 'EVA Torque Wrench',
+    DA_FireExtinguisher: 'ISS CO₂ PFE Extinguisher',
+    DA_PbaMask: 'PBA Emergency O₂ Mask',
+    DA_CryoValve: 'Cryogenic LOX/LH₂ Valve',
+    DA_FlightPlanCard: 'Flight Plan Card (Apollo 13)',
+    DA_SuitHose: 'O₂ Umbilical Suit Hose',
+    DA_DuctTapeKit: 'Grey Duct Tape & Transfer Bag',
+    DA_MailboxAdapter: '"Mailbox" LiOH Square Adapter',
+    DA_CufflinkKit: '5x P6-4B Aluminum Cufflinks',
+    DA_InsulatedCutter: 'HV Insulated Wire Cutter (160V)',
+    DA_WaterPouch: 'WRS Potable Water Pouch (0.25 L)',
   };
   const dict = lang === 'es' ? esMap : enMap;
   return dict[itemKey] ?? itemKey.replace(/^DA_/, '').replace(/_/g, ' ');

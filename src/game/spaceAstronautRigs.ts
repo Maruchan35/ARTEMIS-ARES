@@ -250,6 +250,146 @@ export function createDetailedItemMesh(itemKey: string): THREE.Group {
     return g;
   }
 
+  if (itemKey === 'DA_TorqueWrench') {
+    // NASA EVA Ratchet Torque Wrench with digital N·m dial and socket head
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.024, 0.28), stdMat(0xe2e8f0, 0.22, 0.92));
+    const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.024, 0.11, 14), stdMat(0x0f2547, 0.65, 0.15));
+    grip.rotation.x = Math.PI / 2;
+    grip.position.z = 0.085;
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.042, 16), stdMat(0x64748b, 0.25, 0.9));
+    head.position.z = -0.145;
+    const dial = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 0.045), basicMat(0x22c55e));
+    dial.position.set(0, 0.016, -0.02);
+    g.add(beam, grip, head, dial);
+    return g;
+  }
+
+  if (itemKey === 'DA_FireExtinguisher') {
+    // ISS Portable Fire Extinguisher (PFE) 2.7 kg CO2 cylinder + nozzle cone
+    const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.28, 16), stdMat(0xd93025, 0.32, 0.45));
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.034, 0.055, 14), stdMat(0xe2e8f0, 0.25, 0.85));
+    neck.position.y = 0.165;
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.042, 0.11, 14), stdMat(0x18181b, 0.7, 0.1));
+    horn.rotation.x = -Math.PI / 2;
+    horn.position.set(0.045, 0.15, -0.085);
+    const gauge = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.014, 12), basicMat(0x4ade80));
+    gauge.rotation.x = Math.PI / 2;
+    gauge.position.set(0, 0.16, 0.04);
+    g.add(tank, neck, horn, gauge);
+    return g;
+  }
+
+  if (itemKey === 'DA_PbaMask') {
+    // ISS Portable Breathing Apparatus (PBA) 15-min O2 bottle + sealed hood
+    const hood = new THREE.Mesh(new THREE.SphereGeometry(0.088, 16, 14), stdMat(0xf1f5f9, 0.45, 0.15));
+    const visor = new THREE.Mesh(
+      new THREE.BoxGeometry(0.11, 0.075, 0.05),
+      new THREE.MeshStandardMaterial({ color: 0xfacc15, transparent: true, opacity: 0.72, roughness: 0.12, metalness: 0.35 })
+    );
+    visor.position.set(0, 0.015, -0.065);
+    const o2Bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.14, 12), stdMat(0x16a34a, 0.3, 0.7));
+    o2Bottle.rotation.z = Math.PI / 2;
+    o2Bottle.position.set(0, -0.085, 0);
+    g.add(hood, visor, o2Bottle);
+    return g;
+  }
+
+  if (itemKey === 'DA_CryoValve') {
+    // SLS/Orion RS-25 Cryogenic LOX/LH2 Solenoid Seal & Valve Core
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.16, 16), stdMat(0x94a3b8, 0.25, 0.88));
+    const handwheel = new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.012, 10, 18), stdMat(0xf59e0b, 0.35, 0.4));
+    handwheel.rotation.x = Math.PI / 2;
+    handwheel.position.y = 0.095;
+    const cryoStripe = new THREE.Mesh(new THREE.CylinderGeometry(0.061, 0.061, 0.032, 16), basicMat(0x38bdf8));
+    const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.022, 16), stdMat(0x1e293b, 0.35, 0.8));
+    flange.position.y = -0.068;
+    g.add(body, handwheel, cryoStripe, flange);
+    return g;
+  }
+
+  if (itemKey === 'DA_FlightPlanCard') {
+    // Apollo 13 Flight Plan cardboard cover used to build the Mailbox CO2 adapter
+    const card = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.012, 0.24), stdMat(0xe2e8f0, 0.72, 0.05));
+    const diagram = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.014, 0.16), basicMat(0x0b3d91));
+    const tab = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.015, 0.03), basicMat(0xff4f00));
+    tab.position.set(0.04, 0, -0.09);
+    g.add(card, diagram, tab);
+    return g;
+  }
+
+  if (itemKey === 'DA_SuitHose') {
+    // Coiled lunar suit & O2 umbilical hose
+    const coilA = new THREE.Mesh(new THREE.TorusGeometry(0.082, 0.018, 8, 16), stdMat(0x334155, 0.65, 0.25));
+    coilA.rotation.x = Math.PI / 2;
+    const couplerL = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.05, 10), stdMat(0x38bdf8, 0.35, 0.75));
+    couplerL.position.set(-0.082, 0.015, 0);
+    const couplerR = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.05, 10), stdMat(0xff4f00, 0.35, 0.75));
+    couplerR.position.set(0.082, 0.015, 0);
+    g.add(coilA, couplerL, couplerR);
+    return g;
+  }
+
+  if (itemKey === 'DA_DuctTapeKit') {
+    // NASA Apollo grey duct tape roll + plastic bag
+    const outer = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.052, 16), stdMat(0x94a3b8, 0.55, 0.2));
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.056, 12), stdMat(0x1e293b, 0.7, 0.1));
+    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.018, 0.12), stdMat(0xcbd5e1, 0.3, 0.1));
+    bag.position.set(0, -0.036, 0);
+    g.add(outer, core, bag);
+    return g;
+  }
+
+  if (itemKey === 'DA_MailboxAdapter') {
+    // Assembled Apollo 13 square LiOH canister "Mailbox" contraption
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.18), stdMat(0xe2e8f0, 0.5, 0.25));
+    const tapeBand = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.05, 0.19), stdMat(0x64748b, 0.55, 0.2));
+    const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.042, 0.12, 12), stdMat(0x334155, 0.6, 0.3));
+    snout.rotation.z = Math.PI / 2;
+    snout.position.set(0.12, 0, 0);
+    const grille = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, 0.02), basicMat(0x22c55e));
+    grille.position.set(0, 0, -0.092);
+    g.add(box, tapeBand, snout, grille);
+    return g;
+  }
+
+  if (itemKey === 'DA_CufflinkKit') {
+    // STS-120 5 improvised aluminum + Kapton-wrapped hinge cufflinks on EVA tether ring
+    const tray = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.024, 0.13), stdMat(0x1e293b, 0.45, 0.65));
+    for (let i = 0; i < 5; i++) {
+      const link = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.045, 0.06), stdMat(0xe2e8f0, 0.25, 0.85));
+      link.position.set(-0.068 + i * 0.034, 0.026, 0);
+      const kapton = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.018, 0.062), basicMat(0xf59e0b));
+      kapton.position.set(-0.068 + i * 0.034, 0.026, 0);
+      g.add(link, kapton);
+    }
+    g.add(tray);
+    return g;
+  }
+
+  if (itemKey === 'DA_InsulatedCutter') {
+    // High-voltage Kapton/polyurethane insulated EVA shears (160V DC P6-4B safe)
+    const gripL = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.12, 0.026), stdMat(0xf59e0b, 0.4, 0.1));
+    gripL.position.set(-0.022, -0.04, 0);
+    gripL.rotation.z = -0.18;
+    const gripR = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.12, 0.026), stdMat(0xff4f00, 0.4, 0.1));
+    gripR.position.set(0.022, -0.04, 0);
+    gripR.rotation.z = 0.18;
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.085, 0.016), stdMat(0xcbd5e1, 0.22, 0.9));
+    jaw.position.set(0, 0.055, 0);
+    g.add(gripL, gripR, jaw);
+    return g;
+  }
+
+  if (itemKey === 'DA_WaterPouch') {
+    // ISS WRS/PWA potable drink pouch with straw valve
+    const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.16, 0.045), stdMat(0xe2e8f0, 0.28, 0.55));
+    const label = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.085, 0.048), basicMat(0x0284c7));
+    const straw = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.065, 8), basicMat(0x38bdf8));
+    straw.position.set(0.025, 0.105, 0);
+    g.add(pouch, label, straw);
+    return g;
+  }
+
   if (itemKey === 'DA_LegacyTablet') {
     // Glowing blue Legacy Note / SPACE PAPER electronic tablet
     const casing = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.24, 0.022), stdMat(0x1e293b, 0.35, 0.75));
