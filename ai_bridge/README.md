@@ -49,6 +49,23 @@ El juego busca el puente en `http://localhost:8765`. Para cambiarlo: clic en la 
   probarla. Se guarda en el navegador.
 - Modelo de voz: licencia OpenRAIL-M (uso permitido con restricciones de uso responsable); código MIT.
 
+## KATHERINE como maestra (fase 1)
+- **Niveles de edad:** al empezar pregunta quién juega: 🧒 Explorador (6–9), 🧑‍🚀 Cadete (10–14), 👩‍🔬 Ingeniero (15+).
+  Se cambia desde el orbe (clic → botón de nivel) y se ajusta solo: 2 fallos seguidos bajan un nivel, 4 aciertos suben.
+- **Mapa de conceptos** (`src/ai/learner.ts`): 13 conceptos con prerrequisitos. Si el jugador toma una decisión sobre
+  "qué cuidar primero", KATHERINE explica antes *respirar en una nave* y *reciclar agua* (texto distinto por nivel).
+- **Ciclo de enseñanza:** explicación a su nivel → "¿Entiendes la idea?" → quiz → "explícamelo con tus palabras"
+  (respuesta abierta, texto o micrófono) → calificación: el modelo si está en línea, si no, ideas clave → repaso
+  espaciado cuando el jugador se atora (concepto medio aprendido, visto hace más de 4 min).
+- **Memoria del alumno** en el navegador (`astro.learnerProfile`): dominio por concepto, confusiones y errores de
+  concepto detectados por el modelo. Un resumen viaja al modelo en cada pregunta.
+- **Verificador** (`verify_reply` en `mentor_server.py`): si el modelo dice un número que no está en la tarjeta, el
+  RAG o la telemetría, o invierte el orden aire → agua → comida, se descarta y se usa la tarjeta. Las preguntas de
+  seguimiento fuera de tema se quitan.
+- **Contenido pre-generado con Colab:** `python ai_bridge/pregen_tutor.py` (con el puente conectado al modelo) escribe
+  explicación + analogía + pregunta por tarjeta × nivel × idioma; `python ai_bridge/review_tutor.py` para aprobar.
+  Solo lo aprobado llega al juego (`src/ai/generated/tutorContent.json`), al instante y sin internet.
+
 ## Controles en el juego
 - **[T]** hablar con KATHERINE (🎙 micrófono en Chrome/Edge) · **[1]/[2]** responder · **[M]** voz on/off
 - **⚙** idioma y voz · El panel se puede minimizar (▁).

@@ -68,6 +68,8 @@ interface ServerReply {
   mode?: MentorReply['mode'];
   origin?: MentorReply['origin'];
   latency_ms?: number;
+  verdict?: MentorReply['verdict'];
+  misconception?: string;
 }
 
 /** Asks the model. `failed` = network/server error (mark offline); `reply` null = server had nothing useful. */
@@ -89,6 +91,8 @@ export async function askMentorServer(req: MentorRequest, timeoutMs = 35000): Pr
         mode: r.mode ?? 'socratic',
         origin: r.origin ?? 'model',
         latencyMs: r.latency_ms,
+        verdict: r.verdict,
+        misconception: r.misconception?.trim() || undefined,
       },
     };
   } catch {

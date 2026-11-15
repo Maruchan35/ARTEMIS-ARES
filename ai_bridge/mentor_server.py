@@ -67,9 +67,26 @@ SYSTEM_PROMPT = (
     "reports real-life danger, step out of the game and tell them to get a trusted adult."
 )
 LANG_RULE = {
-    "es": "Responde SIEMPRE en español de México, claro y natural para un niño de 10 a 14 años.",
-    "en": "Always answer in clear, natural English for a 10-14 year old.",
+    "es": "Responde SIEMPRE en español de México, claro y natural.",
+    "en": "Always answer in clear, natural English.",
 }
+# Teaching register per age level (src/ai/learner.ts). The facts never change, only how they are told.
+LEVEL_RULES = {
+    "explorer": (
+        "AUDIENCE: a child aged 6-9 (Explorer). Use very short sentences (max 12 words each), everyday words and ONE "
+        "concrete comparison from home or school (a sponge, a backpack, a bathtub). Avoid units and big numbers unless "
+        "they are in the card; never use formulas. Be warm and encouraging."
+    ),
+    "cadet": (
+        "AUDIENCE: a student aged 10-14 (Cadet). Clear sentences, real NASA data from the card, explain the 'why' in "
+        "one step, define any technical word in a few words."
+    ),
+    "engineer": (
+        "AUDIENCE: a teenager or adult (Engineer, 15+). Be precise: use the card's numbers with units, name the system "
+        "(ECLSS, CDRA, Kilopower...), explain cause and effect, and mention one trade-off."
+    ),
+}
+LEVEL_LABEL = {"explorer": "Explorer 6-9", "cadet": "Cadet 10-14", "engineer": "Engineer 15+"}
 TASKS = {
     "decision": (
         "The cadet just made a DECISION. In 'say' explain in 1-2 short sentences what it means for the mission, using the "
@@ -93,6 +110,13 @@ TASKS = {
         "The mission verdict is in. In 'say' debrief in max 2 sentences connecting it to the cadet's decisions. In "
         "'did_you_know' give ONE real fact from the card. In 'check_question' ask what they would change next time."
     ),
+    "grade": (
+        "The cadet explained the idea of the VERIFIED_FACT_CARD in their own words (CADET_ANSWER). Judge ONLY against "
+        "the card: 'verdict' is good (main idea right), partial (right direction, key piece missing) or miss (wrong "
+        "or unrelated). In 'say' give warm feedback in max 2 sentences: praise what is right, then add the missing "
+        "piece or correct the error kindly. In 'misconception' write the wrong belief in max 12 words, or leave it "
+        "empty. Output keys: say, verdict, misconception."
+    ),
     "question": (
         "The cadet asked you something. In 'say' answer in max 3 short sentences grounded ONLY in the context; if the context "
         "does not contain the answer, say honestly you are not sure and suggest what to check in the game. 'did_you_know' may "
@@ -102,6 +126,7 @@ TASKS = {
     ),
 }
 OUTPUT_RULE = 'Output ONLY one JSON object, no markdown: {"say": "...", "did_you_know": "...", "check_question": "..."}'
+GRADE_OUTPUT_RULE = 'Output ONLY one JSON object, no markdown: {"say": "...", "verdict": "good|partial|miss", "misconception": "..."}'
 
 REAL_WORLD_MARKERS = (
     "en la vida real", "de verdad me", "fuera del juego", "no en el juego", "emergencia real", "me duele el pecho",
@@ -405,7 +430,7 @@ def parse_model_json(raw: str | None) -> dict[str, str] | None:
             obj = None
     if obj is None:
         say = _clip(t, 420)
-        return {"say": say, "did_you_know": "", "check_question": ""} if say else None
+        return {"say": say, "did_you_know": "", "check_question": "", "verdict": "", "misconception": ""} if say else None
     say = obj.get("say") or obj.get("copilot_message") or obj.get("message") or obj.get("answer") or ""
     dyk = str(obj.get("did_you_know") or obj.get("fact") or "")
     if _DATASET_NOISE.search(dyk):  # the model copied a raw RAG title/id instead of a real fact
@@ -414,7 +439,40 @@ def parse_model_json(raw: str | None) -> dict[str, str] | None:
         "say": _clip(say, 420),
         "did_you_know": _clip(dyk, 320),
         "check_question": _clip(obj.get("check_question") or obj.get("question") or "", 160),
+        "verdict": str(obj.get("verdict") or "").strip().lower(),
+        "misconception": _clip(obj.get("misconception") or "", 140),
     }
+
+
+_NUM_RE = re.compile(r"\d+(?:[.,]\d+)?")
+_WORD_RE = re.compile(r"[a-záéíóúñü]{4,}")
+_STOP = {"porque", "para", "como", "cómo", "esto", "esta", "este", "crees", "cree", "sería", "seria", "puedes", "hace", "tiene", "what", "does", "would", "your", "with", "that", "this", "think", "why", "about"}
+# Survival order taught by the cards: air (minutes) > water (days) > food (weeks).
+_BAD_ORDER = re.compile(r"agua\s*(?:>|→|,|y luego|luego)\s*aire|water\s*(?:>|→|,|then)\s*air", re.I)
+
+
+def _nums(text: str) -> set[str]:
+    return {n.replace(",", "").rstrip("0").rstrip(".") or "0" for n in _NUM_RE.findall(text or "")}
+
+
+def verify_reply(parsed: dict, card: dict, docs: list, telemetry: dict, question: str) -> str:
+    """Returns why a model reply must be discarded ('' = OK). Facts may only come from the card, RAG,
+    telemetry or the question; anything else is treated as invented."""
+    reply = f"{parsed.get('say', '')} {parsed.get('did_you_know', '')}"
+    ground = " ".join([str(card.get(k) or "") for k in ("say", "fact", "simple")] +
+                      [str(d.get("content") or "")[:1500] for d in docs] + [json.dumps(telemetry), question])
+    allowed = _nums(ground)
+    invented = [n for n in _nums(reply) if n not in allowed and not (n.isdigit() and int(n) <= 10)]
+    if invented:
+        return f"numbers not in the card/RAG: {', '.join(sorted(invented)[:4])}"
+    if _BAD_ORDER.search(reply):
+        return "wrong survival order (water before air)"
+    check = parsed.get("check_question") or ""
+    if check:
+        topic_words = set(_WORD_RE.findall(f"{ground} {parsed.get('say', '')}".lower())) - _STOP
+        if not topic_words & (set(_WORD_RE.findall(check.lower())) - _STOP):
+            parsed["check_question"] = ""  # off-topic follow-up: drop it, keep the answer
+    return ""
 
 
 class MentorService:
@@ -457,7 +515,18 @@ class MentorService:
                 f"{'KATHERINE' if h.get('role') == 'mentor' else 'CADET'}: {_clip(h.get('text'), 200)}" for h in hist[-6:]))
         if kind == "question":
             parts.append(f"[CADET_ASKS] {_clip(ev.get('text'), 400)}")
-        parts.append(f"TASK: {TASKS.get(kind, TASKS['question'])}\n{LANG_RULE[lang]}\n{OUTPUT_RULE}")
+        if kind == "grade":
+            parts.append(f"[CADET_ANSWER] {_clip(ev.get('text'), 400)}")
+        learner = req.get("learner") or {}
+        level = learner.get("level") if learner.get("level") in LEVEL_RULES else "cadet"
+        profile = f"[LEARNER] level={LEVEL_LABEL[level]}"
+        for key in ("mastered", "struggling", "misconceptions"):
+            vals = [str(v)[:80] for v in (learner.get(key) or [])][:4]
+            if vals:
+                profile += f" | {key}: {', '.join(vals)}"
+        parts.append(profile)
+        out_rule = GRADE_OUTPUT_RULE if kind == "grade" else OUTPUT_RULE
+        parts.append(f"TASK: {TASKS.get(kind, TASKS['question'])}\n{LEVEL_RULES[level]}\n{LANG_RULE[lang]}\n{out_rule}")
         return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": "\n\n".join(parts)}]
 
     def reply(self, req: dict) -> dict[str, Any]:
@@ -473,6 +542,9 @@ class MentorService:
             if any(m in low for m in REAL_WORLD_MARKERS) or self.rag.is_real_world_emergency(text):
                 return {"say": SAFETY_REPLY[lang], "sources": ["Real-world safety protocol"], "mode": "safety", "origin": "card",
                         "latency_ms": int((time.time() - t0) * 1000)}
+
+        if kind == "grade":
+            return self.grade(req, t0)
 
         if kind == "question":
             terms = rag_terms(text, lang)
@@ -495,6 +567,11 @@ class MentorService:
 
         parsed = parse_model_json(raw)
         if parsed and parsed["say"]:
+            problem = verify_reply(parsed, card, docs, req.get("telemetry") or {}, text)
+            if problem:
+                print(f"[verify] model reply rejected ({problem}); using the verified card.", flush=True)
+                parsed = None
+        if parsed and parsed["say"]:
             dyk = parsed["did_you_know"]
             if lang == "es" and looks_english(dyk):  # copied straight from an English RAG doc
                 dyk = ""
@@ -514,6 +591,27 @@ class MentorService:
             return {"say": _clip(card.get("say"), 500), "did_you_know": _clip(card.get("fact"), 400), "sources": sources[:3],
                     "mode": "socratic", "origin": "card", "latency_ms": int((time.time() - t0) * 1000)}
         return {"say": "", "sources": [], "mode": "chat", "origin": "card"}
+
+    def grade(self, req: dict, t0: float) -> dict[str, Any]:
+        """Open-answer check: the model compares the player's own explanation with the verified card."""
+        card = req.get("card") or {}
+        raw = None
+        try:
+            raw = self.backend.generate(self.build_messages(req, [], []), 160, 0.3)
+        except Exception as exc:
+            print(f"[mentor] grading failed: {exc}", flush=True)
+        parsed = parse_model_json(raw) or {}
+        verdict = parsed.get("verdict") if parsed.get("verdict") in ("good", "partial", "miss") else ""
+        say = parsed.get("say", "")
+        if say and verify_reply(parsed, card, [], {}, str((req.get("event") or {}).get("text") or "")):
+            say = ""  # feedback invented a number: keep only the verdict
+        out: dict[str, Any] = {"say": say, "sources": [card["source"]] if card.get("source") else [], "mode": "socratic",
+                               "origin": "model" if say else "card", "latency_ms": int((time.time() - t0) * 1000)}
+        if verdict:
+            out["verdict"] = verdict
+        if parsed.get("misconception"):
+            out["misconception"] = parsed["misconception"]
+        return out
 
     def raw_generate(self, body: dict) -> dict[str, Any]:
         msgs = body.get("messages")

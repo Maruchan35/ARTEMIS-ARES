@@ -3,6 +3,8 @@
 // card-based mentor used when the AstroCopilot model server is not reachable.
 // =============================================================================
 
+import type { AgeLevel } from './learner';
+import { tutorLine } from './tutorContent';
 import { MENTOR_CARDS, OBJECTIVE_HINTS, alarmAction } from './mentorKnowledge';
 import type { Lang, MentorCard, MentorEvent, MentorReply, MentorTelemetry } from './mentorTypes';
 
@@ -131,7 +133,18 @@ function alarmValue(alarmId: string, t: MentorTelemetry): string {
   }
 }
 
-export function composeOfflineReply(event: MentorEvent, lang: Lang, t: MentorTelemetry): MentorReply | null {
+/** Shorter, friendlier check-ins for the youngest players. */
+const CHECK_PROMPT_EXPLORER: Record<Lang, string[]> = {
+  es: ['¿Me entendiste?', '¿Lo ves, explorador?', '¿Tiene sentido?'],
+  en: ['Did you get it?', 'See it, explorer?', 'Makes sense?'],
+};
+
+/**
+ * Builds KATHERINE's reply from the verified cards, adapted to the player's age level:
+ * explorer → the simple analogy first; cadet → meaning + fact; engineer → meaning + numbers.
+ * Pre-generated, human-approved lines (tutorContent.json) win when they exist.
+ */
+export function composeOfflineReply(event: MentorEvent, lang: Lang, t: MentorTelemetry, level: AgeLevel = 'cadet'): MentorReply | null {
   if (event.kind === 'question') {
     const text = event.text ?? '';
     if (isRealWorldSafetyIssue(text)) return safetyReply(lang);
@@ -156,8 +169,9 @@ export function composeOfflineReply(event: MentorEvent, lang: Lang, t: MentorTel
   if (!card) return null;
 
   if (event.kind === 'explain_again') {
+    const pre = tutorLine(card.id, level, lang);
     return {
-      say: `${pick(PERSONA_LINES.explainAgain[lang])} ${(card.simple ?? card.say)[lang]}`,
+      say: `${pick(PERSONA_LINES.explainAgain[lang])} ${pre?.analogy ?? (card.simple ?? card.say)[lang]}`,
       check: lang === 'es' ? '¿Ahora sí tiene más sentido?' : 'Does it make more sense now?',
       sources: [card.source],
       mode: 'socratic',
@@ -176,10 +190,13 @@ export function composeOfflineReply(event: MentorEvent, lang: Lang, t: MentorTel
   }
 
   const opener = event.kind === 'mission_start' ? '' : `${pick(OPENERS[card.tone][lang])} `;
+  const pre = tutorLine(card.id, level, lang);
+  const body = pre?.say ?? (level === 'explorer' && card.simple ? card.simple[lang] : card.say[lang]);
+  const checks = level === 'explorer' ? CHECK_PROMPT_EXPLORER[lang] : CHECK_PROMPT[lang];
   return {
-    say: `${opener}${card.say[lang]}`,
+    say: `${opener}${body}`,
     didYouKnow: card.fact[lang],
-    check: card.askCheck ? pick(CHECK_PROMPT[lang]) : undefined,
+    check: card.askCheck ? pre?.check ?? pick(checks) : undefined,
     sources: [card.source],
     mode: 'socratic',
     origin: 'card',
