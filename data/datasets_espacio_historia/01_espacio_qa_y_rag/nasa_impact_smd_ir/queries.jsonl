@@ -1,0 +1,498 @@
+{"_id": "0", "text": "What issue causes environmental degradation?"}
+{"_id": "1", "text": "Pollution is created from?"}
+{"_id": "2", "text": "What depletes ecosystems?"}
+{"_id": "3", "text": "How would you characterize HSLC environments across the West?"}
+{"_id": "4", "text": "Where do the majority of significant tornadoes and winds occur?"}
+{"_id": "5", "text": "What is similar across all regions?"}
+{"_id": "6", "text": "What was the most significant finding of the study?"}
+{"_id": "7", "text": "For this case, did mesovortices (MVs) form after the TC made landfall?"}
+{"_id": "8", "text": "What occurred that changed the processes that generate and maintain mesovortices (MVs)?"}
+{"_id": "9", "text": "What additional parameters are used to evaluate time lag in this study?"}
+{"_id": "10", "text": "Why are DPR and GMI observations extracted at heights at least 1 km below the melting level and above the LCFH?"}
+{"_id": "11", "text": "Is a consistent interval of time lag observed in the present case?"}
+{"_id": "12", "text": "What time of the year do asian dust storms frequently occur?"}
+{"_id": "13", "text": "Can airborne dust from asia reach US?"}
+{"_id": "14", "text": "What factors contribute in the formation of dust storms?"}
+{"_id": "15", "text": "Which MODIS bands have spatial resolution of 500 m?"}
+{"_id": "16", "text": "Which MODIS spectral band has the maximum reflectance for sand?"}
+{"_id": "17", "text": "Where can you find spectral signatures for different materials useful for remote sensing?"}
+{"_id": "18", "text": "What impacts historical precipitation observations?"}
+{"_id": "19", "text": "When do most problems of undercounted precipitation occur in historical precipitation records?"}
+{"_id": "20", "text": "Why was this study restricted to the warm season?"}
+{"_id": "21", "text": "What is a major source of PM2.5 emissions in the US?"}
+{"_id": "22", "text": "What type of wildland fires dominate in the southeastern US?"}
+{"_id": "23", "text": "When do most wildland fire emissions occur in the western US?"}
+{"_id": "24", "text": "Which are important factors for high-impact weather events?"}
+{"_id": "25", "text": "What is the use of scatterometers?"}
+{"_id": "26", "text": "How is the wind and precipitation related?"}
+{"_id": "27", "text": "\u200bWhich area of the cyclone has the highest rainfall when the cyclone's translation speed increases?"}
+{"_id": "28", "text": "Where do cyclones originate more frequently out of Arabian Sea and the Bay of Bengal?"}
+{"_id": "29", "text": "\u200bWhich cyclone's sector or quadrant experiences the most rainfall in the North Indian Ocean ?"}
+{"_id": "30", "text": "\u200bWhat\u2019s values of Tropical Cyclone Heat Potential ( TCHP) favors the most for intensification of cyclones ?"}
+{"_id": "31", "text": "\u200bWhich sector of the tropical cyclone experiences significant changes in TCHP anomaly (TCHPA) as the intensity increases."}
+{"_id": "32", "text": "\u200b Which season sees a greater amount of cooling for cyclones?"}
+{"_id": "33", "text": "\u200bWhat cyclone intensity should the model be initialized at to obtain the more accurate forecast?\u200b "}
+{"_id": "34", "text": "Where does the model produce the least error\u2014the inner or outer core of the cyclone?"}
+{"_id": "35", "text": "\u200bHow much of the RMSE has been decreased following the CRA correcti\u200bon?\u200b\u200b\u200b\u200b"}
+{"_id": "36", "text": "Which approach relates the NRCS measurements to the surface friction velocity and wind stress?"}
+{"_id": "37", "text": "When does the elementary relationship between surface roughness and wind breaks down?"}
+{"_id": "38", "text": "How is the increase of wind speeds approximated to the growth of the wave spectrum?"}
+{"_id": "39", "text": "The depletion of landscapes create unfamiliarity and stops the utilization of what?"}
+{"_id": "40", "text": "What is the main cause of environmental degradation?"}
+{"_id": "41", "text": "Name one source that causes pollution?"}
+{"_id": "42", "text": "What\u2019s  primary kind of forest disturbance since 2004?"}
+{"_id": "43", "text": "Which estimate has the largest uncertainty, the area estimate of deforestation of that of D/ND?"}
+{"_id": "44", "text": "Which has increased more since 2004, deforestation or D/ND?"}
+{"_id": "45", "text": "What are strata?"}
+{"_id": "46", "text": "What are two purposes of a stratification? "}
+{"_id": "47", "text": "What are two common attributes used to construct strata?"}
+{"_id": "48", "text": "what is Saharan Air Layer?"}
+{"_id": "49", "text": "What causes the formation of Saharan Air Layer?"}
+{"_id": "50", "text": "How does Saharan Air Layer impact Atlantic Tropical Cyclone activity?"}
+{"_id": "51", "text": "How much dust is transported across the Atlantic every year?"}
+{"_id": "52", "text": "How does dust impact earth's radiation budget?"}
+{"_id": "53", "text": "How does does impact cloud formation?"}
+{"_id": "54", "text": "What role does dust play in the development of tropical cyclones?"}
+{"_id": "55", "text": "What numerical model can you use to simulate tropical cyclones?"}
+{"_id": "56", "text": "What role do environmental conditions play on determining the impact of CCN on storm intensity?"}
+{"_id": "57", "text": "The geographic distribution of adaptation action challenges what?"}
+{"_id": "58", "text": "The adaptation deficit appears to be significant to who?"}
+{"_id": "59", "text": "middle-income nations who often have similar vulnerability profiles to who?"}
+{"_id": "60", "text": "Changing temperature and precipitation pattern will produce a strong direct impact on what?"}
+{"_id": "61", "text": "The equilibrium models and some dynamic vegetation models project that this vegetation shift toward newly available areas with favorable climate conditions will eventually result in?"}
+{"_id": "62", "text": "Timber production is facilitated by who?"}
+{"_id": "63", "text": "Many major cities are on low lying areas and/or close to, coasts are more vulnerable to what?"}
+{"_id": "64", "text": "Coastal city towns contain what?"}
+{"_id": "65", "text": "t larger urban settlements tend to be more concentrated in?"}
+{"_id": "66", "text": "What are two important sources of water for drinking in many parts of the world?"}
+{"_id": "67", "text": "What does the Mann-Kendall test do?"}
+{"_id": "68", "text": "What was the cause of spring discharge attenuation?"}
+{"_id": "69", "text": "What is the sources for 25 billion pounds of toxic pollutants added to the environment?"}
+{"_id": "70", "text": "How much pesticide is sprayed per year on crops?"}
+{"_id": "71", "text": "Have vast majority of artificial chemicals been screened for toxicity?"}
+{"_id": "72", "text": "What percentage of leaching agents are commonly injected into an ore body at a volume ratio of 1:3?"}
+{"_id": "73", "text": "The dosage of (NH4)2SO4 solution has been unintentionally increased to improve what?"}
+{"_id": "74", "text": "Once the dosage of (NH4)2SO4 solution is increased this results in?"}
+{"_id": "75", "text": "Where is the surface low pressure system centered in Fig. 8a?"}
+{"_id": "76", "text": "At what time and date was the anticyclone stationary? "}
+{"_id": "77", "text": "How was the increase in troughing and ridging determined?"}
+{"_id": "78", "text": "What is the significance of drylines?"}
+{"_id": "79", "text": "When are drylines most frequent?"}
+{"_id": "80", "text": "How do drylines respond differently during El Ni\u00f1o and La Ni\u00f1a years?"}
+{"_id": "81", "text": "AN pollution in mine soil is becoming a serious problem due to?"}
+{"_id": "82", "text": "How did scientists prevent and control AN pollution?"}
+{"_id": "83", "text": "What did scientists use as a washing agent instead of water?"}
+{"_id": "84", "text": "What is a centralized source that is found in the center of the landscape and the center of North Alabama citizens' lives?"}
+{"_id": "85", "text": "The river remains as the direct resource that sustains what?"}
+{"_id": "86", "text": "How much surface water utilized for farming is expected to rise by 2040?"}
+{"_id": "87", "text": "How good is the estimate of peak precipitation?"}
+{"_id": "88", "text": "Where is the dry bias?"}
+{"_id": "89", "text": "When irrigation is turned on, what happens to nighttime precipitation"}
+{"_id": "90", "text": "What is the most prevalent hazards in the Himalaya?"}
+{"_id": "91", "text": "What causes accelerated erosion in the Himalayas?"}
+{"_id": "92", "text": "When do land slides become devastating?"}
+{"_id": "93", "text": "What is the main mechanism accounting for clear air reflections in the UHF range?"}
+{"_id": "94", "text": "What spatial scale is the radar sensitive to?"}
+{"_id": "95", "text": "What does the C_n^2 structure parameter do?"}
+{"_id": "96", "text": "Where were observations collected?"}
+{"_id": "97", "text": "What longitude is irrigation dominant west of?"}
+{"_id": "98", "text": "When were the intensive operation periods conducted?"}
+{"_id": "99", "text": "Why is soil moisture important?"}
+{"_id": "100", "text": "How can soil mositure be measured?"}
+{"_id": "101", "text": "Which method is currently considered the best for measuring soil moisture?"}
+{"_id": "102", "text": "How was the aerosol sampled?"}
+{"_id": "103", "text": "Where was the aerosol data collected?"}
+{"_id": "104", "text": "Which type of aerosol was expected to be sampled?"}
+{"_id": "105", "text": "What is the scale of the classes called \"local climate zones\"?"}
+{"_id": "106", "text": "How long do the screen-height temperature regimes of an LCZ persist?"}
+{"_id": "107", "text": "Where and when are the screen-height temperature regimes most apparent?"}
+{"_id": "108", "text": "Where is the Earth covered by fair-weather cumulus clouds?"}
+{"_id": "109", "text": "Which key boundary-layer processes are parameterized in climate models?"}
+{"_id": "110", "text": "Why is there a large dispersion in model-based estimates of cloud feedback?"}
+{"_id": "111", "text": "How is tropospheric ozone formed?"}
+{"_id": "112", "text": "What trace gases are emitted by wildfires?"}
+{"_id": "113", "text": "What is the major source of OH reactivity within smoke plumes?"}
+{"_id": "114", "text": "How will scientists be connected?"}
+{"_id": "115", "text": "Where is there a need to advance understanding of air pollution-terrestrial ecosystems?"}
+{"_id": "116", "text": "What regions are underrepresented?"}
+{"_id": "117", "text": "What is are terrestial gamma ray flashes?"}
+{"_id": "118", "text": "From which orbit are TGFs detected?"}
+{"_id": "119", "text": "How observations associate TGFs with lightning"}
+{"_id": "120", "text": "How is CAPE related to an air parcel?"}
+{"_id": "121", "text": "What value of CAPE is needed for severe storm development?"}
+{"_id": "122", "text": "What does NARR offer for severe weather climatology studies?"}
+{"_id": "123", "text": "What is the swath width of MODIS instrument abroad on the Terra satellite?"}
+{"_id": "124", "text": "What is the reason behind the limited availability of AOD in Level 2 data sets of MODIS ?"}
+{"_id": "125", "text": "Which instrument gives the vertical structure and different attributes of tropospheric aerosol and could assist in monitoring the variation in particulate matter transport?"}
+{"_id": "126", "text": "What is the reason behind the  better capture of  precipitation patterns in local regions and precipitation extremes?"}
+{"_id": "127", "text": "Out of ERA5 and ERA Interim, which product gives the best precipitation estimates?"}
+{"_id": "128", "text": "What is the spatial resolution of ERA Interim dataset?"}
+{"_id": "129", "text": "When does rainfall start near the coast?"}
+{"_id": "130", "text": "What is the amplitude of the diurnal cycle in precipitation near the coast in comparison to the tropics?"}
+{"_id": "131", "text": "What errors do numerical models produced regarding the diurnal cycle?"}
+{"_id": "132", "text": "Which satellite carries the Atmospheric Infrared Sounder?"}
+{"_id": "133", "text": "Which instrument is on the Suomi National Polar-orbiting Partnership satellite?"}
+{"_id": "134", "text": "Why CrIMSS  produces long-term data sets across multi-instrument remote sensing records with improved bias stationarity?"}
+{"_id": "135", "text": "What exhibited a significant horizontal gradient of reflectivity and large vertical extension?"}
+{"_id": "136", "text": "In which direction SLLR propagates so that it  shows a complex convective development of sequential intensification, weakening, and re-intensification within a 2.5-hr period?"}
+{"_id": "137", "text": "What plays a crucial role in the re-intensification of the SLLR, which suggests the importance of the cold pool and topography in structural features and convective evolution of the squall line-like rain bands?"}
+{"_id": "138", "text": "Where in the atmosphere the warming associated with latent heat release by condensation is dominant?"}
+{"_id": "139", "text": "What are the processes contributes to the  warming processes?"}
+{"_id": "140", "text": "What are the factors dominates the cooling process in dissipating stage of the MCS? "}
+{"_id": "141", "text": "What is the role of  ITF in the regional climate?"}
+{"_id": "142", "text": "How thick are the surface layers of the MC?"}
+{"_id": "143", "text": "What is the role of the thermocline in the deeper seas?"}
+{"_id": "144", "text": "What effect does resolution have on the phase of the diurnal cycle when parameterizing deep convection?"}
+{"_id": "145", "text": "When is the diurnal cycle produced for deep convection scheme?"}
+{"_id": "146", "text": "Why higher-resolution runs may pay a penalty?"}
+{"_id": "147", "text": "What turbulence spectra was assumed?"}
+{"_id": "148", "text": "Who performed laboratory studies?"}
+{"_id": "149", "text": "When did theoretical arguments show that C\u03f5 takes different values?"}
+{"_id": "150", "text": "Where is the Earth covered by fair-weather cumulus clouds?"}
+{"_id": "151", "text": "Which key boundary-layer processes are parameterized in climate models?"}
+{"_id": "152", "text": "Why is there a large dispersion in model-based estimates of cloud feedback?"}
+{"_id": "153", "text": "What is the range for within-cloud cell sizes?"}
+{"_id": "154", "text": "What is the largest observed change in reflectance across cloud cells most likely due to?"}
+{"_id": "155", "text": "How small were observed multicelled clouds?"}
+{"_id": "156", "text": "How are clouds identified in large-eddy simulations?"}
+{"_id": "157", "text": "What is a difficulty in comparing the multiple datasets?"}
+{"_id": "158", "text": "Why was a condensate threshold of 10-8 used instead of the threshold of 10\u22125 used in the preceding sections?"}
+{"_id": "159", "text": "What do the dust sensors aboard the Galileo and Ulysses spacecraft detect?"}
+{"_id": "160", "text": "What sources of dust have been detected by the dust sensors on the Galileo and Ulysses spacecraft?"}
+{"_id": "161", "text": "What has been modeled using the data from the dust sensors on the Galileo and Ulysses spacecraft?"}
+{"_id": "162", "text": "What Hubble Space Telescope instruments have been used to observe Sila and Nunam?"}
+{"_id": "163", "text": "How can the relative astrometry of two objects be derived from Hubble Space Telescope observations?"}
+{"_id": "164", "text": "How can the uncertainties on the relative astrometry of two objects be estimated from Hubble Space Telescope observations?"}
+{"_id": "165", "text": "What is responsible for the opposition surge observed on Pluto?"}
+{"_id": "166", "text": "What is responsible for most variations in the specific intensity of a planetary surface?"}
+{"_id": "167", "text": "What is the  photometric function of a planetary surface?"}
+{"_id": "168", "text": "How was the normal to the bow shock at the location of 4 Cluster spacecraft calculated in this work?"}
+{"_id": "169", "text": "What was the assumed shape of the magnetic field lines at the location of the shock being calculated in this work?"}
+{"_id": "170", "text": "How much closer to the Earth did this work calculate the shock should be compared to the Cluster spacecraft?"}
+{"_id": "171", "text": "Why does the interaction of the solar wind with the upper atmosphere play an important role for the atmospheric erosion over Solar System time scales for Venus and Mars? "}
+{"_id": "172", "text": "What process primarily controled atmospheric loss for early Mars?"}
+{"_id": "173", "text": "What was the main reason for the high ion escape rate on early Mars?"}
+{"_id": "174", "text": "How can the contrast of map-projected photometrically flattened images of Saturn be enhanced?"}
+{"_id": "175", "text": "What is removed when applying a high-pass spatial filter to map-projected photometrically flattened images of Saturn?"}
+{"_id": "176", "text": "What causes residual large-scale variation in map-projected photometrically flattened images of Saturn?"}
+{"_id": "177", "text": "How are large-scale surveys of the near-Earth environment used to identify asteroids on a collision trajectory with Earth?"}
+{"_id": "178", "text": "What is the impact of the decrease in available sample size for non-targeted observations of asteroids in large-scale surveys have on the resulting catalog?"}
+{"_id": "179", "text": "What does the large photometric uncertainty of non-targeted observations of asteroids in large-scale surveys inhibit the reduction of when compared to targeted observations of asteroids?"}
+{"_id": "180", "text": "What is Eureka's escape velocity?"}
+{"_id": "181", "text": "Do longterm planetary perturbations affect libration amplitudes or eccentricities?"}
+{"_id": "182", "text": "What is an important effect for realistic simulations of collisional families?"}
+{"_id": "183", "text": "What are the slit lengths of the Spitzer IRS SL and LL modules?"}
+{"_id": "184", "text": "What feature of the SL and LL modules allows the sky to be extracted from Spitzer IRS images?"}
+{"_id": "185", "text": "What positions along the slit modules does Spitzer nod between when observing with IRS?"}
+{"_id": "186", "text": "How can organic growth be prevented when mimicing the evolution of aerosols in Titan's ionosphere? "}
+{"_id": "187", "text": "What is the proportion of H2 in Titan's ionosphere at 1000 km of altitude?"}
+{"_id": "188", "text": "What molecule is easily dissociated in the ionosphere of Titan?"}
+{"_id": "189", "text": "What is a key drawback of using a kinetic model in this work?"}
+{"_id": "190", "text": "What can be done to reduce the mathematical complexity of the kinetic model used in this work?"}
+{"_id": "191", "text": "What is made possible once the mathematical complexities of the kinetic model used in this work are reduced?"}
+{"_id": "192", "text": "For these simulations, what is the assumed total angular momentum of Pluto and Charon after the collisional capture of Charon?"}
+{"_id": "193", "text": "For these simulations, what is the asymptotic tidal spin rate of Charon soon after its collisional capture around Pluto?"}
+{"_id": "194", "text": "What is the value of J2P assumed for these simulations?"}
+{"_id": "195", "text": "Why is there still no consensus about Pluto\u2019s atmospheric circulation, despite the proliferation of GCMs for Pluto?"}
+{"_id": "196", "text": "Why does Pluto's steep, low-altitude temperature inversion make it difficult to reach consensus about Pluto\u2019s atmospheric circulation,  despite the proliferation of GCMs for Pluto?"}
+{"_id": "197", "text": "What surface and thermodynamical processes are GCMs coupled to?"}
+{"_id": "198", "text": "What feature of the orbits of Phobos and Deimos suggest that they were born in or from a circumplanetary disk?"}
+{"_id": "199", "text": "Besides the low orbital inclinations of Phobos and Deimos with respect to Mars\u2019 equatorial plane, what other feature of their orbits is consistent with their formation in or from a circumplanetary disk?"}
+{"_id": "200", "text": "Besides being born in or from a circumplanetary disk, what is another possible explanation for orbit of Phobos?"}
+{"_id": "201", "text": "What is the characteristic time scale for color change in the main asteroid belt?"}
+{"_id": "202", "text": "What is a laboratory experimental method that can be used to simulate micrometeorite bombardment on main belt asteroids?"}
+{"_id": "203", "text": "How much weaker is the micrometeorite impact energy at the main asteroid belt compared to at 1 AU?"}
+{"_id": "204", "text": "What is the effective nucleus radius of the sungrazing comet ISON? "}
+{"_id": "205", "text": "Why are dynamically new comets interesting?"}
+{"_id": "206", "text": "What are sungrazing comets?"}
+{"_id": "207", "text": "What form of heating could have globally melted water ice on Titan during its formation? "}
+{"_id": "208", "text": "If impact heating formed a global water ocean on Titan during its formation, where would the main reservoir of NH3 be located? "}
+{"_id": "209", "text": "If impact heating formed a global water ocean on Titan during its formation, why would the global ocean become the main reservoir of NH3?"}
+{"_id": "210", "text": "Are there recent observations of the extended oxygen corona of Mars?"}
+{"_id": "211", "text": "How well do we understand the processes governing planetary atmosphere escape?"}
+{"_id": "212", "text": "How long have we been sending spacecraft to Mars?"}
+{"_id": "213", "text": "Why is the Moon probably the only attainable record of Venus\u2019 early surface geology?"}
+{"_id": "214", "text": "What can the Moon tell us about the heavy bombardment impactors?"}
+{"_id": "215", "text": "What was the likely major source of biotic precursors on early Earth?"}
+{"_id": "216", "text": "What are \"spiders\" on Mars' ice sheets?"}
+{"_id": "217", "text": "What causes \"spiders\" to form on Mars' ice sheets?"}
+{"_id": "218", "text": "During what season do \"spiders\" form on Mars' ice sheets?"}
+{"_id": "219", "text": "In general, do NEAs have large or small orbital eccentricities?"}
+{"_id": "220", "text": "What is the effect of the large orbital eccentricities of NEAs on their insolation?"}
+{"_id": "221", "text": "How does the large variation in NEA insolation as a function of their orbital position affect their surface temperatures?"}
+{"_id": "222", "text": "Are approximate analytic models sufficient to accurately describe the transition with altitude from the collision dominated regime to the collisionless regime in a single-component atmosphere?"}
+{"_id": "223", "text": "Why are approximate analytic models insufficient to accurately describe the transition with altitude from the collision dominated regime to the collisionless regime in a single-component atmosphere?"}
+{"_id": "224", "text": "What is the Jeans parameter in the context of planetary atmospheres?"}
+{"_id": "225", "text": "What can high pressure experiments tell us about the Earth's core?"}
+{"_id": "226", "text": "What can observations of geo-neutrinos tell us about the Earth's core?"}
+{"_id": "227", "text": "What is the main reason for discrepancies in the estimates of elemental abundances of Earth's core?"}
+{"_id": "228", "text": "What is the zodiacal cloud in the Solar System?"}
+{"_id": "229", "text": "What are the main sources of dust that contribute to the zodiacal cloud?"}
+{"_id": "230", "text": "What type of space telescopes have been important for realizing the contribution of asteroids and comets to the zodiacal cloud?"}
+{"_id": "231", "text": "What equation of state (EOS) is widely used in largescale planetary impact simulations?"}
+{"_id": "232", "text": "What iron core to mantle mass ratio can be used when simulating largescale planetary impacts of Mars?"}
+{"_id": "233", "text": "What total weight of Mars can be used when simulating largescale planetary impacts of Mars?"}
+{"_id": "234", "text": "How did Schiaparelli find the Hydaspes in 1858?"}
+{"_id": "235", "text": "What is the usual appearance of the Hydaspes?"}
+{"_id": "236", "text": "How far did Cyclops extend at the close of the 18th century?"}
+{"_id": "237", "text": "What part of the planet is showing activity?"}
+{"_id": "238", "text": "What does the observer find so interesting?"}
+{"_id": "239", "text": "What complicates the theory of the observer?"}
+{"_id": "240", "text": "What is the timing of Venus transists?"}
+{"_id": "241", "text": "How does the timing of Venus effect extant data of the aureole?"}
+{"_id": "242", "text": "What was the main limitation to collecting data during past transits?"}
+{"_id": "243", "text": "Why are thermochemical models used?"}
+{"_id": "244", "text": "What do endogenic models suggest about the Martian southern highlands?"}
+{"_id": "245", "text": "What do these models rely on to form a low degree convective platform?"}
+{"_id": "246", "text": "What line was used to infer the D/H ratio?"}
+{"_id": "247", "text": "What is the D/H ratio on Jupiter and Saturn considered to represent?"}
+{"_id": "248", "text": "What is the D/H ratio of Uranus and Neptune considered to represent?"}
+{"_id": "249", "text": "Over what wavelength range was IRIS used to observe Miranda and Ariel?"}
+{"_id": "250", "text": "What is the surface of these two moons composed of?"}
+{"_id": "251", "text": "Which moons show brighter 3.6 micron peaks, Uranian moons or Saturnian moons?"}
+{"_id": "252", "text": "What might determine the final shape of a size distribution of chodrules?"}
+{"_id": "253", "text": "Does chondrule mean size vary among different chondrite groups?"}
+{"_id": "254", "text": "HAve chondrules from different chondrite groups all undergone the same mechanisms afecting chonrule size?"}
+{"_id": "255", "text": "Why must the value of CIA's be precisely known?"}
+{"_id": "256", "text": "Why is it important to estimate the minimum amount of H2?"}
+{"_id": "257", "text": "What should happen if methane concentration in the early Martian atmosphere exceeds 10%?"}
+{"_id": "258", "text": "Why can these photochemcal networks not be used in 2 or 3-dimensions?"}
+{"_id": "259", "text": "What did Dobrijevic et al. (2011) develope?"}
+{"_id": "260", "text": "How do the authors determine if the Saturn result is valid for Jupiter as well?"}
+{"_id": "261", "text": "Roughly, what are the rotation periods for Uranus and Neptune?"}
+{"_id": "262", "text": "How far from the Sun is Uranus?"}
+{"_id": "263", "text": "What is the Solar flux recieved by Neptune?"}
+{"_id": "264", "text": "What could be a recent source of dust around the Uranian moons?"}
+{"_id": "265", "text": "What Saturnian moon has a dust torus?"}
+{"_id": "266", "text": "What moon sweeps up much of the dust from Phoebe?"}
+{"_id": "267", "text": "What should be considered for icy worlds that have an ocean that is in contact with a rocky interior?"}
+{"_id": "268", "text": "What does the decomposition timescale of amino acids depend on?"}
+{"_id": "269", "text": "How can the total hydrothermal duration be constrained?"}
+{"_id": "270", "text": "What happens to the trend of the rotational frequency between 4 and 20 km?"}
+{"_id": "271", "text": "What does the trend in the rotational frequency mean about the MBS's?"}
+{"_id": "272", "text": "What else can be estimated with more numerous txanomic classification of MBA's?"}
+{"_id": "273", "text": "In what direction is more ejecta found in observations of impaces?"}
+{"_id": "274", "text": "Why is there more ejecta in the prograde direction?"}
+{"_id": "275", "text": "Is the Martian atmosphere considered in the model?"}
+{"_id": "276", "text": "Name two ways that understanding the internal structure of asteroids is useful."}
+{"_id": "277", "text": "Name two example of hazardous atmospheric entry of small asteroids."}
+{"_id": "278", "text": "Do only large asteroids pose a hazard to the Earth?"}
+{"_id": "279", "text": "What is the long term strategy used in this work?"}
+{"_id": "280", "text": "What are the most prominent processes acting on asteroids?"}
+{"_id": "281", "text": "Knowing the shape of the period and spin-axis distributions can help determine what aspects of a thermal model?"}
+{"_id": "282", "text": "What quantity may constrain early planet formation scenarios?"}
+{"_id": "283", "text": "Can solid monolithic \"rocky\" bodies shed a dust population."}
+{"_id": "284", "text": "What is the rought tensile strength of cometary particles of sizes 102 to 104 microns that entered the atmosphere?"}
+{"_id": "285", "text": "Why are Janus and Epi,etheus interesting?"}
+{"_id": "286", "text": "What mean orbital radius do both moons share?"}
+{"_id": "287", "text": "How close do the pair of moons approach each other every 4 years?"}
+{"_id": "288", "text": "How are the colors of Centaur asteroids distributed?"}
+{"_id": "289", "text": "What is the mean albedo estimated for the Centaurs?"}
+{"_id": "290", "text": "What property of Centaurs correlates strongly with color?"}
+{"_id": "291", "text": "Why is it important to observe oxygen in the spectra of comets with moderatly high spectral resolution?"}
+{"_id": "292", "text": "Is contamination an issue for the red doublet."}
+{"_id": "293", "text": "When is it simple to detect the green line?"}
+{"_id": "294", "text": "How many EURONEAR program asteroids have been observed during the last four years?"}
+{"_id": "295", "text": "What class of telescope has primarily used for the EURONEAR program?"}
+{"_id": "296", "text": "What kind of cameras do the three named telescopes use?"}
+{"_id": "297", "text": "How many vertical leels are used in the simulation?"}
+{"_id": "298", "text": "What sets the initial state the simulations?"}
+{"_id": "299", "text": "How is the Pluto 2D volatile transport model different from the GCM?"}
+{"_id": "300", "text": "What method was used to estimate realistic uncertainties of the fitted parameters?"}
+{"_id": "301", "text": " What dominates the error in the values obtained?"}
+{"_id": "302", "text": "What is a possible explanation of the apparent discrepancy of the 2009n data?"}
+{"_id": "303", "text": "Name a goal of the OSIRIS-Rex mission"}
+{"_id": "304", "text": "When does Bennu make a close approach to the Earth?"}
+{"_id": "305", "text": "What is the research object of the HAMMER mission?"}
+{"_id": "306", "text": "What object is the focus of this paragraph?"}
+{"_id": "307", "text": "What question are the researchers looking to answer?"}
+{"_id": "308", "text": "What types are included in the Tholen system X taxonomic class?"}
+{"_id": "309", "text": "What references define the VIMS Pipeline?"}
+{"_id": "310", "text": "What calibrations were performed on the data?"}
+{"_id": "311", "text": "Is the radiometric calibration necessary?"}
+{"_id": "312", "text": "When did Cassini approach Jupiter?"}
+{"_id": "313", "text": "Which images were suited to comparing with groundbased observations?"}
+{"_id": "314", "text": "What did the intermediate phase angle observations provide?"}
+{"_id": "315", "text": "What are the pressure and temperature at the top of the model?"}
+{"_id": "316", "text": "How are the continuity equations solved?"}
+{"_id": "317", "text": "How long were the model calculations performed?"}
+{"_id": "318", "text": "What did the New Horizons mission find regarding tidal dissipation?"}
+{"_id": "319", "text": "What is required for an ocean to form and remain liquid?"}
+{"_id": "320", "text": "What is a central tenet in evaluating the possibility for the existence of a present-day subsurface ocean?"}
+{"_id": "321", "text": " What is a hard task that is yet to be decisively automated?"}
+{"_id": "322", "text": "What is useful to understand the obliquity history of bodies?"}
+{"_id": "323", "text": "What has been applied recently to the problem of characterizing the shape and ellipticity distributions of craters?"}
+{"_id": "324", "text": "When do shocks occur?"}
+{"_id": "325", "text": "What is a characteristic of the artificial viscosity is used?"}
+{"_id": "326", "text": "What additional effect is taken into account in this paper?"}
+{"_id": "327", "text": "What would a very large Schmidt need to avoid excessive chromatic aberration of the corrector plate"}
+{"_id": "328", "text": "While the Ritchey-Chretien system can obtain a 'very large coma-free field', it still sufferes from what abberations?"}
+{"_id": "329", "text": "Why is it beneficial to avoid introducing additional glass or absorbing material into an optical system."}
+{"_id": "330", "text": "How do Ads Bosch et al. (2016) and Sanchis-Gual et al. (2016) agree, regarding the dynamical development of the superradiant instability?"}
+{"_id": "331", "text": "What does Dias et al. (2021) study?"}
+{"_id": "332", "text": "What type of stars are found in Brihaye and Hartmann (2022)?"}
+{"_id": "333", "text": "What does the model solve the energy balance equation for?"}
+{"_id": "334", "text": "What assumptions are made of the elements in the envelope?"}
+{"_id": "335", "text": "How are the physical properties of the envelope derived?"}
+{"_id": "336", "text": "Why is the strictness of the selection rules for electron transitions important?"}
+{"_id": "337", "text": "What happens to the angular distribution of emitted electrons as the selection rules become less strict?"}
+{"_id": "338", "text": "Is it more obvious to notice the differences in the shape of the emission pattern in electron loss from Ca18+ and Zn28+ in collisions with charged particles or in photo absorption?"}
+{"_id": "339", "text": "Is it thought that any energetic cosmic rays can be associated with known galactic objects?"}
+{"_id": "340", "text": "What kinds of galactic systems can greate lower energy energetic cosmic rays?"}
+{"_id": "341", "text": "Do present measurements of the isotropy of observed cosmic rays show evidence for anisotropy above energies ~10^14 eV?"}
+{"_id": "342", "text": "Does dust chemistry have a large influence on the overall opacity?"}
+{"_id": "343", "text": "What is a serious source of uncertainty in the explored model?"}
+{"_id": "344", "text": "IF the SN output is appropriatly adjusted, what can be done with the average dust opacity of a z~5 object."}
+{"_id": "345", "text": "What is energy density proportional to?"}
+{"_id": "346", "text": "What is the \u039bCDM model based on?"}
+{"_id": "347", "text": "That is the \u039bCDM model a promising candidate to explain?"}
+{"_id": "348", "text": "What types of galaxies were analyzed in this study?"}
+{"_id": "349", "text": "What wavelength regimes were used in the FKT Atlas?"}
+{"_id": "350", "text": "What is the benefit to observing spiral galaxies in different emission bands?"}
+{"_id": "351", "text": "The values of Te and Ne correspond to a recent observation made whith what type of device."}
+{"_id": "352", "text": "What happens to the increse for higher values of n?"}
+{"_id": "353", "text": "Should the forbidden-to-intercombination line ratio be expected to show significant variations with electron temperature?"}
+{"_id": "354", "text": "What must the lightest supersymmetric particle do if R-parity is conserved?"}
+{"_id": "355", "text": "How has the density of cold dark matter been constrained?"}
+{"_id": "356", "text": "How does the density variy in the correct region of paramter space ?"}
+{"_id": "357", "text": "Does observed surface brightness include some uncertainty?"}
+{"_id": "358", "text": "What must happen to | d log I / d log e | if the actual distribution as an index that is slightly larger in the outer region than in the inner region?"}
+{"_id": "359", "text": "What sign would the right hand side of equation (7) have if the distribution was approximated with a power law?"}
+{"_id": "360", "text": "Within what radius will these prediction be useful?"}
+{"_id": "361", "text": "What time standard is used in the procedure?"}
+{"_id": "362", "text": "How does one obtain Eastern Standard Time from Greenwich Civil Time?"}
+{"_id": "363", "text": "What object were astronomers trying to detect X-ray radiation from?"}
+{"_id": "364", "text": "How high did the rocket with the X-ray detector reach during its flight?"}
+{"_id": "365", "text": "What did the instrument actually detect?"}
+{"_id": "366", "text": "What type of observation can directly constrain hot wind properties?"}
+{"_id": "367", "text": "Can the same approach to constraining hot wind properties be used for all galaxies?"}
+{"_id": "368", "text": "What can be constrained by observing the X-ray propoerties of galaxies?"}
+{"_id": "369", "text": "What observation give suspcion towards the cosmological redshift hypothesis?"}
+{"_id": "370", "text": "What are two factors that may affect the quasar redshift distribution?"}
+{"_id": "371", "text": "What does the real distribution function depend on?"}
+{"_id": "372", "text": "How many stars are used to define the FK5 coordinate system?"}
+{"_id": "373", "text": "What is the spatial stellar density of stars used to define the FK5 coordinate system?"}
+{"_id": "374", "text": "Is Hipparcos able to supply positions and proper mostions with the required systematic accuracy for scientific measurments?"}
+{"_id": "375", "text": "What are two sources known to gneerate retrograde precession?"}
+{"_id": "376", "text": "What is the retrograde nodding precessional period for the Earth?"}
+{"_id": "377", "text": "What does Patterson et al. (1993) suggest is the source to retrograde prcession in CV DN non-magnetic, accretting disks?"}
+{"_id": "378", "text": "How do stars form?"}
+{"_id": "379", "text": "What must occur for local collapse to result in the formation of stars?"}
+{"_id": "380", "text": "What happens to fluctuations as the time between shock passages beomes shorter?"}
+{"_id": "381", "text": "What does the SFR derived for an individual galaxy depend on?"}
+{"_id": "382", "text": "What factors will affect the fraction of galaxies missed?"}
+{"_id": "383", "text": "What is FIR emission a good tracer of?"}
+{"_id": "384", "text": "What is the size of the mirro for the Schmidt refractor telescope used in this work?"}
+{"_id": "385", "text": "Is the photomultiplier that is used in this work refrigerated?"}
+{"_id": "386", "text": "How can the extinction characteristics of the sky be determined?"}
+{"_id": "387", "text": "Above what density does N2H+ deplete?"}
+{"_id": "388", "text": "Does the maxima of the N2H+ emission from Oph A core coincide with the peaks in dust emission?"}
+{"_id": "389", "text": "Are the motions of Oph A objects consistent with predictions from models with turbulent and dynamic motions?"}
+{"_id": "390", "text": "What do peculiar velocities do to the clustering pattern of galaxies?"}
+{"_id": "391", "text": "On what scales is the linear perterbation theory approximation for the growth of density fluctuations valid?"}
+{"_id": "392", "text": "What effecct does random non-linear motions in virialized regions have on the amplitude of density fluctuations?"}
+{"_id": "393", "text": "What does the data of E 1405-451 show?"}
+{"_id": "394", "text": "What does the continuation of the inhomogeneous density distribution outside the accretion column imply?"}
+{"_id": "395", "text": "What values of Thompson optical depths are needed to explain the high equivalent width of AM Her's Fe Ka emission?"}
+{"_id": "396", "text": "Confirmation for what formula has been implied by the observations of Taylor and collaborators?"}
+{"_id": "397", "text": "Are laboratory experiments strong enough to measure detections at the approproate level?"}
+{"_id": "398", "text": "How do the authors predict that the gravitational source will be detected?"}
+{"_id": "399", "text": "Can Chorus waves generate MeV microbursts? "}
+{"_id": "400", "text": "Is the Auroral light emitted by interactions between the atmosphere and the MeV electron loss? "}
+{"_id": "401", "text": "Do chorus waves interact with the MeV electrons at the magnetic equator? "}
+{"_id": "402", "text": "Can Chorus waves generate MeV microbursts? "}
+{"_id": "403", "text": "Is the Auroral light emitted by interactions between the atmosphere and the MeV electron loss? "}
+{"_id": "404", "text": "Do chorus waves interact with the MeV electrons at the magnetic equator? "}
+{"_id": "405", "text": "Do EMIC waves preferentially occur in plasmspheric plumes? "}
+{"_id": "406", "text": "Is CRRES able to determine if the EMIC waves are occuring with certainty that EMIC waves are found preferentially in plasmaspheric plumes? "}
+{"_id": "407", "text": "Do EMIC waves occur in regions of increased cold plasma density? "}
+{"_id": "408", "text": "If an electron energy flux spectrum is not broadband or monoenergetic, what is it?"}
+{"_id": "409", "text": "Which electron particle precipitation energy flux spectra typically have a sharp drop above the accelerating range? "}
+{"_id": "410", "text": "What is the upper energy limit for diffuse electron precipitation?"}
+{"_id": "411", "text": "Super granulation is a feature of what process?"}
+{"_id": "412", "text": "How can supergranulation be detected?"}
+{"_id": "413", "text": "How much larger in spacial scale are the supergranules compared to the granultes?"}
+{"_id": "414", "text": "How many cells are being used in the simulation?"}
+{"_id": "415", "text": "What is the azimuthal resolution in the ionosphere?"}
+{"_id": "416", "text": "Why is the simulation grid disorted?"}
+{"_id": "417", "text": "Can an oblique shock front in the solar wind be detected at L1 and not detected at Earth?"}
+{"_id": "418", "text": "Is the currently available solar wind data useful for long-term averaged calculations?"}
+{"_id": "419", "text": "Is the solar wind uniform or constant in space and time?"}
+{"_id": "420", "text": "What data were used in this study?"}
+{"_id": "421", "text": "For what reason(s) did differences arise in the solar abundance estimates?"}
+{"_id": "422", "text": "What kind of solar flux spectrum were obtained with the FTS instrument"}
+{"_id": "423", "text": "What is the principal defining property of a magnetic storm?"}
+{"_id": "424", "text": "What is the total magnetic energy of the geomagnetic field outside the Earth?"}
+{"_id": "425", "text": "What are the most notable species of ions in the ring current?"}
+{"_id": "426", "text": "What events are BBFs usually associated with?"}
+{"_id": "427", "text": "What are common characterizations of BBFs?"}
+{"_id": "428", "text": "What does BBF stand for?"}
+{"_id": "429", "text": "Where does lunar albedo radiation come from?"}
+{"_id": "430", "text": "What is one of the most significant challenges to human space exploration?"}
+{"_id": "431", "text": "What is the composition of lunar albedo radiation?"}
+{"_id": "432", "text": "Is there naturally occurring radiation in the US?"}
+{"_id": "433", "text": "What is the origin of radon gas?"}
+{"_id": "434", "text": "How fast do high energy particles move?"}
+{"_id": "435", "text": "What is the origin of the \"sawtooth peak\" in the lunar gamma ray spectrum?"}
+{"_id": "436", "text": "How can the temporal variation of lunar fast neutrons be estimated?"}
+{"_id": "437", "text": "What is the Kaguya GRS instrument made of?"}
+{"_id": "438", "text": "What is one approach to mitigating the effects of space radiation?"}
+{"_id": "439", "text": "Is crew selection a possible factor in mitigating space radiation risk?"}
+{"_id": "440", "text": "What is an example of a high impulse spacecraft propulsion system?"}
+{"_id": "441", "text": "What percentage of cancer patients receive radiotherapy?"}
+{"_id": "442", "text": "Does FLASH radiotherapy use low dose rates?"}
+{"_id": "443", "text": "What are some of the advantages of FLASH-RT?"}
+{"_id": "444", "text": "How can the uncertainties in biologocical effects of particle radiation be reduced?"}
+{"_id": "445", "text": "What is one of the constraints on studying the biological effects of radiation?"}
+{"_id": "446", "text": "What is one of the particle types used in studying the biological effects of radiation?"}
+{"_id": "447", "text": "Do peroxidase enzyme effect root hair growth in spaceflight?"}
+{"_id": "448", "text": "How does xylan biochemistry change in spaceflight?."}
+{"_id": "449", "text": "What other phenotypes can be observed in the VEGGIE?"}
+{"_id": "450", "text": "How many genes annotated as belonging to the \"mitochondrion\" were selected using the \"GO subcellular location\" tool embedded in TOAST's graphical user interface?"}
+{"_id": "451", "text": "How many unique differentially expressed mitochondrial genes were identified from the light-grown experiments?"}
+{"_id": "452", "text": "What gene was found to be common amongst the significantly differentially expressed genes in all conditions of the four selected experiments?"}
+{"_id": "453", "text": "What evidence is there for hypoxia in space flight?"}
+{"_id": "454", "text": "Why is WRKY33 and HOP33 induction inspace informative?"}
+{"_id": "455", "text": "What experience were performed to confirm the hypoxia response identified ?"}
+{"_id": "456", "text": "What year was Arabidopsis first grown in space?"}
+{"_id": "457", "text": "What vehicle was Arabidopsis first grown in?"}
+{"_id": "458", "text": "Why was Arabidopsis chosen as the first plant flown in space?"}
+{"_id": "459", "text": "What is the effect of microgravity on blooming time in long day and short day conditions?"}
+{"_id": "460", "text": "Which gene is crucial for the day-length related regulation of flowering time?"}
+{"_id": "461", "text": "What are the differentially expressed genes involved in the response to chemical stress, oxidative stress, and abscisic acid regulation in plants grown in long and short days in microgravity"}
+{"_id": "462", "text": "How many common spaceflight response loci were identified in the microarray and RNA-seq analyses in plants exposed to spaceflight stressors?"}
+{"_id": "463", "text": "What are the six common genes that were differentially expressed across all the ecotypes in the BRIC-19 study?"}
+{"_id": "464", "text": "What functions are associated with the six common genes identified in the BRIC-19 study?"}
+{"_id": "465", "text": "What was an effect of altered gravity in the ROOT experiment?"}
+{"_id": "466", "text": "What is meant by \"disruption of meristematic competence\"?"}
+{"_id": "467", "text": "What is a role of the root meristem?"}
+{"_id": "468", "text": "Under what conditions does gravitropism confer adaptive advantages to crops?"}
+{"_id": "469", "text": "What is gravitropism?"}
+{"_id": "470", "text": "Is gravitropism a new field of research?"}
+{"_id": "471", "text": "What is the EMCS?"}
+{"_id": "472", "text": "How many centrifuges are equipped in the EMCE?"}
+{"_id": "473", "text": "How many experiments have been performed since the EMCS became operational?"}
+{"_id": "474", "text": "How is the vital capacity of the respiratory system altered by microgravity?"}
+{"_id": "475", "text": "Which is more affected by microgravity, the abdominal compartment or the rib cage?"}
+{"_id": "476", "text": "Are astronauts more at risk of obstructive sleep apnea events?"}
+{"_id": "477", "text": "Which viruses have been reported to be reactivated in astronauts?"}
+{"_id": "478", "text": "Which viruses continue shedding after spaceflight?"}
+{"_id": "479", "text": "Does reactivation of latent viruses increase risk for any other issue?"}
+{"_id": "480", "text": "What is the vascular system?"}
+{"_id": "481", "text": "What are the 3 types of arteries?"}
+{"_id": "482", "text": "What are the 2 types of venous vessels?"}
+{"_id": "483", "text": "What company sponsored the OSD-194 dataset from the Open Science Data Repository?"}
+{"_id": "484", "text": "Where did the OSD-194 basal control animals live?"}
+{"_id": "485", "text": "What mission generated the OSD-194 dataset?"}
+{"_id": "486", "text": "What is a bio-ink, in the context of 3D bioprinting?"}
+{"_id": "487", "text": "What is bioprinting?"}
+{"_id": "488", "text": "What makes an ideal bioink?"}
+{"_id": "489", "text": "What is the most common chronic disease affecting the liver?"}
+{"_id": "490", "text": "By what factor does NAFLD increase the risk of tpe 2 diabetes?"}
+{"_id": "491", "text": "What is the classical insult that is responsible for causing progressive liver injury?"}
+{"_id": "492", "text": "What does SANS stand for?"}
+{"_id": "493", "text": "What does prolonged spaceflight do to the eye?"}
+{"_id": "494", "text": "How long can globe flattening last after astronauts return to earth?"}
+{"_id": "495", "text": "What are the two mechanisms regarding the movement of DNA double strand breaks (DSB)?"}
+{"_id": "496", "text": "What would you suggest for predicting in vivo radiation toxicity?"}
+{"_id": "497", "text": "What does RIF repair kinetic parameters correlate with?"}

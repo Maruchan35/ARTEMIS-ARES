@@ -30,11 +30,17 @@ import json
 import math
 from pathlib import Path
 import re
+import sqlite3
 from typing import Any
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT_DIR / "data"
 CORPUS_PATH = DATA_DIR / "nasa_rag_corpus.jsonl"
+MEGA_DB_CANDIDATES = (
+    DATA_DIR / "nasa_mega_rag.sqlite",
+    Path("/content/data/nasa_mega_rag.sqlite"),
+    Path("/content/nasa_mega_rag.sqlite"),
+)
 
 
 def build_verified_rag_corpus() -> list[dict[str, Any]]:
@@ -60,7 +66,7 @@ def build_verified_rag_corpus() -> list[dict[str, Any]]:
             "title": "Consumables Mass Balance & ECLSS Reliability Analysis (NTRS: 20190027563, 20190028339, 20160005782)",
             "category": "eclss_life_support",
             "source_type": "NASA_NTRS_OFFICIAL",
-            "keywords": ["20190027563", "20190028339", "20160005782", "lioh", "amine", "ppco2", "ppo2", "11 hours", "4 days", "hypoxia", "hypercapnia"],
+            "keywords": ["20190027563", "20190028339", "20160005782", "lioh", "amine", "scrubber", "scrubbers", "oxygen scrubbers", "air scrubbers", "co2 scrubbers", "prank", "ppco2", "ppo2", "11 hours", "4 days", "hypoxia", "hypercapnia"],
             "content": (
                 "Official NASA NTRS 20190027563, 20190028339, and 20160005782 + NASA-STD-3001: Documents ECLSS consumable tank masses, "
                 "LiOH cartridge ratios, and time-to-limit survival clocks in a 200 m3 pressurized habitat with 4 crewmembers. "
@@ -445,15 +451,40 @@ def build_verified_rag_corpus() -> list[dict[str, Any]]:
 
 
 class NasaHybridRAGEngine:
-    """Zero-latency Hybrid BM25 + TF-IDF Cosine + Deterministic Rule Verifier for AstroCopilot."""
+    """Two-Tier Hybrid BM25 + Tier-2 SQLite FTS5 Mega-RAG (387k+ docs) + Deterministic Rule Verifier."""
 
-    def __init__(self, corpus_path: Path = CORPUS_PATH) -> None:
+    _STOPWORDS = {
+        "the", "a", "an", "is", "are", "was", "were", "be", "been", "being", "what", "why",
+        "how", "when", "where", "who", "whom", "which", "that", "this", "these", "those",
+        "do", "does", "did", "can", "could", "should", "would", "will", "about", "for",
+        "from", "with", "into", "onto", "of", "in", "on", "at", "by", "to", "and", "or",
+        "not", "it", "its", "my", "our", "your", "their", "we", "you", "they", "me", "us",
+        "tell", "explain", "describe", "give", "summary", "please", "mean", "does", "compare",
+    }
+
+    def __init__(self, corpus_path: Path = CORPUS_PATH, mega_db_path: Path | None = None) -> None:
         self.corpus_path = corpus_path
         self.docs = self._load_or_create_corpus()
         self.doc_tokens: list[list[str]] = []
         self.doc_freqs: Counter[str] = Counter()
         self.avg_dl: float = 1.0
         self._build_index()
+        self.mega_db_path: Path | None = mega_db_path
+        if self.mega_db_path is None:
+            for cand in MEGA_DB_CANDIDATES:
+                if cand.exists():
+                    self.mega_db_path = cand
+                    break
+        self.mega_doc_count: int = 0
+        if self.mega_db_path and self.mega_db_path.exists():
+            try:
+                with sqlite3.connect(str(self.mega_db_path)) as conn:
+                    self.mega_doc_count = int(conn.execute("SELECT COUNT(*) FROM docs;").fetchone()[0])
+            except Exception:
+                self.mega_doc_count = 0
+
+    def total_indexed_documents(self) -> int:
+        return len(self.docs) + self.mega_doc_count
 
     def _load_or_create_corpus(self) -> list[dict[str, Any]]:
         self.corpus_path.parent.mkdir(parents=True, exist_ok=True)
@@ -467,7 +498,7 @@ class NasaHybridRAGEngine:
         return re.findall(r"[a-z0-9_.-]+", text.lower())
 
     def classify_query_intent(self, query: str, telemetry: dict[str, Any] | None = None) -> str:
-        """Classifies query intent to prevent technical RAG injection on real-world emergencies, mental health, or casual chat."""
+        """Classifies query intent to prevent technical RAG injection on real-world emergencies, mental health, or casual jokes."""
         q_low = query.lower()
         q_toks = set(self._tokenize(q_low))
 
@@ -505,36 +536,58 @@ class NasaHybridRAGEngine:
             return "real_world_emergency_or_safety"
 
         # If structured telemetry is present, it is always a technical simulator evaluation
-        if telemetry:
+        if telemetry or ("{" in query and "}" in query and any(k in q_low for k in ("ppo2", "ppco2", "co2_mmhg", "gravity_g", "telemetry", "closing_speed"))):
             return "technical_space_or_telemetry"
 
-        # 2. Check for technical space, physics, ECLSS, NTRS, or mission tokens
+        # 2. Humor, jokes, riddles, or playful banter checked BEFORE technical tokens
+        humor_markers = (
+            "joke", "riddle", "funny", "laugh", "humor", "bumps-a-lot", "sir bumps",
+            "make me laugh", "clean pun", "space pun",
+        )
+        if any(m in q_low for m in humor_markers):
+            return "mental_health_or_casual_banter"
+
+        # 3. Check for technical space, physics, ECLSS, NTRS, astronomy, exoplanets, NEOs, space & world history tokens
         technical_tokens = {
             "ntrs", "bvad", "eclss", "kpa", "ppco2", "ppo2", "msv", "sievert", "gray", "gy",
             "kw", "kwe", "kwh", "m2", "m3", "sabatier", "oga", "wrs", "wrs-93", "wrs-98",
-            "lioh", "amine", "moxie", "fsp", "fission", "reactor", "stirling", "radiator",
-            "radiators", "esm", "blss", "osdr", "genelab", "veggie", "aph", "donki", "radlab",
-            "crater", "curiosity", "perseverance", "ingenuity", "apollo", "artemis", "alsj",
-            "afj", "skylab", "iss", "shuttle", "voyager", "cassini", "juno", "europa", "clipper",
-            "dragonfly", "dart", "osiris-rex", "psyche", "landsat", "icesat-2", "swot", "gpm",
-            "inertia", "momentum", "impulse", "gravity", "0.165", "0.379", "0.38", "133.4",
-            "216.2", "12000", "braking", "thrust", "lander", "rover", "jezero", "tranquillitatis",
+            "lioh", "amine", "scrubber", "scrubbers", "prank", "moxie", "fsp", "fission",
+            "reactor", "stirling", "radiator", "radiators", "esm", "blss", "osdr", "genelab",
+            "veggie", "aph", "donki", "radlab", "crater", "curiosity", "perseverance",
+            "ingenuity", "apollo", "artemis", "alsj", "afj", "skylab", "iss", "shuttle",
+            "voyager", "cassini", "juno", "europa", "clipper", "dragonfly", "dart",
+            "osiris-rex", "psyche", "landsat", "icesat-2", "swot", "gpm", "inertia",
+            "momentum", "impulse", "gravity", "0.165", "0.379", "0.38", "133.4", "216.2",
+            "12000", "braking", "thrust", "lander", "rover", "jezero", "tranquillitatis",
             "sgr", "black", "hole", "eht", "ntp", "lh2", "isp", "dsoc", "laser", "snspd",
             "soma", "methylation", "nlr", "transcriptome", "hrp", "wesad", "pamap2", "ppg-dalia",
             "mhealth", "dreamer", "amigos", "deap", "unl", "oppd", "msu-pid", "nutrition5k",
             "food-101", "telemetry", "json", "flight_hazard", "medical_check", "hydroponics",
+            # Tier-2 Space, Astronomy, Exoplanets, CNEOS & World History markers
+            "exoplanet", "exoplanets", "trappist", "trappist-1", "trappist-1e", "kepler",
+            "proxima", "parsecs", "parallax", "redshift", "supernova", "nebula", "pulsar",
+            "quasar", "galaxy", "galaxies", "spectrum", "spectroscopy", "telescope", "jwst",
+            "webb", "hubble", "spitzer", "chandra", "smithsonian", "nasm", "saturn", "titan",
+            "enceladus", "jupiter", "venus", "mercury", "neptune", "uranus", "pluto", "ceres",
+            "asteroid", "asteroids", "comet", "comets", "meteorite", "meteorites", "fireball",
+            "bolide", "chelyabinsk", "apophis", "neo", "neos", "cneos", "openstax",
+            "history", "historical", "civilization", "civilizations", "empire", "mesopotamia",
+            "egypt", "greece", "rome", "roman", "renaissance", "copernicus", "galileo",
+            "keplerian", "newton", "einstein", "relativity", "silk", "industrial", "treaty",
+            "prehistory", "ancient", "medieval", "astronomy", "astrophysics", "cosmology",
+            "apollo11", "apollo13", "houston", "orbital", "orbit", "orbits", "solar",
         }
         if q_toks & technical_tokens:
             return "technical_space_or_telemetry"
 
-        # 3. Emotional support, anxiety, morale, humor, or casual conversation without technical tokens
+        # 4. Emotional support, anxiety, morale, or short casual greetings without technical tokens
         emotional_or_casual_markers = (
             "anxious", "anxiety", "sad", "lonely", "scared", "overwhelmed", "frustrated",
             "stressed", "depressed", "crying", "homesick", "afraid", "nervous", "worried",
             "quit the mission", "want to quit", "feels endless", "so far away", "miss home",
-            "give up", "worn down", "bumps-a-lot", "sir bumps",
-            "joke", "funny", "laugh", "humor", "riddle", "hello", "hi ", "hey ", "good morning",
-            "how are you", "who are you", "thank you", "thanks", "bored", "tired",
+            "give up", "worn down",
+            "hello", "hi ", "hey ", "good morning", "how are you", "who are you",
+            "thank you", "thanks", "bored", "tired",
         )
         if any(m in q_low for m in emotional_or_casual_markers) or len(q_toks) <= 8:
             return "mental_health_or_casual_banter"
@@ -559,8 +612,89 @@ class NasaHybridRAGEngine:
                 self.doc_freqs[ut] += 1
         self.avg_dl = total_len / max(1, len(self.docs))
 
+    def _retrieve_tier2_sqlite(self, query: str, top_k: int = 4) -> list[tuple[float, dict[str, Any]]]:
+        """Queries the 387,363-doc SQLite FTS5 Mega-RAG knowledge base quickly with entity & bigram precision."""
+        if not self.mega_db_path or not self.mega_db_path.exists():
+            return []
+
+        raw_words = re.findall(r"[a-z0-9]+", query.lower())
+        terms: list[str] = []
+        seen: set[str] = set()
+        for w in raw_words:
+            if w in self._STOPWORDS:
+                continue
+            if len(w) < 2 and not w.isdigit():
+                # Keep single-letter exoplanet suffixes like 'e' in TRAPPIST-1 e for overlap check, skip in broad FTS OR
+                continue
+            if w not in seen:
+                seen.add(w)
+                terms.append(w)
+        if not terms:
+            return []
+
+        # Extract alphanumeric/numbered entity phrases like "apollo 13", "trappist 1", "apollo 11"
+        phrase_matches = re.findall(r"\b([a-z]{3,}\s+\d{1,3}(?:\s+[a-z])?)\b", query.lower())
+        phrase_matches = [p.replace(" ", " ") for p in phrase_matches]
+
+        # Prioritize specific/rare/numeric terms (numbers like 13, 2013, 900 + longer technical words) and cap OR terms to 6 for speed
+        terms_ranked = sorted(terms, key=lambda t: (t.isdigit(), len(t) >= 6, len(t)), reverse=True)
+        fts_clauses = [f'"{t}"' for t in terms_ranked[:6]]
+        for ph in phrase_matches[:2]:
+            fts_clauses.append(f'"{ph}"')
+        fts_query = " OR ".join(fts_clauses)
+
+        hits: list[tuple[float, dict[str, Any]]] = []
+        q_low = query.lower()
+        try:
+            with sqlite3.connect(str(self.mega_db_path)) as conn:
+                sql = """
+                    SELECT d.doc_id, d.title, d.category, d.source, d.content, d.source_weight,
+                           bm25(docs_fts, 1.0, 2.2, 0.4, 0.6, 1.0) AS raw_bm25
+                    FROM docs_fts
+                    JOIN docs d ON d.id = docs_fts.rowid
+                    WHERE docs_fts MATCH ?
+                    ORDER BY (bm25(docs_fts, 1.0, 2.2, 0.4, 0.6, 1.0) * d.source_weight) ASC
+                    LIMIT ?;
+                """
+                rows = conn.execute(sql, (fts_query, max(top_k * 5, 20))).fetchall()
+                for doc_id, title, category, source, content, weight, raw_bm25 in rows:
+                    title_low = title.lower()
+                    hay = title_low + " " + content.lower()
+                    # Calibrated scale: ~12..42 so Tier-1 authoritative NASA/PDF docs remain #1 when matched
+                    score = (-float(raw_bm25)) * float(weight) * 0.42
+                    overlap = sum(1 for t in terms_ranked[:8] if re.search(rf"\b{re.escape(t)}\b", hay))
+                    title_overlap = sum(1 for t in terms_ranked[:8] if re.search(rf"\b{re.escape(t)}\b", title_low))
+                    score += overlap * 1.4 + title_overlap * 2.5
+                    # Strong exact phrase / entity-number match (e.g., "apollo 13", "trappist-1 e")
+                    for ph in phrase_matches:
+                        ph_dash = ph.replace(" ", "-")
+                        if ph in hay or ph_dash in hay:
+                            score += 10.0
+                        if ph in title_low or ph_dash in title_low:
+                            score += 8.0
+                    # Single-letter planet match like "trappist-1 e"
+                    if "trappist" in q_low and re.search(r"\btrappist-?1\s*e\b", q_low):
+                        if re.search(r"\btrappist-?1\s*e\b", title_low):
+                            score += 18.0
+                    hits.append((
+                        round(score, 4),
+                        {
+                            "doc_id": f"MEGA-{doc_id}",
+                            "title": f"{title} [{source}]",
+                            "category": category,
+                            "source_type": f"MEGA_RAG:{source}",
+                            "keywords": [],
+                            "content": content,
+                            "rag_tier": "tier2_mega_fts5",
+                        },
+                    ))
+        except Exception:
+            return []
+        hits.sort(key=lambda x: x[0], reverse=True)
+        return hits[:top_k]
+
     def retrieve(self, query: str, top_k: int = 3, min_score: float = 15.0) -> list[dict[str, Any]]:
-        """Retrieves the top_k most relevant verified NASA/University reference chunks using BM25 + keyword boost + intent gate."""
+        """Retrieves the top_k most relevant Tier-1 + Tier-2 references using BM25 + FTS5 + keyword boost + intent gate."""
         intent = self.classify_query_intent(query, None)
         if intent in ("real_world_emergency_or_safety", "mental_health_or_casual_banter"):
             # Do NOT inject irrelevant technical/plant/sensor RAG documents on real-world emergencies, mental health, or casual chat
@@ -573,7 +707,7 @@ class NasaHybridRAGEngine:
         n_docs = len(self.docs)
         k1 = 1.5
         b = 0.75
-        scored: list[tuple[float, dict[str, Any]]] = []
+        tier1_scored: list[tuple[float, dict[str, Any]]] = []
         q_lower = query.lower()
 
         for idx, d in enumerate(self.docs):
@@ -590,17 +724,37 @@ class NasaHybridRAGEngine:
                 denom = tf + k1 * (1.0 - b + b * (dl / self.avg_dl))
                 score += idf * ((tf * (k1 + 1.0)) / denom)
 
-            # Exact phrase / keyword boost
+            kw_hits = 0
             for kw in d.get("keywords", []):
                 if kw.lower() in q_lower:
                     score += 3.5
+                    kw_hits += 1
+
+            # Authoritative Tier-1 NASA/PDF operational docs always outrank generic abstracts when strongly matched
+            if kw_hits >= 1 and score >= min_score:
+                score += 14.0
 
             if score >= min_score:
-                scored.append((round(score, 4), d))
+                t1_doc = dict(d)
+                t1_doc["rag_tier"] = "tier1_nasa_core"
+                tier1_scored.append((round(score, 4), t1_doc))
 
-        scored.sort(key=lambda x: x[0], reverse=True)
+        tier1_scored.sort(key=lambda x: x[0], reverse=True)
+
+        # Also query Tier-2 SQLite FTS5 Mega-RAG (387k+ astronomy, exoplanets, NASA SDE/SMD, Apollo, Smithsonian, World History)
+        tier2_scored = self._retrieve_tier2_sqlite(query, top_k=max(3, top_k))
+
+        combined: list[tuple[float, dict[str, Any]]] = []
+        seen_ids: set[str] = set()
+        for sc, doc in tier1_scored + tier2_scored:
+            did = doc["doc_id"]
+            if did not in seen_ids:
+                seen_ids.add(did)
+                combined.append((sc, doc))
+
+        combined.sort(key=lambda x: x[0], reverse=True)
         results = []
-        for sc, doc in scored[:top_k]:
+        for sc, doc in combined[:top_k]:
             item = dict(doc)
             item["rag_score"] = sc
             results.append(item)
@@ -656,6 +810,14 @@ class NasaHybridRAGEngine:
                 "NASA BVAD EXACT NUMBERS RULE (NTRS 20210024855): 82 kg is standard astronaut body mass (NEVER CO2 mass!). "
                 "Per crewmember per day: O2 consumed = 0.84 kg/day (NEVER 84% pressure!), CO2 exhaled = 1.00-1.04 kg/day, "
                 "dry food = 0.75 kg/day, potable water = 2.6 L/day. Safe cabin ppCO2 <= 0.50 kPa; safe ppO2 = 20.0-30.0 kPa."
+            )
+
+        # 1b-2. CO2 / Air Scrubber Shutdown & Hypercapnia Safety Guard
+        if (q_toks & {"scrubber", "scrubbers", "lioh", "amine"}) and any(w in q_low for w in ("turn off", "shut off", "switch off", "disable", "prank", "turn down")):
+            notes.append(
+                "CO2 SCRUBBER & HYPERCAPNIA SAFETY RULE (NASA-STD-3001 & NTRS 20190027563): Disabling cabin CO2/'oxygen'/air scrubbers "
+                "NEVER depletes CO2—it causes exhaled carbon dioxide (1.00-1.04 kg/person/day) to ACCUMULATE rapidly above the 0.50 kPa "
+                "NASA-STD-3001 limit in ~11 hours, causing acute hypercapnia! Refuse any prank or shutdown in-character."
             )
 
         # 1c. Radiation Dosimetry Guard (Absorbed Dose Gy vs Equivalent/Effective Dose Sv/mSv)

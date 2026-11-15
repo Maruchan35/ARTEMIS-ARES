@@ -1070,13 +1070,28 @@ def build_verified_english_examples(image_paths: dict[str, str]) -> tuple[list[d
     #    - 100 nasa_numeric_precision_drills (anti-hallucination drills for 82 kg crew mass, 4.2 m/s, 0.165 g, 216.2 m2 vs 133.4 m2 FSP ESM, + 30 multimodal vision drills)
     #    - 80 clean_space_humor_curated rows (100% child-safe ages 10-14 jokes & riddles with 80 unique prompts)
     #    - 80 rag_scientific_library_qa rows (RAFT grounded Q&A across the 24 PDFs and 20-page NASA Research Library)
+    #    - ~2,650 mega_dataset_expander rows (NASA SDE, OpenStax Astronomy/World History, arxiv-qa-astro-ph, SciQ/MMLU/ARC, Exoplanets, CNEOS, NASM, Apollo, NTRS History)
+    from mega_dataset_expander import build_mega_dataset_expansions
+
     train_rows.extend(build_safety_boundary_rows(SYSTEM_PROMPT_EN))
     train_rows.extend(build_multi_turn_rows(SYSTEM_PROMPT_EN))
     train_rows.extend(build_numeric_precision_drills(SYSTEM_PROMPT_EN, image_paths))
     train_rows.extend(build_clean_space_humor_rows(SYSTEM_PROMPT_EN))
     train_rows.extend(build_rag_library_qa_rows(SYSTEM_PROMPT_EN))
+    train_rows.extend(build_mega_dataset_expansions(SYSTEM_PROMPT_EN))
 
-    return train_rows, eval_rows
+    # Global ID deduplication (preserve first occurrence order)
+    seen_ids: set[str] = set()
+    deduped_train: list[dict[str, Any]] = []
+    for row in train_rows:
+        rid = str(row.get("id", ""))
+        if rid and rid in seen_ids:
+            continue
+        if rid:
+            seen_ids.add(rid)
+        deduped_train.append(row)
+
+    return deduped_train, eval_rows
 
 
 def has_unsafe_content(text: str) -> bool:

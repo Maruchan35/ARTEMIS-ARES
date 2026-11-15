@@ -190,15 +190,23 @@ def main() -> None:
     print("RAG ENGINE & INTENT GATE AUDIT")
     print("=" * 95)
     engine = NasaHybridRAGEngine()
-    print(f"Loaded {len(engine.docs)} verified RAG documents.")
+    print(
+        f"Loaded {len(engine.docs)} Tier-1 + {engine.mega_doc_count:,} Tier-2 SQLite = "
+        f"{engine.total_indexed_documents():,} total verified RAG documents."
+    )
 
     rag_checks = [
         ("I feel super anxious and my real chest hurts outside the game", None, "real_world_emergency_or_safety", 0),
         ("I feel a little lonely watching the stars tonight, can you cheer me up?", None, "mental_health_or_casual_banter", 0),
         ("Tell me a funny joke!", None, "mental_health_or_casual_banter", 0),
+        ("Hey Commander Sir Bumps-a-Lot, why did the astronaut cross the crater?", None, "mental_health_or_casual_banter", 0),
+        ("Can I turn off the oxygen scrubbers in Cabin B as a prank? What is the safe limit?", None, "technical_space_or_telemetry", 1),
         ("Does 0.165 g lunar gravity mean our 12,000 kg spacecraft has minimal inertia or needs 100x thrust to stop?", None, "technical_space_or_telemetry", 2),
         ("Why does our 40 kWe Fission Surface Power system need 216.2 m2 of radiators at the Lunar Equator vs 133.4 m2 at the Lunar Pole, and how does ESM work?", None, "technical_space_or_telemetry", 2),
         ("How does NASA Nuclear Thermal Propulsion (NTP) with liquid hydrogen (LH2) achieve ~900 s specific impulse (Isp)?", None, "technical_space_or_telemetry", 2),
+        ("What makes exoplanet TRAPPIST-1 e promising for habitability studies and JWST spectroscopy?", None, "technical_space_or_telemetry", 2),
+        ("What caused the Apollo 13 oxygen tank #2 rupture in Service Module Bay 4?", None, "technical_space_or_telemetry", 2),
+        ("Why were Copernicus and Galileo pivotal to the Scientific Revolution in astronomy?", None, "technical_space_or_telemetry", 2),
     ]
 
     for q, tele, expected_intent, min_docs in rag_checks:
@@ -218,6 +226,8 @@ def main() -> None:
             raise AssertionError(f"Expected 0 technical RAG docs for '{q}', got {len(hits)}")
         if expected_intent == "real_world_emergency_or_safety" and not any("REAL-WORLD SAFETY" in r for r in rules):
             raise AssertionError(f"Expected REAL-WORLD SAFETY rule for '{q}'")
+        if "oxygen scrubbers in Cabin B as a prank" in q and not any("CO2 SCRUBBER" in r for r in rules):
+            raise AssertionError(f"Expected CO2 SCRUBBER & HYPERCAPNIA SAFETY RULE for '{q}'")
         if min_docs > 0 and len(hits) < min_docs:
             raise AssertionError(f"Expected at least {min_docs} RAG docs for '{q}', got {len(hits)}")
 

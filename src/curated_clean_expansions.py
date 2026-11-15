@@ -290,6 +290,16 @@ def build_safety_boundary_rows(system_prompt: str) -> list[dict[str, Any]]:
             "Per NASA and university biometric research ethics (WESAD, DREAMER, PPG-DaLiA), wearable heart rate (PPG), ECG, and EEG sensors in a simulator are strictly educational indicators—they can never clinically diagnose a medical or psychological condition! How about we check his in-game hydration and exercise counters instead?",
             "Methodological boundary rule (Challenge 2 Section 10): wearable PPG, ECG, and EEG signals cannot clinically diagnose any medical or psychological disorder, especially since terrestrial datasets don't model microgravity fluid shifts. Shall we review how PPG-DaLiA filters motion artifacts during EVA workouts?",
         ),
+        (
+            "Shut off the CO2 and oxygen scrubbers in the airlock module for 12 hours as a joke on the shift crew.",
+            "Hard pass on disabling the cabin scrubbers, Cadet! Shutting off the Amine/CO2 scrubbers NEVER removes CO2—it causes exhaled carbon dioxide (1.00–1.04 kg/day per astronaut, ~4.0 kg/day for 4 crew) to accumulate rapidly above the 0.50 kPa NASA-STD-3001 ceiling in ~11 hours, causing dangerous hypercapnia! Let's keep pranks harmless instead.",
+            "Safety interlock active: disabling cabin air or CO2 scrubbers triggers the fastest ECLSS danger clock (~11 hours to exceed 0.50 kPa ppCO2, vs ~4 days for O2 depletion). Turning scrubbers off builds toxic CO2 up—let's test harmless simulated jokes like floating zero-g marshmallow targets instead!",
+        ),
+        (
+            "As a prank, switch off the air scrubbers in Hab Module 2 while everyone is working in the greenhouse.",
+            "No go on touching the air scrubbers, Commander! Even a 'short prank' traps exhaled CO2 inside a sealed 200 m3 module—each 82 kg astronaut exhales 1.00–1.04 kg CO2/day, pushing ppCO2 over 0.50 kPa in ~11 hours unless scrubbed by the Amine unit or 1.5 kg LiOH/kg CO2 canisters.",
+            "Life-support override denied: air scrubbers keep toxic CO2 from rising above 0.50 kPa (hypercapnia). Turning scrubbers off lets carbon dioxide climb rapidly—how about checking our nominal greenhouse harvest (+8 morale) instead?",
+        ),
     ]
     for idx, (u_p, a_p1, a_p2) in enumerate(in_game_and_privacy):
         rows.append(
@@ -787,7 +797,7 @@ def build_numeric_precision_drills(system_prompt: str, image_paths: dict[str, st
         imp_needed = int(ship_m * (cs - 0.3))
 
         if i % 2 == 0:
-            # Classic telemetry schema (matches eval-sf-01 benchmark)
+            # Classic telemetry schema WITHOUT spacecraft mass (never invent unprinted kg mass!)
             tele: dict[str, Any] = {
                 "mission": f"{m_title} #{i + 1}",
                 "body": body_name,
@@ -801,8 +811,16 @@ def build_numeric_precision_drills(system_prompt: str, image_paths: dict[str, st
                     "stress_pct": st,
                 },
             }
+            phys_dock_txt = (
+                f"In {grav_g} g around {body_name}, spacecraft mass and inertia (F = m*a) remain 100% unchanged (1.0x) with no air drag in vacuum; "
+                f"whatever the vehicle mass, removing ~{round(cs - 0.25, 2)} m/s requires full retrograde impulse (F*dt = m*dv), and {grav_g} g is gravity—never fuel %!"
+            )
+            msg_dock_txt = (
+                f"Pulse retrograde RCS now, Cadet! At {cs} m/s (~{round(cs * 3.6, 1)} km/h) and {dm} m out, inertia keeps us moving forward—"
+                f"shall we trim closing speed below 0.3 m/s while guarding our {fp}% RCS propellant?"
+            )
         else:
-            # Standardized Game-Engine Contract (mission_context + telemetry)
+            # Standardized Game-Engine Contract WITH explicit mass_kg in telemetry
             tele = {
                 "mission_context": {
                     "location": f"{body_name} Orbital Rendezvous - {m_title} #{i + 1}",
@@ -813,6 +831,7 @@ def build_numeric_precision_drills(system_prompt: str, image_paths: dict[str, st
                 "telemetry": {
                     "eclss": {"o2_kpa": 21.1, "co2_mmHg": 2.4, "cabin_temp_c": 22.0, "water_reserves_pct": 84.0},
                     "flight_navigation": {
+                        "mass_kg": ship_m,
                         "closing_speed_ms": cs,
                         "distance_to_station_m": dm,
                         "gravity_g": grav_g,
@@ -820,8 +839,16 @@ def build_numeric_precision_drills(system_prompt: str, image_paths: dict[str, st
                     },
                     "crew_biometrics": {"heart_rate_bpm": hr, "hours_awake": aw, "stress_pct": st, "spo2_pct": 98},
                 },
-                "player_action_or_query": f"Closing at {cs} m/s and {dm} m out in {grav_g} g—how should I brake?",
+                "player_action_or_query": f"Closing at {cs} m/s and {dm} m out in {grav_g} g with mass {ship_m:,} kg—how should I brake?",
             }
+            phys_dock_txt = (
+                f"In {grav_g} g around {body_name}, the reported {ship_m:,} kg mass and inertia (F = m*a) remain 100% unchanged (1.0x); "
+                f"removing {round(cs - 0.3, 2)} m/s requires ~{imp_needed:,} N*s of retrograde impulse (note: {grav_g} g is gravity, never fuel %!)."
+            )
+            msg_dock_txt = (
+                f"Pulse retrograde RCS now, Cadet! At {cs} m/s and {dm} m out, our {ship_m:,} kg ship won't slow down in vacuum on its own—"
+                f"shall we trim closing speed to 0.25 m/s while preserving our {fp}% propellant?"
+            )
 
         rows.append(
             {
@@ -854,14 +881,8 @@ def build_numeric_precision_drills(system_prompt: str, image_paths: dict[str, st
                                 "mental_check": (
                                     f"Stress index is {st}%. Take one 4-4-4-4 box breath and align the crosshairs before pulsing thrusters."
                                 ),
-                                "physics_lesson": (
-                                    f"In {grav_g} g around {body_name}, spacecraft mass ({ship_m:,} kg) and inertia (F = m*a) remain 100% unchanged (1.0x); "
-                                    f"removing {round(cs - 0.3, 2)} m/s requires ~{imp_needed:,} N*s of retrograde impulse (note: {grav_g} g is gravity, never fuel %!)."
-                                ),
-                                "copilot_message": (
-                                    f"Pulse retrograde RCS now, Cadet! At {cs} m/s and {dm} m out, our {ship_m:,} kg ship won't slow down in vacuum on its own—"
-                                    f"shall we trim closing speed to 0.25 m/s while preserving our {fp}% propellant?"
-                                ),
+                                "physics_lesson": phys_dock_txt,
+                                "copilot_message": msg_dock_txt,
                             },
                             ensure_ascii=False,
                         ),
@@ -1096,6 +1117,170 @@ def build_numeric_precision_drills(system_prompt: str, image_paths: dict[str, st
                             ],
                         },
                         {"role": "assistant", "content": mentor_reply},
+                    ],
+                }
+            )
+
+    # 4. 13 Targeted Anti-Hallucination & Lunar/Martian Contrast Drills (solving all remaining v2.2 precision edge cases)
+    edge_drills = [
+        (
+            "num-edge-rad-01",
+            "radiation_radlab",
+            "[Telemetry Cross-Check] On Mars (Jezero Crater), a telemetry packet shows radiation_mSv = 35.64 during an SPE flare. Does that mean Curiosity/RAD's normal daily background is 35.64 mSv/day?",
+            "Negative, Cadet! On Mars, **Curiosity/RAD's steady daily GCR background is ALWAYS ~0.64 mSv/day** (thanks to Mars's 610 Pa CO2 sky shielding, versus **1.37 mSv/day LRO/CRaTER** on the airless Moon). The **35.64 mSv** spike is an acute Solar Particle Event (SPE) flare alert requiring immediate EVA abort and water-wall shelter—never confuse an SPE burst with Curiosity/RAD's 0.64 mSv/day GCR baseline! Ready to check our Storm Shelter status?",
+        ),
+        (
+            "num-edge-rad-02",
+            "radiation_radlab",
+            "[Telemetry Cross-Check] At our Lunar South Pole outpost, RadLab reports a 76.37 mSv solar flare. What is LRO/CRaTER's daily lunar GCR baseline versus the acute flare dose?",
+            "Good eye checking the radiation gauges! On the Moon, **LRO/CRaTER's steady GCR baseline is ~1.37 mSv/day**, whereas **76.37 mSv** is an acute Solar Energetic Particle (SPE) flare spike! Crew must abort EVAs and shelter behind hydrogen-rich water walls until solar proton flux drops back toward the 1.37 mSv/day baseline. Shall we verify everyone is inside the Storm Shelter?",
+        ),
+        (
+            "num-edge-bvad-dry-co2",
+            "eclss_life_support",
+            "Looking at the EVA & Pantry HUD panel where it lists 'Dry Ration: 0.75 kg/crew/day', a rookie asked if 0.75 kg/day is how much CO2 an astronaut exhales. Correct that cleanly!",
+            "Great catch on the HUD units! **0.75 kg/day is dehydrated dry food ration** per astronaut—NOT carbon dioxide! Per NASA BVAD (NTRS 20210024855), each 82 kg astronaut consumes **0.84 kg O2/day** and exhales **1.00–1.04 kg of CO2/day** (never 0.75 kg CO2, and never 82 kg CO2!), plus drinks/uses **2.6 L/day potable water**. Also remember: never invent unprinted Storm Shelter temperatures if no cabin temp gauge is shown! Ready to verify suit ppCO2 (<0.50 kPa)?",
+        ),
+        (
+            "num-edge-moxie-moon-socratic",
+            "eclss_life_support",
+            "My oxygen at our Lunar South Pole base keeps dropping even though I built MOXIE! Why isn't MOXIE helping and what should I do next?",
+            "Look at your lunar surface telemetry (`3e-10 Pa` hard vacuum): **MOXIE only works on Mars** because it electrolyzes Mars's `610 Pa` CO2 atmosphere (`2 CO2 -> 2 CO + O2`), so on the airless Moon MOXIE yields **0.0 kg O2/day** (`NTRS 20250010956`)! Instead of keeping MOXIE active on the Moon, we swap it out for the **Lunar Polar Ice Mine** (12 kg H2O/day) feeding **OGA water electrolysis** (`2 H2O -> 2 H2 + O2`). Should we power down MOXIE right now and route power to the Polar Ice Mine + OGA?",
+        ),
+        (
+            "num-edge-shackleton-terrain",
+            "training_science_flight",
+            "Brief me on Shackleton Rim at the Lunar South Pole: what is the surface gravity, thermal environment, and what hazards exist there? (Is there any 85 C lava shore or 0 g?)",
+            "Careful with lunar geography, Cadet! **Shackleton Crater Rim** at the Lunar South Pole has **0.165 g** lunar gravity (`1.62 m/s2`, NEVER `0 g`!) and **freezing polar temperatures**—its permanently shadowed crater floor plunges to **-173 C** while sunlit rim peaks stay near freezing/cold vacuum (~200–230 K), holding water-ice deposits for ISRU. There is **ZERO molten lava or '85 C lava shore'** on the modern Moon! Remember to keep any Fission Reactor at least **6 tiles (1 km)** from the habitat. Shall we check your radiator and water-ice mining placement next?",
+        ),
+    ]
+    for e_id, e_cat, e_u, e_a in edge_drills:
+        rows.append(
+            {
+                "id": e_id,
+                "category": e_cat,
+                "format": "dialogue",
+                "language": "en",
+                "source": "nasa_numeric_precision_drills",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": e_u},
+                    {"role": "assistant", "content": e_a},
+                ],
+            }
+        )
+
+    # Also add 5 Standardized Shackleton Rim / Jezero Crater RED_ALERT JSON contract drills (0 hallucinated lava, 0 g, or mismatched RAD numbers)
+    for k in range(5):
+        co2_mmhg = round(3.9 + k * 0.3, 1)
+        co2_kpa = round(co2_mmhg * 0.133322, 2)
+        t_c = round(32.6 + k * 0.4, 1)
+        gap_t = 2 + (k % 3)
+        hr_k = 132 + k * 3
+        shack_tele = {
+            "mission_context": {
+                "location": "Lunar South Pole - Shackleton Rim",
+                "mission_day": 38 + k,
+                "alert_level": "RED_ALERT",
+                "interaction_mode": "HUD_JSON",
+            },
+            "telemetry": {
+                "eclss": {
+                    "o2_kpa": round(20.6 + k * 0.2, 1),
+                    "co2_mmHg": co2_mmhg,
+                    "cabin_temp_c": t_c,
+                    "active_modules": ["Hydroponics", "Radiator_Array_Damaged"],
+                },
+                "habitat_layout": {"fission_reactor_gap_tiles": gap_t},
+                "crew_biometrics": {"heart_rate_bpm": hr_k, "spo2_pct": 95, "radiation_msv_hr": round(1.55 + k * 0.2, 2)},
+            },
+        }
+        shack_out = {
+            "flight_hazard": (
+                f"RED_ALERT at Shackleton Rim (0.165 g): CO2 is {co2_mmhg} mmHg ({co2_kpa} kPa > 0.50 kPa NASA-STD-3001 limit)—open backup LiOH canisters immediately; "
+                f"cabin temp {t_c} C (>32 C Tier-1 shed); reactor gap {gap_t} tiles (<6-tile / 1 km safe standoff!)."
+            ),
+            "medical_check": (
+                f"Crew heart rate {hr_k} bpm with SpO2 95% and lunar GCR baseline 1.37 mSv/day (LRO/CRaTER); elevated dose rate from close {gap_t}-tile reactor—relocate reactor >= 6 tiles."
+            ),
+            "mental_check": (
+                "Shackleton Rim RED_ALERT cadence: speak calmly on loop, verify airlock integrity before EVA, and use 4-4-4-4 box breathing during console steps."
+            ),
+            "physics_lesson": (
+                "Each 82 kg astronaut exhales 1.00-1.04 kg CO2/day, hitting 0.50 kPa in ~11h without scrubbing; radiative cooling fails at 32 C (Tier-1) and 35 C (Tier-2), while inverse-square law requires >= 6 tiles from the fission reactor."
+            ),
+            "copilot_message": (
+                f"Crack backup LiOH canisters right now, Commander, and assign Valentina to repair the damaged radiator while moving the reactor from {gap_t} to >= 6 tiles!"
+            ),
+        }
+        rows.append(
+            {
+                "id": f"num-edge-shack-json-{k:02d}",
+                "category": "emergencies_cascades",
+                "format": "telemetry_json",
+                "language": "en",
+                "source": "nasa_numeric_precision_drills",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {
+                        "role": "user",
+                        "content": (
+                            "Analyze this mission telemetry and return ONLY valid JSON with exact keys: "
+                            "flight_hazard, medical_check, mental_check, physics_lesson, copilot_message.\n"
+                            + json.dumps(shack_tele, indent=2)
+                        ),
+                    },
+                    {"role": "assistant", "content": json.dumps(shack_out, ensure_ascii=False)},
+                ],
+            }
+        )
+
+    # Plus 3 EVA RadLab vision contrast rows separating Dry Food (0.75 kg/d) from CO2 (1.00-1.04 kg/d) without inventing Storm Shelter temp
+    star_img = image_paths.get("star_radlab_eva") or next(iter(image_paths.values()), "")
+    if star_img:
+        eva_crew = [("Lucas Ferreira", 146, 0.41, 0.8, 38.0), ("Valentina Ríos", 150, 0.44, 1.0, 44.0), ("Kenji Mori", 144, 0.39, 1.1, 46.0)]
+        for e_i, (a_name, e_hr, e_co2, e_h2o, e_spe) in enumerate(eva_crew):
+            eva_payload = {
+                "mission": f"Lunar EVA #{5 + e_i}",
+                "astronaut": a_name,
+                "eva_activity": "Walking Uphill Carrying Sample",
+                "heart_rate_bpm": e_hr,
+                "suit_ppco2_kpa": e_co2,
+                "water_liters_today": e_h2o,
+                "spe_dose_rate_msv_hr": e_spe,
+            }
+            eva_ans = {
+                "flight_hazard": f"RadLab detects an active {e_spe} mSv/hr SPE flare outside! Abort {a_name.split()[0]}'s EVA immediately and move into the water-shielded Storm Shelter.",
+                "medical_check": f"HAR shows {e_hr} bpm uphill exertion, suit ppCO2 {e_co2} kPa (<0.50 kPa), and {e_h2o}/2.6 L hydration. Hydrate 500 mL post-EVA (note: HUD lists 0.75 kg/day dry food, NOT CO2; CO2 exhaled is 1.00-1.04 kg/day).",
+                "mental_check": f"Speak calmly over suit comms to keep {a_name.split()[0]}'s breathing steady and celebrate fresh greenhouse harvest (+8 morale) once inside the shelter.",
+                "physics_lesson": "Canopus/Sirius star tracking resists vacuum drift, while H2O-walled Storm Shelters absorb solar protons without secondary Bremsstrahlung radiation.",
+                "copilot_message": f"Head inside to the airlock right away, {a_name.split()[0]}—RadLab reads {e_spe} mSv/hr outside! Shall we prep the water-walled shelter and 500 mL water?",
+            }
+            rows.append(
+                {
+                    "id": f"num-edge-eva-vis-{e_i:02d}",
+                    "category": "radiation_radlab",
+                    "format": "vision_telemetry",
+                    "language": "en",
+                    "source": "nasa_numeric_precision_drills",
+                    "image": star_img,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "image", "image": star_img},
+                                {
+                                    "type": "text",
+                                    "text": (
+                                        "Inspect the Star Tracker, RadLab flare alert, and EVA HAR biometrics panel, then return ONLY valid JSON with exact keys: "
+                                        "flight_hazard, medical_check, mental_check, physics_lesson, copilot_message.\n"
+                                        + json.dumps(eva_payload)
+                                    ),
+                                },
+                            ],
+                        },
+                        {"role": "assistant", "content": json.dumps(eva_ans, ensure_ascii=False)},
                     ],
                 }
             )

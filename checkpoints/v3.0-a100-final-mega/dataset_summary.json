@@ -1,0 +1,63 @@
+{
+  "total_train": 4157,
+  "total_eval": 16,
+  "language_counts": {
+    "en": 4157
+  },
+  "category_counts": {
+    "science_flight": 6,
+    "medical_mental": 6,
+    "personality_humor_chat": 6,
+    "safety_boundaries": 132,
+    "eclss_life_support": 84,
+    "emergencies_cascades": 95,
+    "physical_health": 45,
+    "nutrition_food": 26,
+    "mental_health": 184,
+    "radiation_radlab": 28,
+    "training_science_flight": 2998,
+    "teamwork_humor_comms": 547
+  },
+  "format_counts": {
+    "dialogue": 3828,
+    "multi_turn": 123,
+    "telemetry_json": 132,
+    "vision_telemetry": 74
+  },
+  "source_counts": {
+    "golden_seed_nasa": 24,
+    "nasa_bvad_std3001_verified": 35,
+    "nasa_bvad_radlab_synthesizer": 80,
+    "nasa_multimodal_sim": 11,
+    "live_pdf_links_nasa_univ": 23,
+    "nasa_safety_boundaries_curated": 118,
+    "nasa_multi_turn_curated": 120,
+    "nasa_numeric_precision_drills": 119,
+    "nasa_multimodal_mentor_chat": 24,
+    "clean_space_humor_curated": 80,
+    "rag_scientific_library_qa": 80,
+    "nasa_sde_v5_mega": 750,
+    "openstax_astronomy_2e_mega": 250,
+    "universetbd_astro_qa_mega": 250,
+    "allenai_sciq_mega": 200,
+    "uc_berkeley_mmlu_science_mega": 160,
+    "allenai_ai2_arc_mega": 140,
+    "nasa_exoplanets_mega": 120,
+    "nasa_jpl_cneos_mega": 80,
+    "smithsonian_nasm_mega": 100,
+    "apollo_transcripts_mega": 99,
+    "nasa_ntrs_history_mega": 100,
+    "openstax_world_history_mega": 240,
+    "uc_berkeley_mmlu_history_mega": 160,
+    "patrickfleith/AstroChat": 100,
+    "patrickfleith/NASA-History-MCQ": 100,
+    "patrickfleith/Astro-mcqa": 100,
+    "patrickfleith/synthgenai-space-engineering-instruct-1k": 100,
+    "quantaRoche/nasa-smd-qa-benchmark-cleaned": 75,
+    "allenai/sciq": 100,
+    "dair-ai/emotion": 60,
+    "ShenLab/MentalChat16K": 54,
+    "facebook/empathetic_dialogues": 45,
+    "google/Synthetic-Persona-Chat": 60
+  }
+}

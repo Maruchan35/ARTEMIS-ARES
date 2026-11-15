@@ -1,0 +1,44 @@
+{
+  "version": "v3.0-a100-final-mega",
+  "created_at": "2026-11-15T00:17:39.548250+00:00",
+  "status": "snapshot_ready",
+  "hardware": "NVIDIA A100-SXM4-40GB",
+  "base_model": "unsloth/gemma-4-E4B-it",
+  "lora_rank_r": 32,
+  "lora_alpha": 64,
+  "trainable_params": 69763072,
+  "train_rows": 4157,
+  "eval_rows": 16,
+  "max_steps": 1204,
+  "initial_loss": 3.3888,
+  "final_loss": 0.4147,
+  "training_runtime_sec": 1814.45,
+  "rag_documents_count": 367,
+  "json_validity": "3/3 (100%)",
+  "physics_inertia_probe": "PASSED (**NEITHER!** 1.0x braking impulse, F = m*a, Δp = F*Δt)",
+  "ntrs_fsp_citation_probe": "PASSED (Cited NTRS 20220004670 216.2 m2 vs 133.4 m2 & NTRS 20040015099 C*L_C)",
+  "files": {
+    "astrocopilot_gemma4_lora/adapter_config.json": {
+      "size_bytes": 14731,
+      "sha256": "0508dead02fe1853adbef0f03fab6a6c2541a41a892782ca0d67d58f3af74609"
+    },
+    "astrocopilot_gemma4_lora/adapter_model.safetensors": {
+      "size_bytes": 279129344,
+      "sha256": "05ce42d9d6fbf9c606ccae07cbb9bb66779ebfd78e12a55bb85b57123e24852b"
+    },
+    "qlora_training_report.json": {
+      "size_bytes": 25082,
+      "sha256": "d93f368aa05423aa36537672b72eb96550d362b9634d234b7f6ff49890f6a7b9"
+    },
+    "dataset_summary.json": {
+      "size_bytes": 1888,
+      "sha256": "126b10336582905ee7b930e90e49a01a158136766fcaa52ca5307f74596893a9"
+    },
+    "nasa_rag_corpus.jsonl": {
+      "size_bytes": 668269,
+      "sha256": "a20b44171b8188694aea111b71069bdaa2de46b7b8f7d7f441f3335657775268",
+      "documents_count": 367
+    }
+  },
+  "notes": "Final Mega A100 QLoRA AstroCopilot (r=32, alpha=64, 4,157 clean unique rows: 2 epochs core + 1 epoch 2,649 Mega Knowledge rows across NASA SDE, OpenStax Astronomy/World History, arxiv-astro-ph, Exoplanets, JPL CNEOS, Smithsonian NASM, Apollo 11/13) + 387,730-doc Hybrid RAG (367 Tier-1 + 387,363 Tier-2 SQLite FTS5) + 19-benchmark live evaluation."
+}

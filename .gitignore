@@ -6,8 +6,12 @@ __pycache__/
 # Local Drive mapping
 .drive_ids.json
 
-# Large binary weights (>100MB, published via GitHub Releases)
+# Large binary weights & compiled SQLite FTS5 Mega-RAG (>100MB, published via GitHub Releases)
 *.safetensors
 *.bin
 *.pt
 *.pth
+data/nasa_mega_rag.sqlite
+data/nasa_mega_rag.sqlite.gz
+data/mega_rag_parts/
+

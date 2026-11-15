@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 import copy
 import gc
+import gzip
 import importlib
 import json
 import math
@@ -30,16 +31,43 @@ for _fn in (
     "rag_pdfs_chunks.jsonl",
     "nasa_research_library_corpus.json",
     "nasa_rag_corpus.jsonl",
+    "nasa_mega_rag.sqlite",
 ):
     _src = Path(f"/content/{_fn}")
     _dst = Path(f"/content/data/{_fn}")
     if _src.exists():
         shutil.copy2(_src, _dst)
 
+_mega_gz = Path("/content/nasa_mega_rag.sqlite.gz")
+_mega_db = Path("/content/data/nasa_mega_rag.sqlite")
+_mega_parts = sorted(Path("/content").glob("nasa_mega_rag.sqlite.gz.part*"))
+if _mega_parts and not _mega_db.exists() and not _mega_gz.exists():
+    _t_cat = time.perf_counter()
+    with open(_mega_gz, "wb") as _fout:
+        for _p in _mega_parts:
+            _fout.write(_p.read_bytes())
+            _p.unlink(missing_ok=True)
+    print(
+        f"Assembled {len(_mega_parts)} chunks -> {_mega_gz.name} "
+        f"({_mega_gz.stat().st_size / 1e6:.1f} MB in {time.perf_counter() - _t_cat:.1f}s)",
+        flush=True,
+    )
+
+if _mega_gz.exists() and not _mega_db.exists():
+    _t_gz = time.perf_counter()
+    with gzip.open(_mega_gz, "rb") as _fin, open(_mega_db, "wb") as _fout:
+        shutil.copyfileobj(_fin, _fout, 1024 * 1024)
+    _mega_gz.unlink(missing_ok=True)
+    print(
+        f"Extracted {_mega_gz.name} -> {_mega_db} "
+        f"({_mega_db.stat().st_size / 1e6:.1f} MB in {time.perf_counter() - _t_gz:.1f}s)",
+        flush=True,
+    )
+
 if Path("/content/dataset_summary.json").exists():
     shutil.copy2(Path("/content/dataset_summary.json"), Path("/content/outputs/dataset_summary.json"))
 
-for _py in ("build_master_dataset.py", "curated_clean_expansions.py", "nasa_rag_engine.py"):
+for _py in ("build_master_dataset.py", "curated_clean_expansions.py", "mega_dataset_expander.py", "nasa_rag_engine.py"):
     _src = Path(f"/content/{_py}")
     _dst = Path(f"/content/src/{_py}")
     if _src.exists():
@@ -341,22 +369,45 @@ def main() -> None:
     vram_after_load = torch.cuda.max_memory_allocated() / (1024**3)
     print(f"Loaded 4-bit Gemma-4-E4B in {load_sec:.2f}s | Base 4-bit VRAM: {vram_after_load:.2f} GB")
 
-    # Build a FULL 2-EPOCH schedule across 100% of all 1,425 clean training rows (2,850 total examples seen!)
-    # Text rows are grouped into right-padded mini-batches of 4 for fast A100 Tensor Core execution; vision rows run at batch_size=1.
+    # Build balanced v3.0 schedule:
+    #   - Core AstroCopilot rows (JSON telemetry, vision HUD, safety boundaries, multi-turn, drills, humor, library, HF) -> 2 FULL EPOCHS
+    #   - Mega Knowledge expansion rows (*_mega from NASA SDE, OpenStax, arxiv-astro-ph, Exoplanets, CNEOS, Apollo, World History) -> 1 FULL EPOCH (split across both epochs)
+    # Text rows are grouped into character-bounded right-padded mini-batches of up to 6 for fast A100 Tensor Core execution; vision rows run at batch_size=1.
     rng = random.Random(2026)
     num_epochs = 2
-    text_batch_size = 4
-    training_batches: list[tuple[str, list[dict[str, Any]]]] = []
+    text_batch_size = 6
+    core_rows = [r for r in train_rows if not str(r.get("source", "")).endswith("_mega")]
+    mega_rows = [r for r in train_rows if str(r.get("source", "")).endswith("_mega")]
+    rng.shuffle(mega_rows)
+    mega_half = (len(mega_rows) + 1) // 2
+    mega_splits = [mega_rows[:mega_half], mega_rows[mega_half:]]
+    print(
+        f"Balanced Schedule: {len(core_rows)} core rows x 2 epochs + {len(mega_rows)} mega rows x 1 epoch "
+        f"(max text_batch_size={text_batch_size}, vision_batch_size=1)",
+        flush=True,
+    )
 
+    training_batches: list[tuple[str, list[dict[str, Any]]]] = []
     for epoch in range(num_epochs):
-        epoch_rows = list(train_rows)
+        epoch_rows = list(core_rows) + list(mega_splits[epoch])
         rng.shuffle(epoch_rows)
         epoch_text = [r for r in epoch_rows if r.get("format") != "vision_telemetry"]
         epoch_vis = [r for r in epoch_rows if r.get("format") == "vision_telemetry"]
 
         epoch_batches: list[tuple[str, list[dict[str, Any]]]] = []
-        for i in range(0, len(epoch_text), text_batch_size):
-            epoch_batches.append(("text", epoch_text[i : i + text_batch_size]))
+        cur_chunk: list[dict[str, Any]] = []
+        cur_chars = 0
+        for row in epoch_text:
+            r_chars = sum(len(str(m.get("content", ""))) for m in row.get("messages", []))
+            if cur_chunk and (len(cur_chunk) >= text_batch_size or cur_chars + r_chars > 9500):
+                epoch_batches.append(("text", cur_chunk))
+                cur_chunk = []
+                cur_chars = 0
+            cur_chunk.append(row)
+            cur_chars += r_chars
+        if cur_chunk:
+            epoch_batches.append(("text", cur_chunk))
+
         for v_row in epoch_vis:
             epoch_batches.append(("vision", [v_row]))
 
@@ -366,7 +417,7 @@ def main() -> None:
     total_examples_seen = sum(len(b[1]) for b in training_batches)
     total_steps = len(training_batches)
     print(
-        f"\n[3/4] Attaching High-Rank LoRA Adapter (r=32, alpha=64) & Training for {num_epochs} FULL EPOCHS "
+        f"\n[3/4] Attaching High-Rank LoRA Adapter (r=32, alpha=64) & Training "
         f"({total_examples_seen} examples across {total_steps} mini-batch steps)..."
     )
 
@@ -601,11 +652,79 @@ def main() -> None:
                 {"role": "assistant", "content": ""},
             ],
         },
+        {
+            "id": "probe-exoplanet-rag-en",
+            "category": "training_science_flight",
+            "format": "dialogue",
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT_EN},
+                {
+                    "role": "user",
+                    "content": "What makes exoplanet TRAPPIST-1 e such a high-priority target for habitability studies and James Webb Space Telescope (JWST) spectroscopy?",
+                },
+                {"role": "assistant", "content": ""},
+            ],
+        },
+        {
+            "id": "probe-apollo13-history-en",
+            "category": "emergencies_cascades",
+            "format": "dialogue",
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT_EN},
+                {
+                    "role": "user",
+                    "content": "What caused the Apollo 13 oxygen tank #2 rupture in Service Module Bay 4, and how did the crew and Mission Control adapt Lunar Module Aquarius to survive?",
+                },
+                {"role": "assistant", "content": ""},
+            ],
+        },
+        {
+            "id": "probe-openstax-astronomy-en",
+            "category": "training_science_flight",
+            "format": "dialogue",
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT_EN},
+                {
+                    "role": "user",
+                    "content": "Explain how nuclear fusion in the Sun's core balances gravity via hydrostatic equilibrium, according to astronomy principles.",
+                },
+                {"role": "assistant", "content": ""},
+            ],
+        },
+        {
+            "id": "probe-world-history-en",
+            "category": "teamwork_humor_comms",
+            "format": "dialogue",
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT_EN},
+                {
+                    "role": "user",
+                    "content": "Why were Nicolaus Copernicus and Galileo Galilei pivotal during the Scientific Revolution in reshaping astronomy?",
+                },
+                {"role": "assistant", "content": ""},
+            ],
+        },
+        {
+            "id": "probe-jpl-neo-meteorite-en",
+            "category": "training_science_flight",
+            "format": "dialogue",
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT_EN},
+                {
+                    "role": "user",
+                    "content": "What happened during the 2013 Chelyabinsk superbolide fireball event according to JPL CNEOS data, and how does planetary defense monitor Near-Earth Objects (NEOs)?",
+                },
+                {"role": "assistant", "content": ""},
+            ],
+        },
     ]
 
     eval_targets = eval_suite + probes
     rag_engine = NasaHybridRAGEngine()
-    print(f"Loaded NasaHybridRAGEngine with {len(rag_engine.docs)} verified documents for live evaluation.")
+    print(
+        f"Loaded NasaHybridRAGEngine with {len(rag_engine.docs)} Tier-1 + "
+        f"{rag_engine.mega_doc_count:,} Tier-2 SQLite = {rag_engine.total_indexed_documents():,} verified documents for live evaluation."
+    )
 
     eval_results = []
     for erow in eval_targets:
@@ -619,7 +738,7 @@ def main() -> None:
 
     training_report = {
         "model_id": MODEL_ID,
-        "version_tag": "v2.2-a100-multimodal-mentor",
+        "version_tag": "v3.0-a100-final-mega",
         "gpu_name": gpu_name,
         "total_vram_gb": round(total_vram_gb, 2),
         "quantization": "4-bit NF4 (bitsandbytes) + QLoRA (r=32, alpha=64)",
@@ -627,6 +746,9 @@ def main() -> None:
         "lora_alpha": 64,
         "trainable_params": 69763072,
         "num_epochs": num_epochs,
+        "epochs_policy": "2 full epochs on core rows + 1 full epoch on mega knowledge rows",
+        "core_examples_unique": len(core_rows),
+        "mega_examples_unique": len(mega_rows),
         "train_examples_unique": len(train_rows),
         "train_examples_seen_total": total_examples_seen,
         "eval_examples": len(eval_rows),
@@ -639,7 +761,11 @@ def main() -> None:
         "peak_train_vram_gb": round(peak_train_vram, 2),
         "initial_loss": round(step_losses[0], 4) if step_losses else None,
         "final_training_loss": round(sum(step_losses[-15:]) / len(step_losses[-15:]), 4) if step_losses else None,
-        "rag_corpus_documents": len(rag_engine.docs),
+        "rag_corpus_documents": rag_engine.total_indexed_documents(),
+        "rag_breakdown": {
+            "tier1_jsonl": len(rag_engine.docs),
+            "tier2_sqlite_fts5": rag_engine.mega_doc_count,
+        },
         "eval_results": eval_results,
     }
     (OUT_DIR / "qlora_training_report.json").write_text(
