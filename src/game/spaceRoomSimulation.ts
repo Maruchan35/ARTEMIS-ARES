@@ -49,6 +49,7 @@ export type RoomStationKind =
   | 'centrifuge_station'
   | 'eclss_fire_station'
   | 'wall_manual_station'
+  | 'orion_hatch'
   | 'orion_fault_panel'
   | 'orion_power_panel'
   | 'orion_pilot_seat'
@@ -103,7 +104,7 @@ export interface RoomZoneInfo {
 }
 
 export interface AutoDoorState {
-  id: 'door_west' | 'door_east' | 'door_north' | 'door_south' | 'door_sw' | 'door_ne' | 'door_se';
+  id: 'door_west' | 'door_east' | 'door_north' | 'door_south' | 'door_sw' | 'door_ne' | 'door_se' | 'door_orion_hatch';
   x: number;
   y: number;
   axis: 'x' | 'y';
@@ -326,6 +327,10 @@ export interface SpaceRoomState {
   lightingMode: LightingMode;
   throwPhysicsMode: ThrowPhysicsMode;
   shutterOpen: boolean;
+  orionHatchOpen: boolean;
+  orionHatchSealed: boolean;
+  orionLevelsChecked: boolean;
+  playerInsideOrion: boolean;
   sleeping: boolean;
   sleepTimerSec: number;
   exercisingTimerSec: number;
@@ -585,6 +590,7 @@ export function createDefaultAutoDoors(): AutoDoorState[] {
     { id: 'door_sw', x: 3.1, y: -1.2, axis: 'y', openProgress: 0, labelEs: 'Compuerta Piscina NBL', labelEn: 'SW NBL Pool Door' },
     { id: 'door_ne', x: 19.3, y: 8.2, axis: 'y', openProgress: 0, labelEs: 'Compuerta Centrífuga 4.5G', labelEn: 'NE Centrifuge Lab Door' },
     { id: 'door_se', x: 19.3, y: -1.2, axis: 'y', openProgress: 0, labelEs: 'Compuerta Cámara Incendio', labelEn: 'SE Fire Chamber Door' },
+    { id: 'door_orion_hatch', x: 10.0, y: -4.55, axis: 'y', openProgress: 1, labelEs: 'Escotilla Cápsula Orion', labelEn: 'Orion Capsule Pressure Hatch' },
   ];
 }
 
@@ -942,6 +948,15 @@ export function getStationTrainingBrief(kind: RoomStationKind): StationTrainingB
       nasaDataEs: `Espesor crítico ${NASA_CONSTANTS.RADIATION_AND_SHIELDING.GCR_REGOLITH_THICKNESS_M} m (300 g/cm² · 400 t) para mantener dosis < ${NASA_CONSTANTS.RADIATION_AND_SHIELDING.SPE_30_DAY_LIMIT_MSV} mSv/30d.`,
       nasaDataEn: `${NASA_CONSTANTS.RADIATION_AND_SHIELDING.GCR_REGOLITH_THICKNESS_M} m thickness (300 g/cm² · 400 t) keeping crew dose < ${NASA_CONSTANTS.RADIATION_AND_SHIELDING.SPE_30_DAY_LIMIT_MSV} mSv/30d.`,
       sourceDoc: 'NASA HIDH / Aug 1972 SPE Limit',
+    },
+    orion_hatch: {
+      titleEs: 'Escotilla Lateral de Acceso Orion CM (101.3 kPa)',
+      titleEn: 'Orion CM Side Access Pressure Hatch (101.3 kPa)',
+      purposeEs: 'Compuerta hermética de embarque desde la Bahía de Lanzamiento LC-39B; se abre para abordar la cápsula y debe cerrarse y sellarse a 101.3 kPa antes de encender sistemas.',
+      purposeEn: 'Hermetic crew boarding hatch from LC-39B Launch Bay; opens for ingress and must be latched & sealed at 101.3 kPa before pre-flight power-up.',
+      nasaDataEs: `Escotilla de 0.91 m · Sello doble redundante a ${NASA_CONSTANTS.HABITAT_ATMOSPHERE.NOMINAL_PRESSURE_KPA} kPa (14.7 psi).`,
+      nasaDataEn: `0.91 m crew hatch · Redundant pressure seal at ${NASA_CONSTANTS.HABITAT_ATMOSPHERE.NOMINAL_PRESSURE_KPA} kPa (14.7 psi).`,
+      sourceDoc: 'NASA Artemis ESDMD-001 Crew Ingress Spec',
     },
     hatch_next_mission: {
       titleEs: 'Esclusa de Embarque Aeroespacial SLS',
@@ -1735,6 +1750,19 @@ export function createInitialSpaceRoomState(
         value: roverChoice,
       },
       {
+        id: 'orion_hatch',
+        kind: 'orion_hatch',
+        x: 10.00,
+        y: -4.55,
+        z: 1.25,
+        yawDeg: 0,
+        labelEs: 'Escotilla Orion · Abrir / Sellar Presión',
+        labelEn: 'Orion Side Hatch · Open / Seal Pressure',
+        progress: 0,
+        active: true,
+        done: false,
+      },
+      {
         id: 'orion_fault_panel',
         kind: 'orion_fault_panel',
         x: 8.82,
@@ -2340,6 +2368,10 @@ export function createInitialSpaceRoomState(
     lightingMode,
     throwPhysicsMode: missionId === 'tutorial_hab' ? 'earth_1g' : 'zero_g',
     shutterOpen,
+    orionHatchOpen: missionId !== 'manifest_launch',
+    orionHatchSealed: missionId !== 'manifest_launch',
+    orionLevelsChecked: missionId !== 'manifest_launch',
+    playerInsideOrion: false,
     sleeping: false,
     sleepTimerSec: 0,
     exercisingTimerSec: 0,
@@ -2393,7 +2425,9 @@ export function createInitialSpaceRoomState(
       textEn: radioEn,
       timestampSec: 0,
     },
-    doors: createDefaultAutoDoors(),
+    doors: createDefaultAutoDoors().map((d) =>
+      d.id === 'door_orion_hatch' ? { ...d, openProgress: missionId === 'manifest_launch' ? 0 : 1 } : d
+    ),
     missionAssigned: false,
     stations,
     worldItems,
@@ -2709,10 +2743,11 @@ export function stepSpaceRoomSimulation(
     sim.rpcmTripped = false;
   }
 
-  // Step automatic sliding bulkhead doors based on proximity (2.85 m)
+  // Step automatic sliding bulkhead doors (corridors auto-open; Orion Hatch is manual)
+  sim.playerInsideOrion = player.y < -4.55 && player.x >= 8.15 && player.x <= 11.85;
   for (const d of sim.doors) {
     const dist = Math.hypot(player.x - d.x, player.y - d.y);
-    const targetOpen = dist < 2.85 ? 1 : 0;
+    const targetOpen = d.id === 'door_orion_hatch' ? (sim.orionHatchOpen ? 1 : 0) : dist < 2.85 ? 1 : 0;
     const rate = dt * 3.4;
     if (d.openProgress < targetOpen) {
       d.openProgress = Math.min(1, d.openProgress + rate);
@@ -3246,7 +3281,56 @@ export function interactRoomStation(
       };
     }
 
+    case 'orion_hatch': {
+      if (!sim.orionHatchOpen) {
+        sim.orionHatchOpen = true;
+        sim.orionHatchSealed = false;
+        st.done = false;
+        return {
+          handItem,
+          animType: 'use',
+          tone: 'ok',
+          msgEs: sim.playerInsideOrion
+            ? 'Escotilla Orion desbloqueada y abierta hacia la Bahía de Lanzamiento'
+            : 'Escotilla Orion abierta — Entra por la pasarela de la Bahía de Lanzamiento',
+          msgEn: sim.playerInsideOrion
+            ? 'Orion Side Hatch unlatched & opened toward Launch Bay'
+            : 'Orion Side Hatch opened — Walk inside via Launch Bay Gantry',
+        };
+      }
+      sim.orionHatchOpen = false;
+      if (sim.playerInsideOrion) {
+        sim.orionHatchSealed = true;
+        st.done = true;
+        return {
+          handItem,
+          animType: 'use',
+          tone: 'ok',
+          msgEs: 'Escotilla Orion CERRADA y SELLADA (101.3 kPa). Repara falla Crio y comprueba niveles/interruptores.',
+          msgEn: 'Orion Side Hatch CLOSED & SEALED (101.3 kPa). Repair Cryo fault & check levels/switches.',
+        };
+      }
+      sim.orionHatchSealed = false;
+      st.done = false;
+      return {
+        handItem,
+        animType: 'use',
+        tone: 'warn',
+        msgEs: 'Escotilla Orion cerrada desde la Bahía de Lanzamiento',
+        msgEn: 'Orion Side Hatch closed from Launch Bay',
+      };
+    }
+
     case 'orion_fault_panel': {
+      if (sim.currentMissionId === 'manifest_launch' && !sim.orionHatchSealed) {
+        return {
+          handItem,
+          animType: 'reach',
+          tone: 'warn',
+          msgEs: 'Cierra y sella primero la Escotilla de Orion atrás tuyo (101.3 kPa)',
+          msgEn: 'Close and seal the Orion Side Hatch behind you first (101.3 kPa)',
+        };
+      }
       return {
         handItem,
         animType: 'use',
@@ -3258,6 +3342,15 @@ export function interactRoomStation(
     }
 
     case 'orion_power_panel': {
+      if (sim.currentMissionId === 'manifest_launch' && !sim.orionHatchSealed) {
+        return {
+          handItem,
+          animType: 'reach',
+          tone: 'warn',
+          msgEs: 'Cierra y sella primero la Escotilla de Orion (101.3 kPa)',
+          msgEn: 'Close and seal Orion Side Hatch first (101.3 kPa)',
+        };
+      }
       if (!sim.objectives.preflightRepaired) {
         return {
           handItem,
@@ -3272,8 +3365,8 @@ export function interactRoomStation(
         animType: 'use',
         tone: 'ok',
         openOrionPreflight: 'power_switches',
-        msgEs: 'Abriendo Tablero Superior Orion de 5 Interruptores...',
-        msgEn: 'Opening Orion 5-Switch Overhead Power Panel...',
+        msgEs: 'Abriendo Verificación de Niveles y 5 Interruptores Orion...',
+        msgEn: 'Opening Orion Telemetry Levels & 5-Switch Overhead Panel...',
       };
     }
 
@@ -3287,13 +3380,22 @@ export function interactRoomStation(
           msgEn: 'Configure the Payload Manifest on North MEDS Deck first',
         };
       }
-      if (!sim.objectives.preflightRepaired || !sim.objectives.preflightSystemsOn) {
+      if (sim.currentMissionId === 'manifest_launch' && !sim.orionHatchSealed) {
         return {
           handItem,
           animType: 'reach',
           tone: 'warn',
-          msgEs: 'Completa reparación Crio/RS-25 (izq.) y enciende los 5 interruptores Orion (der.)',
-          msgEn: 'Complete Orion cryo/fuse repair (port) and 5 overhead switches (starboard) first',
+          msgEs: 'Escotilla sin sellar — Cierra y sella la Escotilla Orion (101.3 kPa) antes de despegar',
+          msgEn: 'Hatch unsealed — Close & seal Orion Side Hatch (101.3 kPa) before liftoff',
+        };
+      }
+      if (!sim.objectives.preflightRepaired || !sim.objectives.preflightSystemsOn || !sim.orionLevelsChecked) {
+        return {
+          handItem,
+          animType: 'reach',
+          tone: 'warn',
+          msgEs: 'Completa reparación Crio/RS-25 (izq.) y verifica niveles + 5 interruptores Orion (der.)',
+          msgEn: 'Complete Orion cryo/fuse repair (port) and verify levels + 5 switches (starboard) first',
         };
       }
       const nextId = (st.value as MissionId | undefined) ?? 'act1_2_surface';
@@ -5029,8 +5131,8 @@ export function getCurrentGuidedStep(
       return makeStep(
         me.x,
         me.y,
-        'Fase 1 (1/4) · Manifiesto SLS/Orion',
-        'Phase 1 (1/4) · SLS Payload Manifest',
+        'Fase 1 (1/6) · Manifiesto SLS/Orion',
+        'Phase 1 (1/6) · SLS Payload Manifest',
         'Sube al Puente Norte (MEDS) y selecciona arquitectura ECLSS, Reactor KRUSTY y Rover 6,000 kg.',
         'Go to North MEDS Deck and configure ISS ECLSS, 40 kWe KRUSTY & FSP Rover architectures.'
       );
@@ -5042,8 +5144,8 @@ export function getCurrentGuidedStep(
           return makeStep(
             cryo.x,
             cryo.y,
-            'Fase 1 (2/4) · Recoger Válvula Crio LOX/LH₂',
-            'Phase 1 (2/4) · Collect Cryo Valve',
+            'Fase 1 (2/6) · Recoger Válvula Crio LOX/LH₂',
+            'Phase 1 (2/6) · Collect Cryo Valve',
             'Ve al banco EVA de la Piscina NBL (Suroeste) y guarda la Válvula Criogénica LOX/LH₂.',
             'Walk to SW NBL EVA bench and collect the LOX/LH₂ Cryogenic Valve.'
           );
@@ -5055,8 +5157,8 @@ export function getCurrentGuidedStep(
           return makeStep(
             fuse.x,
             fuse.y,
-            'Fase 1 (2/4) · Recoger Fusible RS-25',
-            'Phase 1 (2/4) · Collect RS-25 Fuse',
+            'Fase 1 (2/6) · Recoger Fusible RS-25',
+            'Phase 1 (2/6) · Collect RS-25 Fuse',
             'Recoge el Fusible de Emergencia RS-25 en la mesa del Núcleo Central.',
             'Pick up the RS-25 Emergency Fuse on the Central Hub tool bench.'
           );
@@ -5068,42 +5170,75 @@ export function getCurrentGuidedStep(
           return makeStep(
             wr.x,
             wr.y,
-            'Fase 1 (2/4) · Recoger Llave EVA',
-            'Phase 1 (2/4) · Collect EVA Wrench',
+            'Fase 1 (2/6) · Recoger Llave EVA',
+            'Phase 1 (2/6) · Collect EVA Wrench',
             'Recoge la Llave Dinamométrica EVA en el Almacén Sureste (cámara de entrenamiento).',
             'Pick up the EVA Torque Wrench in the Southeast Storage Wing.'
           );
         }
       }
+    }
+    const hatchSt = stPos('orion_hatch', 10.00, -4.55);
+    if (!sim.playerInsideOrion) {
+      if (!sim.orionHatchOpen) {
+        return makeStep(
+          hatchSt.x,
+          hatchSt.y,
+          'Fase 1 (3/6) · Bahía de Lanzamiento -> Abrir Escotilla',
+          'Phase 1 (3/6) · Launch Bay -> Open Hatch',
+          'Camina por la pasarela de la Bahía de Lanzamiento (Hangar Sur) hasta la Escotilla Orion y ábrela [E / Clic].',
+          'Walk along South Hangar Launch Bay Gantry to Orion Side Hatch and open it [E / Click].'
+        );
+      }
+      return makeStep(
+        10.00,
+        -5.60,
+        'Fase 1 (3/6) · Abordar Cápsula Orion',
+        'Phase 1 (3/6) · Board Orion Capsule',
+        'Camina hacia el interior de la Cápsula Orion por la escotilla abierta.',
+        'Walk forward through the open hatch into the Orion Crew Module.'
+      );
+    }
+    if (!sim.orionHatchSealed) {
+      return makeStep(
+        hatchSt.x,
+        hatchSt.y,
+        'Fase 1 (4/6) · Cerrar y Sellar Escotilla Orion',
+        'Phase 1 (4/6) · Close & Seal Orion Hatch',
+        'Da media vuelta y cierra la Escotilla de Orion atrás tuyo [E / Clic] para sellar la cabina a 101.3 kPa.',
+        'Turn around and close the Orion Side Hatch behind you [E / Click] to seal cabin at 101.3 kPa.'
+      );
+    }
+    if (!sim.objectives.preflightRepaired) {
       const faultSt = stPos('orion_fault_panel', 8.82, -6.10);
       return makeStep(
         faultSt.x,
         faultSt.y,
-        'Fase 1 (2/4) · Reparar Falla Crio en Orion',
-        'Phase 1 (2/4) · Repair Orion Cryo Fault',
-        'Entra por la compuerta a la Cápsula Orion (Hangar Sur) y repara la falla Crio/RS-25 en el panel izquierdo.',
-        'Board South Hangar Orion Capsule through the open hatch and fix the Cryo/RS-25 port panel.'
+        'Fase 1 (5/6) · Reparar Falla Crio en Orion',
+        'Phase 1 (5/6) · Repair Orion Cryo Fault',
+        'Repara la falla Crio/RS-25 y aplica torque 28.5 N·m en el panel izquierdo de Orion.',
+        'Repair the Cryo/RS-25 fault and torque 28.5 N·m on the Orion port bay panel.'
       );
     }
-    if (!sim.objectives.preflightSystemsOn) {
+    if (!sim.objectives.preflightSystemsOn || !sim.orionLevelsChecked) {
       const pwrSt = stPos('orion_power_panel', 11.18, -6.10);
       return makeStep(
         pwrSt.x,
         pwrSt.y,
-        'Fase 1 (3/4) · Encender 5 Sistemas Orion',
-        'Phase 1 (3/4) · Power 5 Orion Buses',
-        'Enciende los 5 interruptores superiores en el panel derecho de Orion y verifica que no falte nada.',
-        'Flip all 5 overhead power switches on Orion starboard panel and confirm full readiness.'
+        'Fase 1 (5/6) · Comprobar Niveles y 5 Sistemas',
+        'Phase 1 (5/6) · Verify Levels & 5 Buses',
+        'Comprueba todos los niveles (O₂/CO₂/H₂O/kPa) y enciende los 5 interruptores en el panel derecho de Orion.',
+        'Verify all telemetry levels (O₂/CO₂/H₂O/kPa) and switch ON all 5 buses on Orion starboard panel.'
       );
     }
     const seatSt = stPos('orion_pilot_seat', 10.00, -7.12);
     return makeStep(
       seatSt.x,
       seatSt.y,
-      'Fase 1 (4/4) · Sentarse y Despegar en 3D',
-      'Phase 1 (4/4) · Strap In & 3D Liftoff',
-      'Siéntate en el Asiento del Comandante Orion (proa de la cabina) para iniciar despegue y aterrizaje 3D.',
-      'Sit in the forward Orion Commander Seat to start 3D cockpit ascent, Max-Q stabilization & 3D landing.'
+      'Fase 1 (6/6) · Sentarse y Despegar en 3D',
+      'Phase 1 (6/6) · Strap In & 3D Liftoff',
+      'Siéntate en el Asiento del Comandante Orion (proa) para iniciar despegue, estabilización Max-Q y aterrizaje 3D.',
+      'Sit in the forward Orion Commander Seat for 3D cockpit ascent, Max-Q stabilization & 3D landing.'
     );
   }
 
