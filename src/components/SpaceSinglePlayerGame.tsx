@@ -2828,7 +2828,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
             <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-900/12">
               <div className="flex items-center gap-2 text-[11px] font-mono tracking-wider text-slate-600">
                 <span className="w-2 h-2 rounded-full bg-sky-600" />
-                NASA BVAD · ESDMD-001
+                NASA BVAD · ESDMD-001 · v3.1.0
               </div>
               <div className="flex items-center gap-1.5">
                 <button
@@ -2866,7 +2866,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
                 AETHER<span className="font-semibold text-sky-700">-4</span>
               </h1>
               <div className="text-xs font-mono tracking-[0.18em] text-slate-600 uppercase">
-                ARTEMIS–ARES · ORBITAL QUARTERS 3D
+                ARTEMIS–ARES · ORBITAL QUARTERS 3D · v3.1.0
               </div>
             </div>
 
