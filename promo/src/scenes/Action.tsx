@@ -12,7 +12,7 @@ const CARDS = [
   { label: 'POTENCIA', value: 10.0, unit: 'kWe', jitter: 0.08, digits: 1 },
   { label: 'TEMP', value: 22.0, unit: '°C', jitter: 0.05, digits: 1 },
 ];
-const EVENTS = ['tick ▸ Δ telemetry', 'objective ▸ obj_sleepCompleted', 'decision ▸ crisis_water_priority', 'mentor ▸ "¿Entiendes la idea?"'];
+const EVENTS = ['ciclo ▸ Δ telemetría', 'objetivo ▸ dormir completado', 'decisión ▸ priorizar el agua', 'mentora ▸ "¿Entiendes la idea?"'];
 
 const TelemetryCard: React.FC<{ i: number }> = ({ i }) => {
   const frame = useCurrentFrame();
@@ -66,7 +66,7 @@ export const TelemetryScene: React.FC = () => {
       ))}
       <div style={{ position: 'absolute', right: 90, top: 250, width: 560, fontFamily: MONO, fontSize: 22, lineHeight: '46px' }}>
         <div style={{ color: C.cyan, letterSpacing: 4, fontFamily: ORBITRON, fontSize: 22, opacity: interpolate(frame, [18, 26], [0, 1], CLAMP) }}>
-          MENTOR DIRECTOR
+          DIRECTOR DE MENTORÍA
         </div>
         {EVENTS.map((e, i) => (
           <div
@@ -207,13 +207,13 @@ export const MissionsScene: React.FC = () => (
       <MissionShot clip="m1_cockpit_pan" tag="FASE 1" title="CABINA MEDS" metric="Manifiesto de carga · 9.81 m/s²" accent={C.cyan} />
     </Sequence>
     <Sequence name="Superficie lunar" from={20} durationInFrames={19}>
-      <MissionShot clip="m2_surface_3p_pan" tag="FASE 2 · ACTOS 1-2" title="SUPERFICIE LUNAR" metric="Gravedad 1.62 m/s² · traje EVA" accent="#ffb36b" />
+      <MissionShot clip="m2_surface_3p_pan" tag="FASE 2 · ACTOS 1-2" title="SUPERFICIE LUNAR" metric="Gravedad 1.62 m/s² · traje espacial" accent="#ffb36b" />
     </Sequence>
     <Sequence name="Invernadero" from={39} durationInFrames={20}>
       <MissionShot clip="m3_greenhouse_pan" tag="ACTO 3" title="EL JARDÍN QUE RESPIRA" metric="Luz 630 + 450 nm · 3.70 m/s²" accent="#e879f9" />
     </Sequence>
     <Sequence name="Tormenta solar" from={59} durationInFrames={19}>
-      <MissionShot clip="m4_storm_3p_pan" tag="ACTO 4" title="TORMENTA SOLAR" metric="SPE > 250 mSv · rover blindado" accent={C.alert} />
+      <MissionShot clip="m4_storm_3p_pan" tag="ACTO 4" title="TORMENTA SOLAR" metric="Tormenta > 250 mSv · rover blindado" accent={C.alert} />
     </Sequence>
   </AbsoluteFill>
 );

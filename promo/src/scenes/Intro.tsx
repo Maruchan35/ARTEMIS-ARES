@@ -102,7 +102,7 @@ export const CompileScene: React.FC = () => {
             opacity: interpolate(frame, [8, 18], [0, 1], CLAMP),
           }}
         >
-          <div style={{ fontFamily: ORBITRON, fontSize: 26, letterSpacing: 6, color: C.cyan }}>BUILD · CODECRAFT</div>
+          <div style={{ fontFamily: ORBITRON, fontSize: 26, letterSpacing: 6, color: C.cyan }}>COMPILANDO · CODECRAFT</div>
           <div style={{ marginTop: 18, height: 10, background: `${C.blue}33` }}>
             <div
               style={{
@@ -183,7 +183,7 @@ export const BootScene: React.FC = () => {
           textShadow: `0 0 10px ${C.cyan}`,
         }}
       >
-        SYS ▸ ONLINE · CODECRAFT RUNTIME
+        SISTEMA ▸ EN LÍNEA · CODECRAFT
       </div>
       <div
         style={{
@@ -199,7 +199,7 @@ export const BootScene: React.FC = () => {
           textShadow: `0 0 14px ${C.cyan}`,
         }}
       >
-        ORBITAL QUARTERS · 3D REAL TIME
+        ORBITAL QUARTERS · 3D EN TIEMPO REAL
       </div>
     </AbsoluteFill>
   );

@@ -61,7 +61,7 @@ export const CrisisScene: React.FC = () => {
         <div style={{ marginTop: 40 }}>
           <Graph values={SPIKE} w={720} h={260} color={C.alert} progress={interpolate(frame, [6, 40], [0, 1], { ...CLAMP, easing: EASE })} />
         </div>
-        <div style={{ fontFamily: MONO, fontSize: 22, color: C.dim, marginTop: 14 }}>umbral de alarma 1,200 ppm · ISS &lt; ~4,000 ppm (NASA-STD-3001)</div>
+        <div style={{ fontFamily: MONO, fontSize: 22, color: C.dim, marginTop: 14 }}>umbral de alarma 1,200 ppm · límite ISS ~4,000 ppm (NASA-STD-3001)</div>
       </div>
       <div
         style={{
@@ -87,8 +87,8 @@ const COLS = 64;
 const ROWS = 16;
 const HITS = [
   { id: 'NASA-STD-3001', title: 'Límites de CO₂ para la tripulación', score: 0.94, at: 24 },
-  { id: 'NTRS-LIB-19950066496', title: 'ISS environmental control and life support system', score: 0.88, at: 34 },
-  { id: 'NTRS-LIB-20050207456', title: 'Status of the ISS Regenerative ECLSS', score: 0.81, at: 45 },
+  { id: 'NTRS-LIB-19950066496', title: 'Control ambiental y soporte vital de la ISS', score: 0.88, at: 34 },
+  { id: 'NTRS-LIB-20050207456', title: 'Estado del soporte vital regenerativo de la ISS', score: 0.81, at: 45 },
 ];
 const METERS = [
   { label: 'INFERENCIA · Gemma-4-E4B + LoRA r=32', to: 96 },
@@ -135,7 +135,7 @@ export const ComputeScene: React.FC = () => {
       />
       <div style={{ position: 'absolute', left: 120, top: 80 }}>
         <div style={{ fontFamily: ORBITRON, fontSize: 52, fontWeight: 900, letterSpacing: 6, color: C.white, textShadow: `0 0 22px ${C.cyan}` }}>
-          NASA HYBRID RAG
+          RAG HÍBRIDO DE LA NASA
         </div>
         <div style={{ fontFamily: MONO, fontSize: 24, color: C.cyan, marginTop: 6 }}>387,730 documentos · Tier-1 BM25 + Tier-2 SQLite FTS5</div>
       </div>
@@ -156,7 +156,7 @@ export const ComputeScene: React.FC = () => {
           padding: '14px 22px',
         }}
       >
-        <span style={{ color: C.cyan }}>query ▸ </span>
+        <span style={{ color: C.cyan }}>consulta ▸ </span>
         {QUERY.slice(0, typed)}
         {typed < QUERY.length && <span style={{ color: C.cyan }}>▌</span>}
       </div>
@@ -199,7 +199,7 @@ export const ComputeScene: React.FC = () => {
           );
         })}
         <Chip color={C.ok} style={{ marginTop: 40, opacity: interpolate(frame, [52, 60], [0, 1], CLAMP) }}>
-          STATUS ▸ ESTABLE · 0 ERRORES
+          ESTADO ▸ ESTABLE · 0 ERRORES
         </Chip>
       </div>
       <AbsoluteFill style={{ backgroundColor: C.cyan, opacity: interpolate(frame, [76, 84], [0, 0.55], CLAMP) }} />

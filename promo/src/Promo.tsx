@@ -65,6 +65,9 @@ export const Promo: React.FC = () => {
         <Sequence name="Sub · Sin pánico" from={Math.round(21.45 * fps)} durationInFrames={Math.round(2.75 * fps)}>
           <Caption text="Sin pánico, cadete. Tú tienes el control." />
         </Sequence>
+        <Sequence name="Sub · CodeCraft presenta" from={Math.round(26.0 * fps)} durationInFrames={Math.round(2.4 * fps)}>
+          <Caption text="CodeCraft presenta: AETHER-4." />
+        </Sequence>
       </Track>
 
       <Audio name="Banda sonora" src={staticFile('audio/score.wav')} volume={0.4} />

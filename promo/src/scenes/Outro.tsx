@@ -112,7 +112,7 @@ export const OutroScene: React.FC = () => {
             opacity: interpolate(frame, [52, 64], [0, 1], CLAMP),
           }}
         >
-          KATHERINE AI v3.0 · Gemma-4 + LoRA · NASA Hybrid RAG 387k · Supertonic 3
+          IA KATHERINE v3.0 · Gemma-4 + LoRA · RAG híbrido NASA 387k · voz Supertonic 3
         </div>
       </AbsoluteFill>
       <AbsoluteFill style={{ backgroundColor: '#000', opacity: interpolate(frame, [durationInFrames - 22, durationInFrames], [0, 1], CLAMP) }} />
