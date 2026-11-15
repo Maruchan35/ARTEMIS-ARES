@@ -67,7 +67,7 @@ El juego busca el puente en `http://localhost:8765`. Para cambiarlo: clic en la 
   Solo lo aprobado llega al juego (`src/ai/generated/tutorContent.json`), al instante y sin internet.
 
 ## Controles en el juego
-- **[T]** hablar con KATHERINE (🎙 micrófono en Chrome/Edge) · **[1]/[2]** responder · **[M]** voz on/off
+- **[T]** hablar con KATHERINE (🎙 micrófono en Chrome/Edge) · **[F1]–[F4]** responder · **[N]** voz on/off · **[M]** minimapa
 - **⚙** idioma y voz · El panel se puede minimizar (▁).
 
 ## Cómo extenderlo
