@@ -65,6 +65,7 @@ import {
   WALL_COLLIDER_COUNT,
 } from '../game/spaceRoomSimulation';
 import { soundEngine } from '../audio/soundEngine';
+import { mentorVoice, VOICE_PRESETS, VoicePresetId } from '../ai/mentorVoice';
 import { SpacePaperCodexModal } from './SpacePaperCodexModal';
 import { MentorHologram } from './MentorHologram';
 import {
@@ -84,7 +85,7 @@ import {
 type ScreenMode = 'menu' | 'room';
 type CameraMode = 'first' | 'third';
 type LangMode = 'es' | 'en';
-type MenuDrawer = 'home' | 'missions' | 'customize';
+type MenuDrawer = 'home' | 'missions' | 'customize' | 'settings';
 type RoomModal =
   | null
   | 'checklist'
@@ -155,6 +156,9 @@ export const SpaceSinglePlayerGame: React.FC = () => {
   const [audioOn, setAudioOn] = useState(soundEngine.enabled);
   const [musicOn, setMusicOn] = useState(soundEngine.musicEnabled);
   const [ambientOn, setAmbientOn] = useState(soundEngine.ambientEnabled);
+  const [voiceURI, setVoiceURI] = useState(() => mentorVoice.getSelectedVoiceURI('es'));
+  const [voicePreset, setVoicePreset] = useState<VoicePresetId>(() => mentorVoice.getPresetId());
+  const [voiceTick, setVoiceTick] = useState(0);
   const [menuDrawer, setMenuDrawer] = useState<MenuDrawer>('home');
   const [selectedMenuMissionId, setSelectedMenuMissionId] = useState<MissionId>('tutorial_hab');
   const [activeMissionKey, setActiveMissionKey] = useState<MissionId>('tutorial_hab');
@@ -457,11 +461,18 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     [lang, pushBanner, syncHudNow]
   );
 
+  useEffect(() => {
+    setVoiceURI(mentorVoice.getSelectedVoiceURI(lang));
+    return mentorVoice.subscribeVoices(() => setVoiceTick((v) => v + 1));
+  }, [lang]);
+  void voiceTick;
+  const availableVoices = mentorVoice.getAvailableVoices(lang);
+
   const enterMission = useCallback(
     (missionId: MissionId, preserveCarry = false) => {
       soundEngine.unlock();
-      if (missionId === 'tutorial_hab') {
-        applyMissionLoad('tutorial_hab', false);
+      if (missionId === 'tutorial_hab' || missionId === 'manifest_launch') {
+        applyMissionLoad(missionId, preserveCarry);
         return;
       }
       const fromId = simRef.current.currentMissionId;
@@ -2810,8 +2821,8 @@ export const SpaceSinglePlayerGame: React.FC = () => {
                 >
                   <DoorOpen className="w-4 h-4" />
                   {lang === 'es'
-                    ? 'INICIAR CAMPAÑA: FASE 0 (BASE J.S.C. TIERRA)'
-                    : 'START CAMPAIGN: PHASE 0 (JSC EARTH BASE)'}
+                    ? 'CAMPAÑA · FASE 0 (BASE J.S.C. TIERRA)'
+                    : 'CAMPAIGN · PHASE 0 (JSC EARTH BASE)'}
                 </button>
 
                 <button
@@ -2823,10 +2834,22 @@ export const SpaceSinglePlayerGame: React.FC = () => {
                   className="w-full py-2.5 px-4 lp-btn rounded-xl text-xs font-medium tracking-wide flex items-center justify-center gap-2"
                 >
                   <Layers className="w-4 h-4 text-sky-700" />
-                  {lang === 'es' ? 'Seleccionar Fase de Misión (0 – 4)' : 'Select Mission Phase (0 – 4)'}
+                  {lang === 'es' ? 'Fases de Misión (0 – 4 + Históricas)' : 'Mission Phases (0 – 4 + Historical)'}
                 </button>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundEngine.playClick();
+                      setMenuDrawer('customize');
+                    }}
+                    className="py-2.5 px-2 lp-btn rounded-xl text-[11px] font-medium flex items-center justify-center gap-1"
+                  >
+                    <User className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                    <span className="truncate">{lang === 'es' ? 'Traje xEMU' : 'xEMU Suit'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -2834,22 +2857,22 @@ export const SpaceSinglePlayerGame: React.FC = () => {
                       setCodexInit({ tab: 'papers', paperId: 1, noteId: 1 });
                       setMenuCodexOpen(true);
                     }}
-                    className="py-2.5 px-3 lp-btn rounded-xl text-[11px] font-medium flex items-center justify-center gap-1.5"
+                    className="py-2.5 px-2 lp-btn rounded-xl text-[11px] font-medium flex items-center justify-center gap-1"
                   >
-                    <Newspaper className="w-3.5 h-3.5 text-amber-600" />
-                    {lang === 'es' ? 'Archivo NASA' : 'NASA Papers'}
+                    <Newspaper className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span className="truncate">{lang === 'es' ? 'Archivo NASA' : 'NASA Papers'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
                       soundEngine.playClick();
-                      setMenuDrawer('customize');
+                      setMenuDrawer('settings');
                     }}
-                    className="py-2.5 px-3 lp-btn rounded-xl text-[11px] font-medium flex items-center justify-center gap-1.5"
+                    className="py-2.5 px-2 lp-btn rounded-xl text-[11px] font-medium flex items-center justify-center gap-1"
                   >
-                    <User className="w-3.5 h-3.5 text-emerald-700" />
-                    {lang === 'es' ? 'Personalizar xEMU' : 'Customize xEMU'}
+                    <Sliders className="w-3.5 h-3.5 text-sky-700 shrink-0" />
+                    <span className="truncate">{lang === 'es' ? 'Ajustes' : 'Settings'}</span>
                   </button>
                 </div>
 
@@ -3049,6 +3072,150 @@ export const SpaceSinglePlayerGame: React.FC = () => {
               </div>
             )}
 
+            {menuDrawer === 'settings' && (
+              <div className="bg-white/65 border border-slate-900/12 rounded-xl p-4 space-y-3.5 max-h-[60vh] overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-slate-900/12 pb-2">
+                  <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-sky-700" />
+                    {lang === 'es' ? 'AJUSTES · AUDIO Y VOZ DE IA' : 'SETTINGS · AUDIO & AI VOICE'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMenuDrawer('home')}
+                    className="lp-btn px-2.5 py-1 rounded-lg text-[11px]"
+                  >
+                    ← {lang === 'es' ? 'Volver' : 'Back'}
+                  </button>
+                </div>
+
+                {/* Audio Channels */}
+                <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundEngine.enabled = !audioOn;
+                      setAudioOn(!audioOn);
+                      if (!audioOn) soundEngine.playClick();
+                    }}
+                    className={`lp-btn py-2 px-2 flex items-center justify-center gap-1 ${audioOn ? 'ring-1 ring-emerald-600/40' : 'opacity-70'}`}
+                  >
+                    {audioOn ? <Volume2 className="w-3.5 h-3.5 text-emerald-700" /> : <VolumeX className="w-3.5 h-3.5 text-rose-600" />}
+                    <span>FX: {audioOn ? 'ON' : 'OFF'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !musicOn;
+                      soundEngine.musicEnabled = next;
+                      setMusicOn(next);
+                      soundEngine.playClick();
+                    }}
+                    className={`lp-btn py-2 px-2 flex items-center justify-center gap-1 ${musicOn ? 'ring-1 ring-sky-600/40' : 'opacity-70'}`}
+                  >
+                    <span>{lang === 'es' ? 'Música' : 'Music'}: {musicOn ? 'ON' : 'OFF'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !ambientOn;
+                      soundEngine.ambientEnabled = next;
+                      setAmbientOn(next);
+                      soundEngine.playClick();
+                    }}
+                    className={`lp-btn py-2 px-2 flex items-center justify-center gap-1 ${ambientOn ? 'ring-1 ring-sky-600/40' : 'opacity-70'}`}
+                  >
+                    <span>{lang === 'es' ? 'Cabina' : 'Cabin'}: {ambientOn ? 'ON' : 'OFF'}</span>
+                  </button>
+                </div>
+
+                {/* KATHERINE AI Voice Selection */}
+                <div className="bg-white/75 border border-slate-900/12 rounded-xl p-3 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-sky-900">
+                      {lang === 'es' ? 'Voz de IA (KATHERINE)' : 'KATHERINE AI Voice'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundEngine.playClick();
+                        mentorVoice.testSpeak(lang);
+                      }}
+                      className="lp-btn-accent px-3 py-1 text-[11px] flex items-center gap-1"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                      {lang === 'es' ? 'Probar Voz' : 'Test Voice'}
+                    </button>
+                  </div>
+
+                  <label className="block space-y-1">
+                    <span className="text-[10px] font-mono text-slate-600 uppercase">
+                      {lang === 'es' ? 'Estilo / Tono Vocal' : 'Vocal Style / Cadence'}
+                    </span>
+                    <select
+                      value={voicePreset}
+                      onChange={(e) => {
+                        const next = e.target.value as VoicePresetId;
+                        setVoicePreset(next);
+                        mentorVoice.setPresetId(next);
+                      }}
+                      className="w-full bg-white border border-slate-900/20 rounded-lg px-2.5 py-1.5 text-xs text-slate-900"
+                    >
+                      {VOICE_PRESETS.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {lang === 'es' ? p.labelEs : p.labelEn}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="text-[10px] font-mono text-slate-600 uppercase">
+                      {lang === 'es' ? 'Voz del Sistema / Navegador' : 'System / Browser Voice'}
+                    </span>
+                    <select
+                      value={voiceURI}
+                      onChange={(e) => {
+                        setVoiceURI(e.target.value);
+                        mentorVoice.setSelectedVoiceURI(lang, e.target.value);
+                      }}
+                      className="w-full bg-white border border-slate-900/20 rounded-lg px-2.5 py-1.5 text-xs text-slate-900"
+                    >
+                      <option value="">{lang === 'es' ? 'Automática (Mejor disponible)' : 'Auto (Best available)'}</option>
+                      {availableVoices.map((v) => (
+                        <option key={v.voiceURI} value={v.voiceURI}>
+                          {v.name} ({v.lang})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                {/* Language Switch */}
+                <div className="flex items-center justify-between bg-white/60 border border-slate-900/12 rounded-lg px-3 py-2 text-xs">
+                  <span className="font-medium text-slate-700">
+                    {lang === 'es' ? 'Idioma de Entrenamiento' : 'Training Language'}
+                  </span>
+                  <div className="flex gap-1.5">
+                    {(['es', 'en'] as const).map((lCode) => (
+                      <button
+                        key={lCode}
+                        type="button"
+                        onClick={() => {
+                          soundEngine.playClick();
+                          setLang(lCode);
+                        }}
+                        className={`px-3 py-1 rounded text-[11px] font-mono font-semibold ${
+                          lang === lCode ? 'lp-btn-accent' : 'lp-btn'
+                        }`}
+                      >
+                        {lCode.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="text-[10px] font-mono text-slate-600 pt-2 border-t border-slate-900/10 flex flex-wrap gap-2">
               <span>[WASD] MOVER</span>·<span>[1-5] CASILLAS</span>·<span>[B] MOCHILA</span>·<span>[ESC] MENÚ</span>
             </div>
@@ -3220,7 +3387,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
             title={lang === 'es' ? 'Ampliar Mapa Táctico [ESC]' : 'Expand Tactical Map [ESC]'}
             className="lp-panel hover:bg-white/75 rounded-lg p-1 shadow-lg text-left transition"
           >
-            <svg viewBox="0 0 440 462" className="w-[126px] h-[132px] bg-slate-950/88 rounded border border-slate-400/35">
+            <svg viewBox="0 0 440 462" className="w-[154px] h-[160px] bg-slate-950/88 rounded border border-slate-400/35">
               {/* Subtle 2m radar grid */}
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((gi) => (
                 <g key={gi} opacity="0.16">
@@ -3687,6 +3854,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
           onReturnMainMenu={() => {
             soundEngine.stopAmbientEnvironment();
             setActiveModal(null);
+            setMenuDrawer('home');
             setScreen('menu');
           }}
           onClose={() => setActiveModal(null)}

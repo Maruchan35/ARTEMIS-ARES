@@ -54,6 +54,7 @@ import {
   getStationTrainingBrief,
 } from '../game/spaceRoomSimulation';
 import { soundEngine } from '../audio/soundEngine';
+import { mentorVoice, VOICE_PRESETS, VoicePresetId } from '../ai/mentorVoice';
 
 export const CrisisSimulatorModal: React.FC<{
   lang: 'es' | 'en';
@@ -549,6 +550,10 @@ export const LaunchTransitModal: React.FC<{
   const [descentVelMs, setDescentVelMs] = useState(28);
   const [retroActive, setRetroActive] = useState(false);
   const [landingMsg, setLandingMsg] = useState<string | null>(null);
+  const [chkHatch, setChkHatch] = useState(false);
+  const [chkCryo, setChkCryo] = useState(false);
+  const [chkGnc, setChkGnc] = useState(false);
+  const padVerified = chkHatch && chkCryo && chkGnc;
 
   const canvasMountRef = useRef<HTMLCanvasElement | null>(null);
   const simRef = useRef({
@@ -717,7 +722,7 @@ export const LaunchTransitModal: React.FC<{
     scene.background = new THREE.Color(0x0b3b6e);
     scene.fog = new THREE.FogExp2(0x0b3b6e, 0.0022);
 
-    const camera = new THREE.PerspectiveCamera(60, (canvas.clientWidth || 720) / (canvas.clientHeight || 360), 0.06, 950);
+    const camera = new THREE.PerspectiveCamera(62, (canvas.clientWidth || 720) / (canvas.clientHeight || 400), 0.06, 950);
 
     const hemi = new THREE.HemisphereLight(0xe0f2fe, 0x0f172a, 1.1);
     scene.add(hemi);
@@ -926,6 +931,7 @@ export const LaunchTransitModal: React.FC<{
     const midMfd = mkMfdTex(320, 220);
     const rightMfd = mkMfdTex(320, 220);
     const hudCombiner = mkMfdTex(320, 180);
+    const cautionTex = mkMfdTex(320, 48);
 
     // ---- Detailed 3D MEDS Glass Cockpit Interior ----
     const cockpitGroup = new THREE.Group();
@@ -933,50 +939,57 @@ export const LaunchTransitModal: React.FC<{
     const trimMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.32, metalness: 0.82 });
     const bezelMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.35, metalness: 0.72 });
     const panelBayMat = new THREE.MeshStandardMaterial({ map: cockpitPanelTex, roughness: 0.45, metalness: 0.55 });
-    const cautionLedMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
 
-    // Angled flight deck dash & bolsters
-    const dash = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.48, 0.64), frameMat);
-    dash.position.set(0, 0.70, -0.78);
-    dash.rotation.x = 0.24;
-    const glareShield = new THREE.Mesh(new THREE.BoxGeometry(2.10, 0.09, 0.38), trimMat);
-    glareShield.position.set(0, 1.00, -0.76);
-    cockpitGroup.add(dash, glareShield);
+    // Raised forward flight deck dash & bolsters cleanly behind the 3 MFD screens
+    const dash = new THREE.Mesh(new THREE.BoxGeometry(2.20, 0.38, 0.28), frameMat);
+    dash.position.set(0, 0.95, -0.87);
+    const lowerConsole = new THREE.Mesh(new THREE.BoxGeometry(2.20, 0.26, 0.42), frameMat);
+    lowerConsole.position.set(0, 0.63, -0.62);
+    const glareShield = new THREE.Mesh(new THREE.BoxGeometry(2.16, 0.045, 0.24), trimMat);
+    glareShield.position.set(0, 1.15, -0.74);
+    cockpitGroup.add(dash, lowerConsole, glareShield);
 
     // Center & side console trays
-    const centerPedestal = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.32, 0.82), frameMat);
-    centerPedestal.position.set(0, 0.52, -0.34);
-    const sideBayL = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.44, 0.92), panelBayMat);
-    sideBayL.position.set(-0.98, 0.76, -0.40);
-    sideBayL.rotation.z = -0.25;
+    const centerPedestal = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.22, 0.64), frameMat);
+    centerPedestal.position.set(0, 0.46, -0.32);
+    const sideBayL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.34, 0.80), panelBayMat);
+    sideBayL.position.set(-1.02, 0.78, -0.40);
+    sideBayL.rotation.z = -0.24;
     const sideBayR = sideBayL.clone();
-    sideBayR.position.x = 0.98;
-    sideBayR.rotation.z = 0.25;
+    sideBayR.position.x = 1.02;
+    sideBayR.rotation.z = 0.24;
     cockpitGroup.add(centerPedestal, sideBayL, sideBayR);
 
-    // Recessed metallic MFD Bezels + crisp 320x220 Screens
-    const mkScreenUnit = (tex: THREE.CanvasTexture, x: number) => {
+    // Recessed metallic MFD Bezels + crisp 320x220 Screens mounted IN FRONT of the dash (zero Z occlusion!)
+    const mkScreenUnit = (tex: THREE.CanvasTexture, x: number, rotY = 0) => {
       const grp = new THREE.Group();
-      grp.position.set(x, 0.80, -0.52);
-      grp.rotation.x = -0.30;
-      const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.38, 0.04), bezelMat);
-      const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.49, 0.33), new THREE.MeshBasicMaterial({ map: tex }));
-      screen.position.z = 0.022;
+      grp.position.set(x, 0.95, -0.69);
+      grp.rotation.order = 'YXZ';
+      grp.rotation.y = rotY;
+      grp.rotation.x = -0.06;
+      const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.34, 0.036), bezelMat);
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.305), new THREE.MeshBasicMaterial({ map: tex }));
+      screen.position.z = 0.021;
       grp.add(bezel, screen);
       return grp;
     };
-    cockpitGroup.add(mkScreenUnit(leftMfd.tex, -0.60));
-    cockpitGroup.add(mkScreenUnit(midMfd.tex, 0));
-    cockpitGroup.add(mkScreenUnit(rightMfd.tex, 0.60));
+    cockpitGroup.add(mkScreenUnit(leftMfd.tex, -0.58, 0.12));
+    cockpitGroup.add(mkScreenUnit(midMfd.tex, 0, 0));
+    cockpitGroup.add(mkScreenUnit(rightMfd.tex, 0.58, -0.12));
 
-    // Glare-shield Master Caution / Warn annunciator bar
-    const cautionBar = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.045, 0.04), cautionLedMat);
-    cautionBar.position.set(0, 1.02, -0.58);
-    cockpitGroup.add(cautionBar);
+    // Compact Glare-Shield NASA Annunciator Light Strip
+    const cautionHousing = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.052, 0.032), frameMat);
+    cautionHousing.position.set(0, 1.168, -0.60);
+    const cautionScreen = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.51, 0.042),
+      new THREE.MeshBasicMaterial({ map: cautionTex.tex })
+    );
+    cautionScreen.position.set(0, 1.168, -0.582);
+    cockpitGroup.add(cautionHousing, cautionScreen);
 
-    // Translucent holographic HUD combiner glass mounted ahead of center pilot line of sight
+    // Translucent holographic HUD combiner glass centered cleanly above the glare shield
     const hudGlass = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.68, 0.38),
+      new THREE.PlaneGeometry(0.66, 0.34),
       new THREE.MeshBasicMaterial({
         map: hudCombiner.tex,
         transparent: true,
@@ -985,32 +998,32 @@ export const LaunchTransitModal: React.FC<{
         depthWrite: false,
       })
     );
-    hudGlass.position.set(0, 1.24, -0.62);
-    const hudFrame = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.025, 0.03), trimMat);
-    hudFrame.position.set(0, 1.05, -0.62);
+    hudGlass.position.set(0, 1.40, -0.68);
+    const hudFrame = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.02, 0.025), trimMat);
+    hudFrame.position.set(0, 1.21, -0.68);
     cockpitGroup.add(hudGlass, hudFrame);
 
-    // 6-pane Orion/Shuttle Canopy Mullions + Overhead Breaker Bay
-    const pillarL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.38, 0.11), trimMat);
-    pillarL.position.set(-0.96, 1.44, -0.68);
-    pillarL.rotation.z = -0.22;
+    // 6-pane Orion/Shuttle Canopy Mullions seated ABOVE glareShield so they never cross the MFDs
+    const pillarL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.96, 0.09), trimMat);
+    pillarL.position.set(-0.98, 1.60, -0.74);
+    pillarL.rotation.z = -0.20;
     const pillarR = pillarL.clone();
-    pillarR.position.x = 0.96;
-    pillarR.rotation.z = 0.22;
-    const pillarDiagL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.24, 0.08), frameMat);
-    pillarDiagL.position.set(-0.46, 1.48, -0.74);
-    pillarDiagL.rotation.z = -0.06;
+    pillarR.position.x = 0.98;
+    pillarR.rotation.z = 0.20;
+    const pillarDiagL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.92, 0.07), frameMat);
+    pillarDiagL.position.set(-0.52, 1.62, -0.78);
+    pillarDiagL.rotation.z = -0.05;
     const pillarDiagR = pillarDiagL.clone();
-    pillarDiagR.position.x = 0.46;
-    pillarDiagR.rotation.z = 0.06;
-    const eyebrow = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.22, 0.48), panelBayMat);
-    eyebrow.position.set(0, 1.98, -0.60);
+    pillarDiagR.position.x = 0.52;
+    pillarDiagR.rotation.z = 0.05;
+    const eyebrow = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.20, 0.44), panelBayMat);
+    eyebrow.position.set(0, 2.04, -0.62);
     eyebrow.rotation.x = 0.35;
     cockpitGroup.add(pillarL, pillarR, pillarDiagL, pillarDiagR, eyebrow);
 
-    // Dual Rotational Hand Controllers (RHC) + Abort/Throttle Lever
+    // Dual Rotational Hand Controllers (RHC) + Abort/Throttle Lever (clear of MFDs)
     const stick = new THREE.Group();
-    stick.position.set(0.18, 0.68, -0.34);
+    stick.position.set(0.18, 0.55, -0.34);
     const stickShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.026, 0.22, 10), trimMat);
     stickShaft.position.y = 0.11;
     const stickGrip = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.09, 0.075), frameMat);
@@ -1423,6 +1436,33 @@ export const LaunchTransitModal: React.FC<{
         ctx.fillText(`V ${s.phase === 'ascent' ? `${frame.velKms.toFixed(2)}km/s` : `-${s.descentVelMs.toFixed(1)}m/s`}`, 215, 22);
         tex.needsUpdate = true;
       }
+
+      // 5. Segmented NASA Glare-Shield Caution & Annunciator Bar
+      {
+        const { ctx, tex } = cautionTex;
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(0, 0, 320, 48);
+        const lights = [
+          { lbl: 'HATCH', ok: true, warn: false },
+          { lbl: 'CRYO', ok: true, warn: s.stageIdx === 1 && s.ignited },
+          { lbl: 'GNC', ok: stable, warn: !stable },
+          { lbl: 'RS-25', ok: s.ignited || s.phase !== 'ascent', warn: false },
+          { lbl: 'RCS', ok: stable, warn: !stable },
+        ];
+        lights.forEach((lt, li) => {
+          const bx = 6 + li * 62;
+          ctx.fillStyle = lt.warn ? (Math.floor(tSec * 6) % 2 === 0 ? '#e11d48' : '#7f1d1d') : lt.ok ? '#059669' : '#1e293b';
+          ctx.fillRect(bx, 7, 56, 34);
+          ctx.strokeStyle = '#334155';
+          ctx.strokeRect(bx, 7, 56, 34);
+          ctx.fillStyle = '#f8fafc';
+          ctx.font = 'bold 12px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(lt.lbl, bx + 28, 29);
+        });
+        ctx.textAlign = 'left';
+        tex.needsUpdate = true;
+      }
       void tSec;
     };
 
@@ -1438,7 +1478,7 @@ export const LaunchTransitModal: React.FC<{
       drawMfd(tSec);
 
       const stable = Math.abs(s.pitchErr) < 9 && Math.abs(s.yawErr) < 9;
-      cautionLedMat.color.setHex(!stable ? (Math.floor(tSec * 6) % 2 === 0 ? 0xf43f5e : 0x7f1d1d) : s.stageIdx === 1 && s.ignited ? 0xf59e0b : 0x22c55e);
+      void stable;
 
       if (s.phase === 'ascent') {
         surfaceGroup.visible = false;
@@ -1546,8 +1586,8 @@ export const LaunchTransitModal: React.FC<{
         rocketGroup.visible = false;
         stick.rotation.set(s.pitchErr * 0.018, 0, -s.yawErr * 0.018);
         const vib = (s.ignited && s.stageIdx === 1) || s.retroActive ? Math.sin(tSec * 45) * 0.009 : 0;
-        camera.position.set(vib, 1.18 + vib * 0.5, 0.16);
-        const lookY = s.phase === 'descent' ? 0.72 - s.pitchErr * 0.015 : 1.24 - s.pitchErr * 0.015;
+        camera.position.set(vib, 1.24 + vib * 0.5, 0.24);
+        const lookY = s.phase === 'descent' ? 0.88 - s.pitchErr * 0.015 : 1.07 - s.pitchErr * 0.015;
         camera.lookAt(s.yawErr * 0.02, lookY, -14);
       } else {
         cockpitGroup.visible = false;
@@ -1610,7 +1650,7 @@ export const LaunchTransitModal: React.FC<{
 
         {/* Real 3D Three.js Canvas (In-Cockpit MFD Screens + External Rocket/Terrain) */}
         <div className="relative rounded-lg overflow-hidden border border-white/25 bg-black">
-          <canvas ref={canvasMountRef} className="w-full h-[310px] sm:h-[360px] block" />
+          <canvas ref={canvasMountRef} className="w-full h-[350px] sm:h-[400px] block" />
           <div className="pointer-events-none absolute top-2.5 left-3 right-3 flex items-center justify-between text-[11px] font-mono">
             <span className="bg-black/60 backdrop-blur px-2.5 py-1 rounded border border-white/25 text-zinc-100">
               {phase === 'ascent'
@@ -1630,6 +1670,56 @@ export const LaunchTransitModal: React.FC<{
         {landingMsg && (
           <div className="bg-rose-500/20 border border-rose-300/60 rounded px-3 py-1.5 text-[11px] text-rose-100 font-mono">
             {landingMsg}
+          </div>
+        )}
+
+        {/* Pre-Ignition NASA Orion Pad Checklist before SLS Ignition */}
+        {phase === 'ascent' && !ignited && (
+          <div className="bg-sky-950/55 border border-sky-400/35 rounded-lg p-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+            <span className="font-mono font-semibold text-sky-200 uppercase">
+              {lang === 'es' ? 'Verificación Pre-Ignición (LC-39B):' : 'Pre-Ignition Pad Poll (LC-39B):'}
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  setChkHatch((v) => !v);
+                }}
+                className={`px-2.5 py-1 rounded border font-mono ${
+                  chkHatch ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200' : 'bg-white/[0.06] border-white/25 text-zinc-200'
+                }`}
+              >
+                {chkHatch ? '✓ ' : ''}
+                {lang === 'es' ? 'Escotilla 101.3 kPa' : 'Hatch 101.3 kPa'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  setChkCryo((v) => !v);
+                }}
+                className={`px-2.5 py-1 rounded border font-mono ${
+                  chkCryo ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200' : 'bg-white/[0.06] border-white/25 text-zinc-200'
+                }`}
+              >
+                {chkCryo ? '✓ ' : ''}
+                {lang === 'es' ? 'Purga Crio LOX/LH₂' : 'LOX/LH₂ Cryo Purge'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playClick();
+                  setChkGnc((v) => !v);
+                }}
+                className={`px-2.5 py-1 rounded border font-mono ${
+                  chkGnc ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200' : 'bg-white/[0.06] border-white/25 text-zinc-200'
+                }`}
+              >
+                {chkGnc ? '✓ ' : ''}
+                {lang === 'es' ? 'GNC / Bus 28V ARM' : 'GNC / 28V Bus ARM'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -1668,13 +1758,23 @@ export const LaunchTransitModal: React.FC<{
             {phase === 'ascent' && !ignited && (
               <button
                 type="button"
+                disabled={!padVerified}
                 onClick={() => {
                   soundEngine.unlock();
                   soundEngine.playStagePyro();
                   setStageIdx(1);
                   setIgnited(true);
                 }}
-                className="lp-btn-accent px-4 py-2 text-xs flex items-center gap-1.5"
+                className={`px-4 py-2 text-xs flex items-center gap-1.5 ${
+                  padVerified ? 'lp-btn-accent' : 'lp-btn opacity-45 cursor-not-allowed'
+                }`}
+                title={
+                  padVerified
+                    ? undefined
+                    : lang === 'es'
+                    ? 'Verifica los 3 sistemas de cabina arriba antes de encender SLS'
+                    : 'Verify all 3 cockpit pad checks above before ignition'
+                }
               >
                 <Flame className="w-4 h-4 text-amber-300" />
                 {lang === 'es' ? 'IGNICIÓN SLS' : 'SLS IGNITION'}
@@ -2744,6 +2844,15 @@ export const EscTacticalMenuModal: React.FC<{
   onClose,
 }) => {
   const [tab, setTab] = useState<'map_ops' | 'telemetry' | 'phases_settings'>('map_ops');
+  const [voiceURI, setVoiceURI] = useState(() => mentorVoice.getSelectedVoiceURI(lang));
+  const [voicePreset, setVoicePreset] = useState<VoicePresetId>(() => mentorVoice.getPresetId());
+  const [voiceTick, setVoiceTick] = useState(0);
+  useEffect(() => {
+    setVoiceURI(mentorVoice.getSelectedVoiceURI(lang));
+    return mentorVoice.subscribeVoices(() => setVoiceTick((v) => v + 1));
+  }, [lang]);
+  void voiceTick;
+  const availableVoices = mentorVoice.getAvailableVoices(lang);
   const distToTargetM = Math.hypot(guidedStep.targetX - playerX, guidedStep.targetY - playerY).toFixed(1);
   const currentZone = getRoomZoneAt(playerX, playerY);
 
@@ -3269,44 +3378,104 @@ export const EscTacticalMenuModal: React.FC<{
           </div>
         )}
 
-        {/* Tab 3: Direct Phases, Audio, Lighting, Camera, Language & Return Menu */}
+        {/* Tab 3: Direct Phases, AI Voice, Audio, Lighting, Camera, Language & Return Menu */}
         {tab === 'phases_settings' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-              <button type="button" onClick={onToggleCamera} className="mc-btn mc-btn-blue p-2.5 font-black flex items-center justify-center gap-1.5">
-                <Camera className="w-4 h-4" />
+              <button type="button" onClick={onToggleCamera} className="lp-btn p-2.5 flex items-center justify-center gap-1.5">
+                <Camera className="w-4 h-4 text-sky-700" />
                 {lang === 'es' ? `Cámara: ${cameraMode.toUpperCase()} [V]` : `Camera: ${cameraMode.toUpperCase()} [V]`}
               </button>
-              <button type="button" onClick={onCycleLighting} className="mc-btn mc-btn-blue p-2.5 font-black flex items-center justify-center gap-1.5">
-                <Lightbulb className="w-4 h-4" />
+              <button type="button" onClick={onCycleLighting} className="lp-btn p-2.5 flex items-center justify-center gap-1.5">
+                <Lightbulb className="w-4 h-4 text-amber-600" />
                 {lightLabels[sim.lightingMode]}
               </button>
-              <button type="button" onClick={onToggleMusic} className="mc-btn mc-btn-blue p-2.5 font-black flex items-center justify-center gap-1.5">
-                {musicOn ? <Volume2 className="w-4 h-4 text-emerald-300" /> : <VolumeX className="w-4 h-4 text-rose-400" />}
+              <button type="button" onClick={onToggleMusic} className="lp-btn p-2.5 flex items-center justify-center gap-1.5">
+                {musicOn ? <Volume2 className="w-4 h-4 text-emerald-600" /> : <VolumeX className="w-4 h-4 text-rose-600" />}
                 {lang === 'es' ? `Música: ${musicOn ? 'ON' : 'OFF'}` : `Music: ${musicOn ? 'ON' : 'OFF'}`}
               </button>
-              <button type="button" onClick={onToggleAmbient} className="mc-btn mc-btn-blue p-2.5 font-black flex items-center justify-center gap-1.5">
-                {ambientOn ? <Volume2 className="w-4 h-4 text-cyan-300" /> : <VolumeX className="w-4 h-4 text-rose-400" />}
+              <button type="button" onClick={onToggleAmbient} className="lp-btn p-2.5 flex items-center justify-center gap-1.5">
+                {ambientOn ? <Volume2 className="w-4 h-4 text-sky-700" /> : <VolumeX className="w-4 h-4 text-rose-600" />}
                 {lang === 'es' ? `Ruido Cabina: ${ambientOn ? 'ON' : 'OFF'}` : `Ambient Noise: ${ambientOn ? 'ON' : 'OFF'}`}
               </button>
-              <button type="button" onClick={onToggleLang} className="mc-btn mc-btn-blue p-2.5 font-black flex items-center justify-center gap-1.5">
-                <Globe className="w-4 h-4" />
+              <button type="button" onClick={onToggleLang} className="lp-btn p-2.5 flex items-center justify-center gap-1.5">
+                <Globe className="w-4 h-4 text-slate-700" />
                 {lang === 'es' ? 'Idioma: ESPAÑOL' : 'Language: ENGLISH'}
               </button>
               {onCycleThrowMode && (
-                <button type="button" onClick={onCycleThrowMode} className="mc-btn mc-btn-blue p-2.5 font-black flex items-center justify-center gap-1.5">
-                  <Activity className="w-4 h-4 text-sky-300" />
+                <button type="button" onClick={onCycleThrowMode} className="lp-btn p-2.5 flex items-center justify-center gap-1.5">
+                  <Activity className="w-4 h-4 text-sky-700" />
                   {lang === 'es' ? `Lanzamiento: ${sim.throwPhysicsMode.toUpperCase()}` : `Throw: ${sim.throwPhysicsMode.toUpperCase()}`}
                 </button>
               )}
-              <button type="button" onClick={onReturnMainMenu} className="mc-btn mc-btn-orange p-2.5 font-black flex items-center justify-center gap-1.5">
+              <button type="button" onClick={onReturnMainMenu} className="lp-btn-accent p-2.5 flex items-center justify-center gap-1.5">
                 <Home className="w-4 h-4" />
                 {lang === 'es' ? 'Menú Principal' : 'Main Menu'}
               </button>
             </div>
 
-            <div className="border-t border-slate-700 pt-3 space-y-2">
-              <div className="text-[11px] font-black uppercase text-cyan-300 flex items-center gap-1.5">
+            {/* KATHERINE AI Voice Selection */}
+            <div className="bg-white/75 border border-slate-900/15 rounded-xl p-3 space-y-2.5 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-semibold text-sky-900 flex items-center gap-1.5">
+                  <Radio className="w-3.5 h-3.5 text-sky-600" />
+                  {lang === 'es' ? 'VOZ DE LA IA (KATHERINE)' : 'AI VOICE SETTINGS (KATHERINE)'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => mentorVoice.testSpeak(lang)}
+                  className="lp-btn-accent px-3 py-1 text-[11px] flex items-center gap-1"
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                  {lang === 'es' ? 'Probar Voz' : 'Test Voice'}
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <label className="space-y-1 block">
+                  <span className="text-[10px] font-mono text-slate-600 uppercase">
+                    {lang === 'es' ? 'Estilo / Tono IA' : 'AI Vocal Style'}
+                  </span>
+                  <select
+                    value={voicePreset}
+                    onChange={(e) => {
+                      const next = e.target.value as VoicePresetId;
+                      setVoicePreset(next);
+                      mentorVoice.setPresetId(next);
+                    }}
+                    className="w-full bg-white border border-slate-900/20 rounded-lg px-2.5 py-1.5 text-xs text-slate-900"
+                  >
+                    {VOICE_PRESETS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {lang === 'es' ? p.labelEs : p.labelEn}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1 block">
+                  <span className="text-[10px] font-mono text-slate-600 uppercase">
+                    {lang === 'es' ? 'Voz del Sistema' : 'System Speech Voice'}
+                  </span>
+                  <select
+                    value={voiceURI}
+                    onChange={(e) => {
+                      setVoiceURI(e.target.value);
+                      mentorVoice.setSelectedVoiceURI(lang, e.target.value);
+                    }}
+                    className="w-full bg-white border border-slate-900/20 rounded-lg px-2.5 py-1.5 text-xs text-slate-900"
+                  >
+                    <option value="">{lang === 'es' ? 'Automática (Mejor disponible)' : 'Auto (Best available)'}</option>
+                    {availableVoices.map((v) => (
+                      <option key={v.voiceURI} value={v.voiceURI}>
+                        {v.name} ({v.lang})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-900/15 pt-3 space-y-2">
+              <div className="text-[11px] font-semibold uppercase text-sky-900 flex items-center gap-1.5">
                 <Rocket className="w-3.5 h-3.5 text-[#FF4F00]" />
                 {lang === 'es' ? 'SALTAR / DESPLEGAR FASE DE MISIÓN AETHER-4' : 'JUMP / LAUNCH AETHER-4 MISSION PHASE'}
               </div>
@@ -3316,11 +3485,11 @@ export const EscTacticalMenuModal: React.FC<{
                     key={m.id}
                     type="button"
                     onClick={() => onSelectMission(m.id)}
-                    className={`mc-btn p-2.5 text-left text-[11px] ${
-                      m.id === sim.currentMissionId ? 'mc-btn-orange ring-2 ring-white' : 'mc-btn-blue'
+                    className={`p-2.5 text-left text-[11px] rounded-lg border transition ${
+                      m.id === sim.currentMissionId ? 'lp-btn-accent ring-2 ring-sky-400' : 'lp-btn'
                     }`}
                   >
-                    <div className="font-black">{lang === 'es' ? m.badgeEs : m.badgeEn}</div>
+                    <div className="font-semibold">{lang === 'es' ? m.badgeEs : m.badgeEn}</div>
                     <div className="text-[10px] opacity-90 line-clamp-2 mt-0.5">
                       {lang === 'es' ? m.titleEs : m.titleEn}
                     </div>

@@ -83,32 +83,35 @@ function holoBlip(alarm = false) {
   }
 }
 
-const HoloAvatar: React.FC<{ accent: string; speaking: boolean; thinking: boolean }> = ({ accent, speaking, thinking }) => (
-  <svg viewBox="0 0 100 100" className="w-16 h-16 shrink-0 holo-flicker" aria-hidden="true">
+const HoloAvatar: React.FC<{ accent: string; speaking: boolean; thinking: boolean; compact?: boolean }> = ({
+  accent,
+  speaking,
+  thinking,
+  compact = false,
+}) => (
+  <svg viewBox="0 0 100 100" className={`${compact ? 'w-9 h-9' : 'w-12 h-12'} shrink-0 holo-flicker`} aria-hidden="true">
     <defs>
       <radialGradient id="katCore" cx="50%" cy="45%" r="60%">
-        <stop offset="0%" stopColor={accent} stopOpacity="0.55" />
-        <stop offset="70%" stopColor={accent} stopOpacity="0.12" />
+        <stop offset="0%" stopColor={accent} stopOpacity="0.65" />
+        <stop offset="70%" stopColor={accent} stopOpacity="0.16" />
         <stop offset="100%" stopColor={accent} stopOpacity="0" />
       </radialGradient>
     </defs>
-    <circle cx="50" cy="50" r="46" fill="none" stroke={accent} strokeOpacity="0.45" strokeWidth="1.5" strokeDasharray="3 7" className="holo-spin" />
-    <circle cx="50" cy="50" r="39" fill="none" stroke={accent} strokeOpacity="0.7" strokeWidth="1.2" strokeDasharray="22 9 4 9" className={thinking ? 'holo-spin-fast' : 'holo-spin-rev'} />
-    <polygon points="50,18 76,33 76,63 50,80 24,63 24,33" fill="url(#katCore)" stroke={accent} strokeWidth="1.6" className="holo-pulse" />
-    <rect x="38" y="40" width="5" height="8" rx="2.5" fill={accent} className="holo-blink" />
-    <rect x="57" y="40" width="5" height="8" rx="2.5" fill={accent} className="holo-blink" />
+    <circle cx="50" cy="50" r="45" fill="url(#katCore)" stroke={accent} strokeOpacity="0.65" strokeWidth="2.4" strokeDasharray="4 6" className="holo-spin" />
+    <circle cx="50" cy="50" r="36" fill="none" stroke={accent} strokeOpacity="0.85" strokeWidth="1.6" strokeDasharray="22 8 5 8" className={thinking ? 'holo-spin-fast' : 'holo-spin-rev'} />
+    <circle cx="50" cy="50" r="19" fill={accent} fillOpacity={speaking ? 0.34 : 0.18} stroke={accent} strokeWidth="2" className="holo-pulse" />
     {[0, 1, 2, 3, 4].map((i) => (
       <rect
         key={i}
-        x={36 + i * 6}
-        y="57"
-        width="3.5"
+        x={35 + i * 6.5}
+        y="46"
+        width="3.6"
         height="8"
-        rx="1.5"
+        rx="1.8"
         fill={accent}
-        opacity={speaking ? 0.95 : 0.45}
+        opacity={speaking ? 0.98 : 0.65}
         className={speaking ? 'holo-wave' : ''}
-        style={{ animationDelay: `${i * 0.11}s`, transformOrigin: `${37.75 + i * 6}px 61px` }}
+        style={{ animationDelay: `${i * 0.11}s`, transformOrigin: `${36.8 + i * 6.5}px 50px` }}
       />
     ))}
   </svg>
@@ -143,7 +146,7 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
   const [server, setServer] = useState<MentorServerStatus>(serverRef.current);
   const voiceRef = useRef(readPref('astro.mentorVoice', true));
   const [voiceOn, setVoiceOn] = useState(voiceRef.current);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatText, setChatText] = useState('');
   const [listening, setListening] = useState(false);
@@ -473,7 +476,6 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
 
   // ------------------------------------------------------------ render
   const mode = shown?.reply.mode ?? 'socratic';
-  const accent = mode === 'crisis' ? '#fb7185' : mode === 'safety' ? '#fbbf24' : '#38bdf8';
   const t = (es: string, en: string) => (lang === 'es' ? es : en);
   const typingDone = !!shown && typed >= shown.reply.say.length;
   const coreLabel = server.online
@@ -492,146 +494,127 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
     window.location.reload();
   };
 
-  if (collapsed) {
-    return (
-      <button
-        type="button"
-        onClick={() => setCollapsed(false)}
-        className="fixed right-3 top-28 z-30 pointer-events-auto rounded-full holo-panel p-1"
-        title={t('Abrir a KATHERINE', 'Open KATHERINE')}
-      >
-        <HoloAvatar accent={accent} speaking={speaking} thinking={stage === 'thinking'} />
-      </button>
-    );
-  }
+  const orbAccent = mode === 'crisis' ? '#fb7185' : mode === 'safety' ? '#38bdf8' : '#38bdf8';
 
   return (
-    <div className="fixed right-3 top-28 z-30 w-[370px] max-w-[calc(100vw-24px)] pointer-events-auto" onContextMenu={(e) => e.stopPropagation()}>
-      <div className={`holo-panel ${mode === 'crisis' ? 'holo-crisis' : ''}`} style={{ borderColor: `${accent}99` }}>
-        <div className="flex items-start gap-2.5 p-2.5 pb-1.5">
-          <HoloAvatar accent={accent} speaking={speaking} thinking={stage === 'thinking'} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <div className="text-[13px] font-black tracking-[0.2em]" style={{ color: accent }}>
-                  KATHERINE
-                </div>
-                <div className="text-[10px] uppercase tracking-wider text-slate-400">
-                  {mode === 'crisis' ? t('Modo crisis · órdenes primero', 'Crisis mode · commands first') : t('IA mentora · Misión AETHER-4', 'Mentor AI · AETHER-4 Mission')}
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <button type="button" onClick={toggleVoice} className="holo-btn" title={t('Voz [M]', 'Voice [M]')}>
-                  {voiceOn ? '🔊' : '🔇'}
-                </button>
-                <button type="button" onClick={() => setCollapsed(true)} className="holo-btn" title={t('Minimizar', 'Minimize')}>
-                  ▁
-                </button>
-              </div>
-            </div>
-            <button type="button" onClick={configureServer} className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400 hover:text-slate-200" title={mentorServerUrl}>
-              <span className={`inline-block w-1.5 h-1.5 rounded-full ${server.online ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' : 'bg-amber-400'}`} />
-              {coreLabel}
+    <div
+      className="fixed right-2.5 top-[210px] z-30 flex flex-col items-end gap-1.5 max-w-[330px] pointer-events-none"
+      onContextMenu={(e) => e.stopPropagation()}
+    >
+      {/* Compact glowing circular blue AI orb directly below the minimap */}
+      <div className="pointer-events-auto flex items-center gap-1.5">
+        {!collapsed && (
+          <div className="flex items-center gap-1 rounded-full bg-slate-950/75 border border-sky-400/50 px-2 py-0.5 backdrop-blur-sm">
+            <button type="button" onClick={toggleVoice} className="text-[11px] text-sky-200 hover:text-white px-1" title={t('Voz [M]', 'Voice [M]')}>
+              {voiceOn ? '🔊' : '🔇'}
             </button>
-          </div>
-        </div>
-
-        <div className="px-3 pb-2.5 text-[13px] leading-snug text-slate-100 min-h-[48px]">
-          {stage === 'thinking' && (
-            <div className="text-cyan-200/90 italic">
-              {PERSONA_LINES.thinking[lang]}
-              <span className="holo-dots" />
-            </div>
-          )}
-          {stage !== 'thinking' && !shown && (
-            <div className="text-slate-400">{t('En línea. Explora el módulo; te acompaño en cada decisión.', 'Online. Explore the module; I will be with you on every decision.')}</div>
-          )}
-          {stage !== 'thinking' && shown && (
-            <>
-              <p className="whitespace-pre-wrap">
-                {shown.reply.say.slice(0, typed)}
-                {!typingDone && <span className="holo-caret">▌</span>}
-              </p>
-              {typingDone && shown.reply.didYouKnow && (
-                <div className="mt-2 border-l-2 pl-2 py-1 bg-sky-950/40 holo-fade" style={{ borderColor: accent }}>
-                  <div className="text-[10px] font-black tracking-widest" style={{ color: accent }}>
-                    {t('¿SABÍAS QUE…?', 'DID YOU KNOW?')}
-                  </div>
-                  <div className="text-[12px] text-slate-200">{shown.reply.didYouKnow}</div>
-                </div>
-              )}
-              {typingDone && shown.reply.check && <p className="mt-2 font-bold holo-fade" style={{ color: accent }}>{shown.reply.check}</p>}
-              {typingDone && stage === 'check' && (
-                <div className="mt-2 flex gap-2 holo-fade">
-                  <button type="button" className="holo-choice" onClick={() => answerCheck(true)}>
-                    [1] {t('Sí, entiendo', 'Yes, I get it')}
-                  </button>
-                  <button type="button" className="holo-choice" onClick={() => answerCheck(false)}>
-                    [2] {t('Explícamelo otra vez', 'Explain it again')}
-                  </button>
-                </div>
-              )}
-              {typingDone && stage === 'quiz' && quiz && (
-                <div className="mt-2 flex flex-col gap-1.5 holo-fade">
-                  {quiz.order.map((optIdx, slot) => (
-                    <button key={slot} type="button" className="holo-choice text-left" onClick={() => answerQuiz(slot)}>
-                      [{slot + 1}] {quiz.card.quiz!.options[optIdx][lang]}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {typingDone && shown.footer && <div className="mt-1.5 text-[11px] font-black text-emerald-300 holo-fade">{shown.footer}</div>}
-              {typingDone && shown.reply.sources.length > 0 && (
-                <div className="mt-1.5 flex flex-wrap gap-1 holo-fade">
-                  {shown.reply.sources.slice(0, 3).map((s) => (
-                    <span key={s} className="text-[9px] px-1.5 py-0.5 border border-slate-600 text-slate-400 font-mono">
-                      {s}
-                    </span>
-                  ))}
-                  <span className="text-[9px] px-1.5 py-0.5 text-slate-500 font-mono">{shown.reply.origin === 'model' ? 'AstroCopilot' : t('tarjeta verificada', 'verified card')}</span>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {chatOpen ? (
-          <form
-            className="flex gap-1.5 px-2.5 pb-2.5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              sendQuestion(chatText);
-            }}
-          >
-            <input
-              ref={inputRef}
-              value={chatText}
-              onChange={(e) => setChatText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setChatOpen(false);
-                  e.currentTarget.blur();
-                }
-              }}
-              maxLength={300}
-              placeholder={t('Pregúntale a KATHERINE…', 'Ask KATHERINE…')}
-              className="flex-1 min-w-0 bg-slate-950/80 border border-sky-700 px-2 py-1 text-[13px] text-slate-100 outline-none focus:border-sky-400"
-            />
-            {mentorEars.supported && (
-              <button type="button" onClick={listen} className={`holo-btn ${listening ? 'holo-listening' : ''}`} title={t('Hablar por micrófono', 'Speak into the microphone')}>
-                🎙
-              </button>
-            )}
-            <button type="submit" className="holo-btn">
-              ➤
+            <button type="button" onClick={() => setChatOpen((o) => !o)} className="text-[11px] font-mono text-sky-300 hover:text-white px-1" title={t('Chat IA [T]', 'AI Chat [T]')}>
+              [T]
             </button>
-          </form>
-        ) : (
-          <div className="px-3 pb-2 text-[10px] text-slate-500 font-mono">
-            [T] {t('Hablar', 'Talk')} · [1]/[2] {t('Responder', 'Answer')} · [M] {t('Voz', 'Voice')}
+            <button type="button" onClick={configureServer} className="flex items-center gap-1 text-[10px] font-mono text-sky-300/80 hover:text-white px-1" title={coreLabel}>
+              <span className={`inline-block w-1.5 h-1.5 rounded-full ${server.online ? 'bg-emerald-400' : 'bg-sky-400'}`} />
+              AI
+            </button>
           </div>
         )}
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          className={`rounded-full p-1 transition pointer-events-auto backdrop-blur-sm ${
+            mode === 'crisis'
+              ? 'bg-rose-950/65 border-2 border-rose-400 shadow-[0_0_16px_rgba(251,113,133,0.7)]'
+              : 'bg-sky-950/65 border-2 border-sky-400 shadow-[0_0_16px_rgba(56,189,248,0.72)] hover:scale-105'
+          }`}
+          title={t('KATHERINE IA · Clic para opciones o [T] para preguntar', 'KATHERINE AI · Click for options or [T] to talk')}
+        >
+          <HoloAvatar accent={orbAccent} speaking={speaking} thinking={stage === 'thinking'} compact />
+        </button>
       </div>
+
+      {/* AI comments rendered as clean blue text lines (no heavy box obscuring the viewport) */}
+      {!paused && stage === 'thinking' && (
+        <div className="pointer-events-none text-right pr-2 border-r-2 border-sky-400/75 text-[11px] font-medium text-sky-300 drop-shadow-[0_1px_6px_rgba(2,6,23,0.98)]">
+          <span className="italic">{PERSONA_LINES.thinking[lang]}</span>
+          <span className="holo-dots" />
+        </div>
+      )}
+
+      {!paused && stage !== 'thinking' && shown && (
+        <div className="pointer-events-auto flex flex-col items-end gap-1 text-right pr-2 border-r-2 border-sky-400/80 bg-slate-950/25 rounded-l px-2 py-1 backdrop-blur-[2px]">
+          <p className="text-[11.5px] leading-snug font-medium text-sky-300 drop-shadow-[0_1px_6px_rgba(2,6,23,0.98)] whitespace-pre-wrap">
+            {shown.reply.say.slice(0, typed)}
+            {!typingDone && <span className="holo-caret">▌</span>}
+          </p>
+          {typingDone && shown.reply.didYouKnow && (
+            <p className="text-[10.5px] leading-snug text-sky-200/90 drop-shadow-[0_1px_5px_rgba(2,6,23,0.98)] holo-fade">
+              {shown.reply.didYouKnow}
+            </p>
+          )}
+          {typingDone && shown.reply.check && (
+            <p className="text-[11px] font-semibold text-cyan-300 drop-shadow-[0_1px_5px_rgba(2,6,23,0.98)] holo-fade">
+              {shown.reply.check}
+            </p>
+          )}
+          {typingDone && stage === 'check' && (
+            <div className="flex flex-wrap justify-end gap-1 pt-0.5 holo-fade">
+              <button type="button" className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80" onClick={() => answerCheck(true)}>
+                [1] {t('Sí, entiendo', 'Yes')}
+              </button>
+              <button type="button" className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80" onClick={() => answerCheck(false)}>
+                [2] {t('Repetir', 'Again')}
+              </button>
+            </div>
+          )}
+          {typingDone && stage === 'quiz' && quiz && (
+            <div className="flex flex-col items-end gap-1 pt-0.5 holo-fade">
+              {quiz.order.map((optIdx, slot) => (
+                <button key={slot} type="button" className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80 text-right" onClick={() => answerQuiz(slot)}>
+                  [{slot + 1}] {quiz.card.quiz!.options[optIdx][lang]}
+                </button>
+              ))}
+            </div>
+          )}
+          {typingDone && shown.footer && (
+            <div className="text-[10.5px] font-semibold text-cyan-200 drop-shadow-[0_1px_5px_rgba(2,6,23,0.98)] holo-fade">
+              {shown.footer}
+            </div>
+          )}
+        </div>
+      )}
+
+      {(!collapsed || chatOpen) && (
+        <form
+          className="pointer-events-auto flex gap-1 w-[260px] bg-slate-950/85 border border-sky-400/60 rounded-lg p-1.5 backdrop-blur-md shadow-lg"
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendQuestion(chatText);
+          }}
+        >
+          <input
+            ref={inputRef}
+            value={chatText}
+            onChange={(e) => setChatText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setChatOpen(false);
+                setCollapsed(true);
+                e.currentTarget.blur();
+              }
+            }}
+            maxLength={300}
+            placeholder={t('Pregúntale a KATHERINE… [T]', 'Ask KATHERINE… [T]')}
+            className="flex-1 min-w-0 bg-slate-900/90 border border-sky-500/50 rounded px-2 py-1 text-[11.5px] text-sky-100 placeholder:text-sky-400/60 outline-none focus:border-sky-300"
+          />
+          {mentorEars.supported && (
+            <button type="button" onClick={listen} className={`px-2 py-1 rounded border border-sky-400/50 text-xs text-sky-200 ${listening ? 'holo-listening' : ''}`} title={t('Hablar por micrófono', 'Mic')}>
+              🎙
+            </button>
+          )}
+          <button type="submit" className="px-2 py-1 rounded bg-sky-600/80 hover:bg-sky-500 text-xs text-white font-semibold">
+            ➤
+          </button>
+        </form>
+      )}
     </div>
   );
 };
