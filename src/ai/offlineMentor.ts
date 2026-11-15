@@ -139,6 +139,35 @@ const CHECK_PROMPT_EXPLORER: Record<Lang, string[]> = {
   en: ['Did you get it?', 'See it, explorer?', 'Makes sense?'],
 };
 
+/** Small talk KATHERINE must handle even without the model (name, who she is, greetings, thanks). */
+const PERSONA_QA: { re: RegExp; es: string; en: string }[] = [
+  {
+    re: /(c[oó]mo te llamas|tu nombre|qui[eé]n eres|qu[eé] eres|what('?s| is) your name|who are you|what are you)/i,
+    es: 'Soy KATHERINE, la IA mentora de la misión AETHER-4. Te acompaño en cada decisión con datos reales de la NASA y te explico paso a paso cómo sobrevive una tripulación en el espacio.',
+    en: "I'm KATHERINE, the AETHER-4 mission's AI mentor. I guide you through every decision with real NASA data and explain, step by step, how a crew survives in space.",
+  },
+  {
+    re: /(qu[eé] puedes hacer|en qu[eé] me ayudas|c[oó]mo me ayudas|what can you do|how can you help)/i,
+    es: 'Te explico cada decisión, te cuento cómo lo vivieron astronautas reales y te hago preguntas para que lo entiendas de verdad. Pregúntame del aire, el agua, la energía o la radiación, o presiona [T] cuando quieras.',
+    en: 'I explain each decision, tell you how real astronauts lived it and ask you questions so you truly understand. Ask me about air, water, power or radiation, or press [T] anytime.',
+  },
+  {
+    re: /^\s*(hola|holi|buenas|hey|hi|hello)\b[\s!¡.,?]*$/i,
+    es: '¡Hola, cadete! Aquí KATHERINE. ¿Qué quieres saber de la misión?',
+    en: "Hi, cadet! KATHERINE here. What would you like to know about the mission?",
+  },
+  {
+    re: /(gracias|thank)/i,
+    es: '¡Con gusto, cadete! Sigue así: cada decisión que entiendes te acerca a volver a casa.',
+    en: "You're welcome, cadet! Keep it up: every decision you understand brings you closer to home.",
+  },
+];
+
+export function personaReply(text: string, lang: Lang): MentorReply | null {
+  const hit = PERSONA_QA.find((q) => q.re.test(text));
+  return hit ? { say: hit[lang], sources: [], mode: 'chat', origin: 'card' } : null;
+}
+
 /**
  * Builds KATHERINE's reply from the verified cards, adapted to the player's age level:
  * explorer → the simple analogy first; cadet → meaning + fact; engineer → meaning + numbers.
@@ -148,6 +177,8 @@ export function composeOfflineReply(event: MentorEvent, lang: Lang, t: MentorTel
   if (event.kind === 'question') {
     const text = event.text ?? '';
     if (isRealWorldSafetyIssue(text)) return safetyReply(lang);
+    const persona = personaReply(text, lang);
+    if (persona) return persona;
     const hit = searchCards(text, lang);
     if (!hit) return { say: PERSONA_LINES.unknownQuestion[lang], sources: [], mode: 'chat', origin: 'card' };
     return {

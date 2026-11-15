@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { SpaceRoomState } from '../game/spaceRoomSimulation';
 import { MentorDirector, PRIORITY, QueuedMentorEvent, buildTelemetry } from '../ai/mentorDirector';
 import { MENTOR_CARDS } from '../ai/mentorKnowledge';
-import { CHECK_PROMPT, PERSONA_LINES, composeOfflineReply, isRealWorldSafetyIssue, safetyReply, searchCards } from '../ai/offlineMentor';
+import { CHECK_PROMPT, PERSONA_LINES, composeOfflineReply, isRealWorldSafetyIssue, personaReply, safetyReply, searchCards } from '../ai/offlineMentor';
 import { MentorServerStatus, askMentorServer, checkMentorServer, mentorServerUrl } from '../ai/mentorClient';
 import { mentorEars, mentorVoice } from '../ai/mentorVoice';
 import { AgeLevel, CONCEPTS, ConceptId, LEVELS, gradeOpenAnswer, hasWrongIdea, learner } from '../ai/learner';
@@ -251,6 +251,12 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
 
         if (event.kind === 'question' && isRealWorldSafetyIssue(event.text ?? '')) {
           present({ reply: safetyReply(l), topic: 'safety', kind: 'question', checkRound: 0 }, 'message');
+          return;
+        }
+        // Small talk (name, greetings, thanks) is answered instantly, no need to wait for the model.
+        const persona = event.kind === 'question' ? personaReply(event.text ?? '', l) : null;
+        if (persona) {
+          present({ reply: persona, topic: 'persona', kind: 'question', checkRound: 0 }, 'message');
           return;
         }
 
