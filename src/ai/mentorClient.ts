@@ -11,6 +11,8 @@ export interface MentorServerStatus {
   backend: string;
   model?: string;
   ragDocs?: number;
+  /** Neural voice offered by the bridge (Supertonic 3), see ai_bridge/mentor_voice.py. */
+  voice?: { status: string; voices: string[]; default?: string; hint?: string };
 }
 
 const DEFAULT_URL = 'http://localhost:8765';
@@ -47,8 +49,12 @@ async function fetchJson<T>(path: string, init: RequestInit, timeoutMs: number):
 
 export async function checkMentorServer(): Promise<MentorServerStatus> {
   try {
-    const h = await fetchJson<{ ok: boolean; backend: string; model?: string; rag_docs?: number }>('/api/health', { method: 'GET' }, 2500);
-    return { online: !!h.ok, backend: h.backend, model: h.model, ragDocs: h.rag_docs };
+    const h = await fetchJson<{ ok: boolean; backend: string; model?: string; rag_docs?: number; voice?: MentorServerStatus['voice'] }>(
+      '/api/health',
+      { method: 'GET' },
+      2500
+    );
+    return { online: !!h.ok, backend: h.backend, model: h.model, ragDocs: h.rag_docs, voice: h.voice };
   } catch {
     return { online: false, backend: 'offline' };
   }
@@ -62,6 +68,8 @@ interface ServerReply {
   mode?: MentorReply['mode'];
   origin?: MentorReply['origin'];
   latency_ms?: number;
+  verdict?: MentorReply['verdict'];
+  misconception?: string;
 }
 
 /** Asks the model. `failed` = network/server error (mark offline); `reply` null = server had nothing useful. */
@@ -83,6 +91,8 @@ export async function askMentorServer(req: MentorRequest, timeoutMs = 35000): Pr
         mode: r.mode ?? 'socratic',
         origin: r.origin ?? 'model',
         latencyMs: r.latency_ms,
+        verdict: r.verdict,
+        misconception: r.misconception?.trim() || undefined,
       },
     };
   } catch {

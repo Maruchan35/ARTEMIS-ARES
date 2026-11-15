@@ -1,0 +1,28 @@
+{
+ "train": 659,
+ "eval": 55,
+ "dropped_by_verifier": {
+  "teach_engineer_number": 22,
+  "explain_engineer_number": 22,
+  "question": 4
+ },
+ "by_category": {
+  "tutor_question_explorer": 26,
+  "tutor_grade_good": 52,
+  "tutor_teach_explorer": 66,
+  "tutor_question_cadet": 24,
+  "tutor_grade_miss": 104,
+  "tutor_explain_cadet": 66,
+  "tutor_teach_cadet": 66,
+  "tutor_explain_engineer": 66,
+  "tutor_question_engineer": 24,
+  "tutor_teach_engineer": 66,
+  "tutor_explain_explorer": 66,
+  "tutor_honesty": 36,
+  "tutor_grade_partial": 52
+ },
+ "by_language": {
+  "en": 357,
+  "es": 357
+ }
+}

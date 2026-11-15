@@ -18,6 +18,7 @@ export type MentorEventKind =
   | 'hint'
   | 'question'
   | 'explain_again'
+  | 'grade'
   | 'ending';
 
 export type MentorMode = 'socratic' | 'crisis' | 'chat' | 'safety';
@@ -91,6 +92,10 @@ export interface MentorReply {
   /** 'model' = Gemma-4 AstroCopilot answered; 'card' = verified offline card. */
   origin: 'model' | 'card';
   latencyMs?: number;
+  /** Only for 'grade' events: how well the player's own explanation matched the idea. */
+  verdict?: 'good' | 'partial' | 'miss';
+  /** Only for 'grade' events: the misconception the model detected, if any. */
+  misconception?: string;
 }
 
 export interface MentorRequest {
@@ -99,6 +104,13 @@ export interface MentorRequest {
   telemetry: MentorTelemetry;
   history: MentorTurn[];
   /** The verified card the game already has for this event: the server grounds the model on it. */
+  /** Who is learning: age level + what they master / struggle with (src/ai/learner.ts). */
+  learner?: {
+    level: 'explorer' | 'cadet' | 'engineer';
+    mastered: string[];
+    struggling: string[];
+    misconceptions: string[];
+  };
   card?: {
     say: string;
     fact: string;

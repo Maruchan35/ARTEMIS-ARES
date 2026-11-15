@@ -33,9 +33,42 @@ El juego busca el puente en `http://localhost:8765`. Para cambiarlo: clic en la 
 
 `--merge` fusiona el LoRA en bf16: respuestas más rápidas, necesita L4/A100.
 
+## Voz de KATHERINE (cálida, en español e inglés)
+- **Voz neural HD (recomendada):** [Supertonic 3](https://github.com/supertone-inc/supertonic) corre en la CPU
+  (~4x más rápido que tiempo real, sin GPU) y cada voz habla español **e** inglés, así KATHERINE suena igual en
+  los dos idiomas. Se activa sola si el puente está corriendo y tienes el paquete:
+  ```
+  pip install supertonic
+  python ai_bridge/mentor_server.py --backend offline      # o cualquier otro backend
+  ```
+  La primera vez baja ~400 MB a `ai_bridge/.cache/supertonic3/` (o a `$SUPERTONIC_DIR`). `--voice off` la apaga.
+  `mentor_voice.py` convierte números, unidades y símbolos a palabras ("1,350 ppm" → "mil trescientos cincuenta
+  partes por millón", "CO₂" → "ce o dos"), porque el modelo lee mal los dígitos en español.
+- **Sin puente:** usa la mejor voz instalada del navegador (en Edge, las voces "Natural" como Dalia o Ava suenan muy bien).
+- **⚙ en el panel:** el jugador elige idioma (Español / English, cambia todo el juego), voz, velocidad y puede
+  probarla. Se guarda en el navegador.
+- Modelo de voz: licencia OpenRAIL-M (uso permitido con restricciones de uso responsable); código MIT.
+
+## KATHERINE como maestra (fase 1)
+- **Niveles de edad:** al empezar pregunta quién juega: 🧒 Explorador (6–9), 🧑‍🚀 Cadete (10–14), 👩‍🔬 Ingeniero (15+).
+  Se cambia desde el orbe (clic → botón de nivel) y se ajusta solo: 2 fallos seguidos bajan un nivel, 4 aciertos suben.
+- **Mapa de conceptos** (`src/ai/learner.ts`): 13 conceptos con prerrequisitos. Si el jugador toma una decisión sobre
+  "qué cuidar primero", KATHERINE explica antes *respirar en una nave* y *reciclar agua* (texto distinto por nivel).
+- **Ciclo de enseñanza:** explicación a su nivel → "¿Entiendes la idea?" → quiz → "explícamelo con tus palabras"
+  (respuesta abierta, texto o micrófono) → calificación: el modelo si está en línea, si no, ideas clave → repaso
+  espaciado cuando el jugador se atora (concepto medio aprendido, visto hace más de 4 min).
+- **Memoria del alumno** en el navegador (`astro.learnerProfile`): dominio por concepto, confusiones y errores de
+  concepto detectados por el modelo. Un resumen viaja al modelo en cada pregunta.
+- **Verificador** (`verify_reply` en `mentor_server.py`): si el modelo dice un número que no está en la tarjeta, el
+  RAG o la telemetría, o invierte el orden aire → agua → comida, se descarta y se usa la tarjeta. Las preguntas de
+  seguimiento fuera de tema se quitan.
+- **Contenido pre-generado con Colab:** `python ai_bridge/pregen_tutor.py` (con el puente conectado al modelo) escribe
+  explicación + analogía + pregunta por tarjeta × nivel × idioma; `python ai_bridge/review_tutor.py` para aprobar.
+  Solo lo aprobado llega al juego (`src/ai/generated/tutorContent.json`), al instante y sin internet.
+
 ## Controles en el juego
 - **[T]** hablar con KATHERINE (🎙 micrófono en Chrome/Edge) · **[1]/[2]** responder · **[M]** voz on/off
-- El panel se puede minimizar (▁). La voz usa las voces del sistema (en Edge, "Dalia Natural" suena mejor).
+- **⚙** idioma y voz · El panel se puede minimizar (▁).
 
 ## Cómo extenderlo
 - **Nuevo dato / decisión:** agrega una tarjeta en `src/ai/mentorKnowledge.ts` (`say`, `fact`, `source`,
@@ -44,6 +77,8 @@ El juego busca el puente en `http://localhost:8765`. Para cambiarlo: clic en la 
   Las decisiones usan el id `<grupo>_<valor>` (p. ej. `act2_krusty_spe`), los objetivos `obj_<clave>`.
 - **Personalidad:** frases en `src/ai/offlineMentor.ts` (`OPENERS`, `PERSONA_LINES`) y `SYSTEM_PROMPT` en
   `mentor_server.py`.
+- **Voz:** nombres de voces en `src/ai/mentorVoice.ts` (`NEURAL_VOICES`); pronunciación de unidades y símbolos
+  en `ai_bridge/mentor_voice.py` (`_UNIT_WORDS`, `_PHRASES`).
 - **Probar desde la consola (solo `npm run dev`):**
   `__katherine.sim().crisisDecision = 'food_priority'` · `__katherine.ask('¿por qué la luz es magenta?')`
 

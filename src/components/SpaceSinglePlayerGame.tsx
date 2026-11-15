@@ -1018,7 +1018,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     const onKeyDown = (e: KeyboardEvent) => {
       // Typing to KATHERINE (mentor chat) must not move the astronaut or trigger actions.
       const tgt = e.target as HTMLElement | null;
-      if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable)) return;
+      if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT' || tgt.isContentEditable)) return;
       keysRef.current[e.code] = true;
       if (e.code === 'KeyQ') {
         ignoreNextUnlockRef.current = true;

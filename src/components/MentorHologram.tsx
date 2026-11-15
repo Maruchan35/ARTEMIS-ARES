@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { SpaceRoomState } from '../game/spaceRoomSimulation';
 import { MentorDirector, PRIORITY, QueuedMentorEvent, buildTelemetry } from '../ai/mentorDirector';
 import { MENTOR_CARDS } from '../ai/mentorKnowledge';
-import { CHECK_PROMPT, PERSONA_LINES, composeOfflineReply, isRealWorldSafetyIssue, safetyReply } from '../ai/offlineMentor';
+import { CHECK_PROMPT, PERSONA_LINES, composeOfflineReply, isRealWorldSafetyIssue, safetyReply, searchCards } from '../ai/offlineMentor';
 import { MentorServerStatus, askMentorServer, checkMentorServer, mentorServerUrl } from '../ai/mentorClient';
 import { mentorEars, mentorVoice } from '../ai/mentorVoice';
+import { AgeLevel, CONCEPTS, ConceptId, LEVELS, gradeOpenAnswer, hasWrongIdea, learner } from '../ai/learner';
 import type { Lang, MentorCard, MentorEvent, MentorReply, MentorTurn } from '../ai/mentorTypes';
 import { soundEngine } from '../audio/soundEngine';
 
@@ -16,7 +17,9 @@ import { soundEngine } from '../audio/soundEngine';
 // online; otherwise the verified offline cards.
 // =============================================================================
 
-type Stage = 'idle' | 'thinking' | 'message' | 'check' | 'quiz';
+type Stage = 'idle' | 'thinking' | 'message' | 'check' | 'quiz' | 'level' | 'explain';
+const WAITING: Stage[] = ['check', 'quiz', 'level', 'explain'];
+const TEACHING_KINDS = new Set<MentorEvent['kind']>(['mission_start', 'decision', 'objective']);
 
 interface Shown {
   reply: MentorReply;
@@ -37,6 +40,10 @@ interface Props {
 
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const MODEL_KINDS = new Set<MentorEvent['kind']>(['decision', 'objective', 'mission_start', 'ending', 'question', 'explain_again']);
+/** A 4-bit Gemma on Colab takes ~25-35 s per answer; give it room before falling back to the cards. */
+const MODEL_TIMEOUT_MS = 75000;
+const eventKey = (e: MentorEvent) => `${e.kind}|${e.topic}|${e.text ?? ''}`;
+const priorityOf = (e: MentorEvent) => (PRIORITY as Record<string, number>)[e.kind] ?? PRIORITY.decision;
 
 function readPref(key: string, fallback: boolean): boolean {
   try {
@@ -56,7 +63,7 @@ function writePref(key: string, v: boolean) {
 
 function isTypingTarget(t: EventTarget | null): boolean {
   const el = t as HTMLElement | null;
-  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
 }
 
 let audioCtx: AudioContext | null = null;
@@ -124,6 +131,14 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
   const pendingSinceRef = useRef(0);
   const shownAtRef = useRef(0);
   const processingRef = useRef(false);
+  /** Model replies that arrived while an alarm was on screen: shown when their event comes up again. */
+  const readyRepliesRef = useRef(new Map<string, MentorReply>());
+  /** Teaching event waiting for the player to choose an age level. */
+  const pendingAfterLevelRef = useRef<MentorEvent | null>(null);
+  /** Open-answer check in progress ("explícamelo con tus palabras"). */
+  const explainRef = useRef<{ concept: ConceptId; card: MentorCard } | null>(null);
+  const gradeRef = useRef<(answer: string) => Promise<void>>(async () => undefined);
+  const [, setLevelTick] = useState(0);
   const historyRef = useRef<MentorTurn[]>([]);
   const langRef = useRef(lang);
   const pausedRef = useRef(paused);
@@ -168,6 +183,7 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
       if (!alive) return;
       serverRef.current = st;
       setServer(st);
+      mentorVoice.setNeural(st.online ? st.voice : null);
       // Re-check often while connected; back off when the bridge is not running (less console noise).
       timer = window.setTimeout(poll, st.online ? 20000 : 60000);
     };
@@ -221,7 +237,9 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
   // ----------------------------------------------------------- handle event
   const handleEvent = useCallback(
     async (event: MentorEvent) => {
-      if (processingRef.current) {
+      // Alarms are composed offline (instant), so they may jump in while the model is still thinking.
+      const ownsLock = !processingRef.current;
+      if (!ownsLock && event.kind !== 'alarm') {
         queueRef.current.unshift({ event, priority: 0 });
         return;
       }
@@ -236,32 +254,106 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
           return;
         }
 
-        let reply: MentorReply | null = composeOfflineReply(event, l, tele);
+        // 1) First teaching moment: ask who is playing so KATHERINE talks at the right level.
+        if (TEACHING_KINDS.has(event.kind) && !learner.hasChosenLevel()) {
+          pendingAfterLevelRef.current = event;
+          present(
+            {
+              reply: {
+                say:
+                  l === 'es'
+                    ? 'Antes de empezar, cadete: ¿quién me acompaña hoy? Así te explico todo a tu medida.'
+                    : 'Before we start, cadet: who is flying with me today? That way I explain everything at your level.',
+                sources: [],
+                mode: 'socratic',
+                origin: 'card',
+              },
+              topic: 'level',
+              kind: 'persona',
+              checkRound: 0,
+            },
+            'level'
+          );
+          return;
+        }
+
+        // 2) Spaced review: an idle moment becomes a quick quiz on something half-learned.
+        if (event.kind === 'hint') {
+          const due = learner.dueReview();
+          const reviewCard = due && Object.values(MENTOR_CARDS).find((c) => c.quiz && learner.conceptOf(c.id) === due);
+          if (reviewCard) {
+            startQuiz(reviewCard, true);
+            return;
+          }
+        }
+
+        // 3) Prerequisites first: teach the missing base idea, then come back to this event.
+        const concept = card ? learner.conceptOf(card.id) : undefined;
+        if (concept && (event.kind === 'decision' || event.kind === 'objective')) {
+          const missing = learner.missingPrereq(concept);
+          const intro = missing && CONCEPTS[missing].intro;
+          if (missing && intro) {
+            learner.markIntroduced(missing);
+            // Not urgent on purpose: the event waits until the intro has been read/heard.
+            queueRef.current = [{ event, priority: PRIORITY.mission_start }, ...queueRef.current];
+            present(
+              {
+                reply: { say: intro[learner.level()][l], sources: [`KATHERINE · ${CONCEPTS[missing].name[l]}`], mode: 'socratic', origin: 'card' },
+                topic: missing,
+                kind: 'persona',
+                checkRound: 0,
+              },
+              'message'
+            );
+            return;
+          }
+          learner.noteSeen(concept);
+        }
+
+        let reply: MentorReply | null = composeOfflineReply(event, l, tele, learner.level());
         // The model handles teaching moments; an 'offline' bridge (RAG only) is still used for free questions.
         const srv = serverRef.current;
-        if (srv.online && MODEL_KINDS.has(event.kind) && (srv.backend !== 'offline' || event.kind === 'question')) {
+        const key = eventKey(event);
+        const ready = readyRepliesRef.current.get(key);
+        if (ready) {
+          readyRepliesRef.current.delete(key);
+          reply = ready;
+        } else if (ownsLock && srv.online && MODEL_KINDS.has(event.kind) && (srv.backend !== 'offline' || event.kind === 'question')) {
           const prevStage = stageRef.current;
+          const askedAt = Date.now();
           setStage('thinking');
-          const { reply: r, failed } = await askMentorServer({
-            event,
-            lang: l,
-            telemetry: tele,
-            history: historyRef.current.slice(-6),
-            card: card
-              ? {
-                  say: card.say[l],
-                  fact: card.fact[l],
-                  source: card.source,
-                  simple: card.simple?.[l],
-                  ragQuery: card.ragQuery,
-                  tone: card.tone,
-                }
-              : undefined,
-          });
+          // Free questions are grounded on the closest verified card, so "¿Sabías que…?" stays on topic.
+          const ground = card ?? (event.kind === 'question' ? searchCards(event.text ?? '', l) : undefined);
+          const { reply: r, failed } = await askMentorServer(
+            {
+              event,
+              lang: l,
+              telemetry: tele,
+              history: historyRef.current.slice(-6),
+              learner: learner.summary(),
+              card: ground
+                ? {
+                    say: ground.say[l],
+                    fact: ground.fact[l],
+                    source: ground.source,
+                    simple: ground.simple?.[l],
+                    ragQuery: ground.ragQuery,
+                    tone: ground.tone,
+                  }
+                : undefined,
+            },
+            MODEL_TIMEOUT_MS
+          );
           if (r) reply = r;
           else if (failed) {
             serverRef.current = { ...serverRef.current, online: false };
             setServer(serverRef.current);
+          }
+          if (shownAtRef.current > askedAt && reply) {
+            // An alarm took the screen while the model was thinking: keep this answer for right after it.
+            readyRepliesRef.current.set(key, reply);
+            queueRef.current = [{ event, priority: priorityOf(event) }, ...queueRef.current];
+            return;
           }
           if (!reply) setStage(prevStage === 'thinking' ? 'idle' : prevStage);
         }
@@ -285,7 +377,7 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
           wantsButtons ? 'check' : 'message'
         );
       } finally {
-        processingRef.current = false;
+        if (ownsLock) processingRef.current = false;
       }
     },
     [present, setStage, simRef]
@@ -307,24 +399,42 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
         for (const q of directorRef.current.tick(simRef.current, now)) enqueue(q);
       }
       const st = stageRef.current;
-      if ((st === 'check' || st === 'quiz') && now - pendingSinceRef.current > 45000) {
+      if (WAITING.includes(st) && now - pendingSinceRef.current > 45000) {
         quizRef.current = null;
         setQuiz(null);
+        explainRef.current = null;
+        if (st === 'level') {
+          // Nobody answered: start as Cadet (it can be changed any time from the orb).
+          learner.setLevel('cadet');
+          setLevelTick((n) => n + 1);
+          const pending = pendingAfterLevelRef.current;
+          pendingAfterLevelRef.current = null;
+          if (pending) queueRef.current = [{ event: pending, priority: 0 }, ...queueRef.current];
+        }
         setStage('message');
         busyUntilRef.current = now;
       }
-      if (pausedRef.current || processingRef.current) return;
+      if (pausedRef.current) return;
       const head = queueRef.current[0];
       if (!head) return;
+      if (processingRef.current) {
+        // While the model thinks only an alarm may cut in (crew safety first).
+        if (head.event.kind === 'alarm') {
+          queueRef.current.shift();
+          void handleEvent(head.event);
+        }
+        return;
+      }
       const urgent = head.priority <= PRIORITY.alarm;
-      const waitingAnswer = stageRef.current === 'check' || stageRef.current === 'quiz';
+      const waitingAnswer = WAITING.includes(stageRef.current);
       // Decisions may cut a long message short once it has been on screen for a few seconds.
-      const canCut = head.priority <= PRIORITY.decision && now - shownAtRef.current >= 4000;
+      const canCut = head.priority <= PRIORITY.decision && now - shownAtRef.current >= 4000 && shownRef.current?.reply.mode !== 'crisis';
       if (!urgent && (waitingAnswer || (now < busyUntilRef.current && !canCut))) return;
       queueRef.current.shift();
       if (waitingAnswer) {
         quizRef.current = null;
         setQuiz(null);
+        explainRef.current = null;
       }
       void handleEvent(head.event);
     }, 400);
@@ -333,15 +443,16 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
 
   // ------------------------------------------------------- player answers
   const startQuiz = useCallback(
-    (card: MentorCard) => {
+    (card: MentorCard, review = false) => {
       const q = card.quiz!;
       const order = q.options.map((_, i) => i).sort(() => Math.random() - 0.5);
       quizRef.current = { card, order };
       setQuiz(quizRef.current);
       const l = langRef.current;
+      const lead = review ? (l === 'es' ? 'Repaso rápido, para que no se te olvide:' : 'Quick review, so it sticks:') : pick(PERSONA_LINES.understoodYes[l]);
       present(
         {
-          reply: { say: `${pick(PERSONA_LINES.understoodYes[l])} ${q.q[l]}`, sources: [card.source], mode: 'socratic', origin: 'card' },
+          reply: { say: `${lead} ${q.q[l]}`, sources: [card.source], mode: 'socratic', origin: 'card' },
           topic: card.id,
           kind: 'persona',
           card,
@@ -368,8 +479,12 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
             'message'
           );
       } else if (sh.checkRound >= 2 || !sh.card) {
+        const c = sh.card && learner.conceptOf(sh.card.id);
+        if (c) learner.recordConfusion(c);
         present({ reply: { say: pick(PERSONA_LINES.stillNo[l]), sources: [], mode: 'socratic', origin: 'card' }, topic: sh.topic, kind: 'persona', checkRound: 0 }, 'message');
       } else {
+        const c = sh.card && learner.conceptOf(sh.card.id);
+        if (c) learner.recordConfusion(c);
         void handleEvent({ kind: 'explain_again', topic: sh.topic });
       }
     },
@@ -396,10 +511,137 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
         footer = l === 'es' ? '+2% moral de la tripulación' : '+2% crew morale';
       }
       const say = ok ? `${pick(PERSONA_LINES.quizRight[l])} ${q.why[l]}` : `${pick(PERSONA_LINES.quizWrong[l])} «${q.options[q.correct][l]}». ${q.why[l]}`;
+      const concept = learner.conceptOf(qz.card.id);
+      const changed = concept ? learner.recordAnswer(concept, ok) : null;
+      if (changed) {
+        setLevelTick((n) => n + 1);
+        const lv = LEVELS.find((x) => x.id === changed)!;
+        footer = `${footer ? `${footer} · ` : ''}${l === 'es' ? 'Ajusté tu nivel a' : 'Level adjusted to'} ${lv.emoji} ${lv[l]}`;
+      }
+      // After a right answer, the deepest check: "explain it with your own words".
+      if (ok && concept && learner.shouldAskExplain(concept)) {
+        explainRef.current = { concept, card: qz.card };
+        present(
+          {
+            reply: {
+              say,
+              check: `${l === 'es' ? 'Ahora explícamelo tú, con tus palabras:' : 'Now you explain it, in your own words:'} ${CONCEPTS[concept].explain[l]}`,
+              sources: [qz.card.source],
+              mode: 'socratic',
+              origin: 'card',
+            },
+            topic: qz.card.id,
+            kind: 'persona',
+            card: qz.card,
+            checkRound: 0,
+            footer,
+          },
+          'explain'
+        );
+        return;
+      }
       present({ reply: { say, sources: [qz.card.source], mode: 'socratic', origin: 'card' }, topic: qz.card.id, kind: 'persona', checkRound: 0, footer }, 'message');
     },
     [present, simRef]
   );
+
+  // ------------------------------------------------------- age level + open answers
+  const chooseLevel = useCallback(
+    (level: AgeLevel) => {
+      learner.setLevel(level);
+      setLevelTick((n) => n + 1);
+      const l = langRef.current;
+      const lv = LEVELS.find((x) => x.id === level)!;
+      const lines: Record<AgeLevel, Record<Lang, string>> = {
+        explorer: { es: '¡Genial, explorador! Te lo voy a contar fácil y con ejemplos.', en: 'Great, explorer! I will keep it simple, with examples.' },
+        cadet: { es: 'Perfecto, cadete. Te explicaré con datos reales de la NASA.', en: 'Perfect, cadet. I will explain with real NASA data.' },
+        engineer: { es: 'Entendido, ingeniero. Iremos a fondo: números, unidades y el porqué.', en: 'Copy that, engineer. We go deep: numbers, units and the why.' },
+      };
+      present(
+        { reply: { say: `${lv.emoji} ${lines[level][l]}`, sources: [], mode: 'socratic', origin: 'card' }, topic: 'level', kind: 'persona', checkRound: 0 },
+        'message'
+      );
+      busyUntilRef.current = Date.now() + 3500;
+      const pending = pendingAfterLevelRef.current;
+      pendingAfterLevelRef.current = null;
+      if (pending) queueRef.current = [{ event: pending, priority: PRIORITY.mission_start }, ...queueRef.current];
+    },
+    [present]
+  );
+
+  const cycleLevel = useCallback(() => {
+    const order: AgeLevel[] = ['explorer', 'cadet', 'engineer'];
+    const next = order[(order.indexOf(learner.level()) + 1) % order.length];
+    learner.setLevel(next);
+    setLevelTick((n) => n + 1);
+    const lv = LEVELS.find((x) => x.id === next)!;
+    const l = langRef.current;
+    present(
+      { reply: { say: `${lv.emoji} ${l === 'es' ? `Nivel: ${lv.es} (${lv.ages} años).` : `Level: ${lv.en} (ages ${lv.ages}).`}`, sources: [], mode: 'socratic', origin: 'card' }, topic: 'level', kind: 'persona', checkRound: 0 },
+      'message'
+    );
+  }, [present]);
+
+  /** Grades the player's own explanation: the model when it is online, otherwise key ideas. */
+  const gradeExplanation = useCallback(
+    async (answer: string) => {
+      const ex = explainRef.current;
+      if (!ex) return;
+      explainRef.current = null;
+      const l = langRef.current;
+      let verdict = gradeOpenAnswer(ex.concept, answer, l);
+      let feedback = '';
+      const srv = serverRef.current;
+      if (srv.online && srv.backend !== 'offline') {
+        setStage('thinking');
+        const { reply } = await askMentorServer(
+          {
+            event: { kind: 'grade', topic: ex.concept, text: answer },
+            lang: l,
+            telemetry: buildTelemetry(simRef.current),
+            history: historyRef.current.slice(-4),
+            learner: learner.summary(),
+            card: { say: ex.card.say[l], fact: ex.card.fact[l], source: ex.card.source, simple: ex.card.simple?.[l], ragQuery: ex.card.ragQuery, tone: ex.card.tone },
+          },
+          MODEL_TIMEOUT_MS
+        );
+        if (reply?.verdict) verdict = reply.verdict;
+        if (reply?.say) feedback = reply.say;
+        // Safety net for a kids' game: a known wrong idea is never praised, whatever the model said.
+        if (hasWrongIdea(ex.concept, answer) && verdict !== 'miss') {
+          verdict = 'miss';
+          feedback = '';
+        }
+        if (reply?.misconception) learner.addMisconception(reply.misconception);
+      }
+      learner.markExplained(ex.concept);
+      learner.recordAnswer(ex.concept, verdict === 'good', 0.5);
+      const lead: Record<typeof verdict, Record<Lang, string>> = {
+        good: { es: '¡Exacto! Lo explicaste como alguien de la NASA.', en: 'Exactly! You explained it like a NASA engineer.' },
+        partial: { es: 'Vas muy bien. Para completarlo:', en: 'Nice start. To complete it:' },
+        miss: { es: 'Casi. Mira la idea completa:', en: 'Almost. Here is the full idea:' },
+      };
+      const reference = verdict === 'good' ? '' : (ex.card.simple ?? ex.card.say)[l];
+      present(
+        {
+          reply: { say: [lead[verdict][l], feedback || reference].filter(Boolean).join(' '), sources: [ex.card.source], mode: 'socratic', origin: feedback ? 'model' : 'card' },
+          topic: ex.card.id,
+          kind: 'persona',
+          checkRound: 0,
+          footer: verdict === 'good' ? (l === 'es' ? '★ Concepto dominado' : '★ Concept mastered') : undefined,
+        },
+        'message'
+      );
+    },
+    [present, setStage, simRef]
+  );
+  gradeRef.current = gradeExplanation;
+
+  const skipExplain = useCallback(() => {
+    explainRef.current = null;
+    const l = langRef.current;
+    present({ reply: { say: l === 'es' ? 'Sin problema, lo vemos otro día.' : 'No problem, another time.', sources: [], mode: 'socratic', origin: 'card' }, topic: 'explain', kind: 'persona', checkRound: 0 }, 'message');
+  }, [present]);
 
   // -------------------------------------------------------------- chat
   const openChat = useCallback(() => {
@@ -415,7 +657,8 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
       if (!t) return;
       historyRef.current.push({ role: 'player', text: t });
       directorRef.current.noteActivity(Date.now());
-      enqueue({ event: { kind: 'question', topic: '', text: t }, priority: PRIORITY.question });
+      if (explainRef.current && stageRef.current === 'explain') void gradeRef.current(t);
+      else enqueue({ event: { kind: 'question', topic: '', text: t }, priority: PRIORITY.question });
       setChatText('');
       setChatOpen(false);
       inputRef.current?.blur();
@@ -450,8 +693,8 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
   }, [sendQuestion, simRef]);
 
   // ------------------------------------------------------------ keyboard
-  const keyHandlers = useRef({ answerCheck, answerQuiz, openChat, toggleVoice });
-  keyHandlers.current = { answerCheck, answerQuiz, openChat, toggleVoice };
+  const keyHandlers = useRef({ answerCheck, answerQuiz, openChat, toggleVoice, chooseLevel, skipExplain });
+  keyHandlers.current = { answerCheck, answerQuiz, openChat, toggleVoice, chooseLevel, skipExplain };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
@@ -465,9 +708,19 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
       } else if (e.code === 'Digit1' || e.code === 'Numpad1') {
         if (st === 'check') h.answerCheck(true);
         else if (st === 'quiz') h.answerQuiz(0);
+        else if (st === 'level') h.chooseLevel('explorer');
+        else if (st === 'explain') {
+          e.preventDefault();
+          h.openChat();
+        }
       } else if (e.code === 'Digit2' || e.code === 'Numpad2') {
         if (st === 'check') h.answerCheck(false);
         else if (st === 'quiz') h.answerQuiz(1);
+        else if (st === 'level') h.chooseLevel('cadet');
+        else if (st === 'explain') h.skipExplain();
+      } else if (e.code === 'Digit3' || e.code === 'Numpad3') {
+        if (st === 'quiz') h.answerQuiz(2);
+        else if (st === 'level') h.chooseLevel('engineer');
       }
     };
     window.addEventListener('keydown', onKey);
@@ -478,9 +731,12 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
   const mode = shown?.reply.mode ?? 'socratic';
   const t = (es: string, en: string) => (lang === 'es' ? es : en);
   const typingDone = !!shown && typed >= shown.reply.say.length;
-  const coreLabel = server.online
-    ? t(`Núcleo: AstroCopilot Gemma-4 · ${server.backend}`, `Core: AstroCopilot Gemma-4 · ${server.backend}`)
-    : t('Núcleo local: tarjetas NASA verificadas', 'Local core: verified NASA cards');
+  const ragDocs = (server.ragDocs ?? 0).toLocaleString('en-US');
+  const coreLabel = !server.online
+    ? t('Núcleo local: tarjetas NASA verificadas', 'Local core: verified NASA cards')
+    : server.backend === 'offline'
+      ? t(`Núcleo: biblioteca NASA · ${ragDocs} docs`, `Core: NASA library · ${ragDocs} docs`)
+      : t(`Núcleo: AstroCopilot Gemma-4 · ${server.backend}`, `Core: AstroCopilot Gemma-4 · ${server.backend}`);
 
   const configureServer = () => {
     const url = window.prompt(t('URL del servidor del mentor (ai_bridge/mentor_server.py):', 'Mentor server URL (ai_bridge/mentor_server.py):'), mentorServerUrl);
@@ -494,6 +750,7 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
     window.location.reload();
   };
 
+  const levelInfo = LEVELS.find((x) => x.id === learner.level())!;
   const orbAccent = mode === 'crisis' ? '#fb7185' : mode === 'safety' ? '#38bdf8' : '#38bdf8';
 
   return (
@@ -510,6 +767,14 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
             </button>
             <button type="button" onClick={() => setChatOpen((o) => !o)} className="text-[11px] font-mono text-sky-300 hover:text-white px-1" title={t('Chat IA [T]', 'AI Chat [T]')}>
               [T]
+            </button>
+            <button
+              type="button"
+              onClick={cycleLevel}
+              className="text-[11px] text-sky-200 hover:text-white px-1"
+              title={t('Nivel de explicación (clic para cambiar)', 'Explanation level (click to change)')}
+            >
+              {levelInfo.emoji} {levelInfo[lang]}
             </button>
             <button type="button" onClick={configureServer} className="flex items-center gap-1 text-[10px] font-mono text-sky-300/80 hover:text-white px-1" title={coreLabel}>
               <span className={`inline-block w-1.5 h-1.5 rounded-full ${server.online ? 'bg-emerald-400' : 'bg-sky-400'}`} />
@@ -565,6 +830,30 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
               </button>
             </div>
           )}
+          {typingDone && stage === 'level' && (
+            <div className="flex flex-col items-end gap-1 pt-0.5 holo-fade">
+              {LEVELS.map((lv, i) => (
+                <button
+                  key={lv.id}
+                  type="button"
+                  className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80"
+                  onClick={() => chooseLevel(lv.id)}
+                >
+                  [{i + 1}] {lv.emoji} {lv[lang]} · {lv.ages} {t('años', 'yrs')}
+                </button>
+              ))}
+            </div>
+          )}
+          {typingDone && stage === 'explain' && (
+            <div className="flex flex-wrap justify-end gap-1 pt-0.5 holo-fade">
+              <button type="button" className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80" onClick={openChat}>
+                [1] {t('Responder (texto o 🎙)', 'Answer (text or 🎙)')}
+              </button>
+              <button type="button" className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80" onClick={skipExplain}>
+                [2] {t('Saltar', 'Skip')}
+              </button>
+            </div>
+          )}
           {typingDone && stage === 'quiz' && quiz && (
             <div className="flex flex-col items-end gap-1 pt-0.5 holo-fade">
               {quiz.order.map((optIdx, slot) => (
@@ -602,7 +891,7 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
               }
             }}
             maxLength={300}
-            placeholder={t('Pregúntale a KATHERINE… [T]', 'Ask KATHERINE… [T]')}
+            placeholder={stage === 'explain' ? t('Explícalo con tus palabras…', 'Explain it in your own words…') : t('Pregúntale a KATHERINE… [T]', 'Ask KATHERINE… [T]')}
             className="flex-1 min-w-0 bg-slate-900/90 border border-sky-500/50 rounded px-2 py-1 text-[11.5px] text-sky-100 placeholder:text-sky-400/60 outline-none focus:border-sky-300"
           />
           {mentorEars.supported && (
