@@ -1,10 +1,24 @@
 class SoundEngine {
   private ctx: AudioContext | null = null;
   public enabled = true;
+  public musicEnabled = true;
+  public ambientEnabled = true;
   private thrusterGain: GainNode | null = null;
   private thrusterOsc: AudioNode | null = null;
   private thrusterSubOsc: OscillatorNode | null = null;
   private thrusterFilter: BiquadFilterNode | null = null;
+
+  private ambientNoise: AudioBufferSourceNode | null = null;
+  private ambientDroneA: OscillatorNode | null = null;
+  private ambientDroneB: OscillatorNode | null = null;
+  private ambientFilter: BiquadFilterNode | null = null;
+  private ambientGain: GainNode | null = null;
+  private currentAmbientEnv: 'earth_jsc' | 'orbital_iss' | 'surface_alert' | 'off' = 'off';
+  private lastMusicTriggerAt = -999;
+
+  public unlock() {
+    this.ensureContext();
+  }
 
   private ensureContext(): AudioContext | null {
     if (!this.enabled) return null;
@@ -521,6 +535,234 @@ class SoundEngine {
       gain.connect(ctx.destination);
       osc.start(st);
       osc.stop(st + 0.58);
+    });
+  }
+
+  public playDoorSlide() {
+    const ctx = this.ensureContext();
+    if (!ctx || ctx.state !== 'running') return;
+    const t = ctx.currentTime;
+    const dur = 0.28;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.sin((Math.PI * i) / data.length);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(520, t);
+    filter.frequency.exponentialRampToValueAtTime(1450, t + 0.14);
+    filter.frequency.exponentialRampToValueAtTime(420, t + dur);
+    filter.Q.value = 2.2;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.055, t);
+    gain.gain.exponentialRampToValueAtTime(0.0005, t + dur);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(t);
+
+    const servo = ctx.createOscillator();
+    const sGain = ctx.createGain();
+    servo.type = 'sine';
+    servo.frequency.setValueAtTime(160, t);
+    servo.frequency.linearRampToValueAtTime(220, t + 0.22);
+    sGain.gain.setValueAtTime(0.025, t);
+    sGain.gain.exponentialRampToValueAtTime(0.0005, t + 0.24);
+    servo.connect(sGain);
+    sGain.connect(ctx.destination);
+    servo.start(t);
+    servo.stop(t + 0.25);
+  }
+
+  public playStagePyro() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const thump = ctx.createOscillator();
+    const tGain = ctx.createGain();
+    thump.type = 'triangle';
+    thump.frequency.setValueAtTime(125, t);
+    thump.frequency.exponentialRampToValueAtTime(34, t + 0.34);
+    tGain.gain.setValueAtTime(0.24, t);
+    tGain.gain.exponentialRampToValueAtTime(0.001, t + 0.36);
+    thump.connect(tGain);
+    tGain.connect(ctx.destination);
+    thump.start(t);
+    thump.stop(t + 0.38);
+
+    const dur = 0.42;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.11));
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(980, t);
+    lp.frequency.exponentialRampToValueAtTime(140, t + dur);
+    const nGain = ctx.createGain();
+    nGain.gain.setValueAtTime(0.18, t);
+    nGain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    noise.connect(lp);
+    lp.connect(nGain);
+    nGain.connect(ctx.destination);
+    noise.start(t);
+  }
+
+  public setAmbientEnvironment(env: 'earth_jsc' | 'orbital_iss' | 'surface_alert' | 'off') {
+    this.currentAmbientEnv = env;
+    if (env === 'off' || !this.enabled || !this.ambientEnabled) {
+      this.stopAmbientEnvironment();
+      return;
+    }
+    const ctx = this.ensureContext();
+    if (!ctx || ctx.state !== 'running') return;
+
+    if (!this.ambientGain) {
+      const bufferSize = ctx.sampleRate * 3;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let lastOut = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        lastOut = (lastOut + 0.04 * white) / 1.04;
+        data[i] = lastOut * 1.8;
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 340;
+      filter.Q.value = 0.8;
+
+      const droneA = ctx.createOscillator();
+      droneA.type = 'sine';
+      droneA.frequency.value = 55;
+      const droneAGain = ctx.createGain();
+      droneAGain.gain.value = 0.14;
+
+      const droneB = ctx.createOscillator();
+      droneB.type = 'triangle';
+      droneB.frequency.value = 110;
+      const droneBGain = ctx.createGain();
+      droneBGain.gain.value = 0.06;
+
+      const master = ctx.createGain();
+      master.gain.value = 0.0001;
+
+      noise.connect(filter);
+      droneA.connect(droneAGain);
+      droneAGain.connect(filter);
+      droneB.connect(droneBGain);
+      droneBGain.connect(filter);
+      filter.connect(master);
+      master.connect(ctx.destination);
+
+      noise.start();
+      droneA.start();
+      droneB.start();
+
+      this.ambientNoise = noise;
+      this.ambientDroneA = droneA;
+      this.ambientDroneB = droneB;
+      this.ambientFilter = filter;
+      this.ambientGain = master;
+    }
+
+    const freqFilter = env === 'earth_jsc' ? 420 : env === 'orbital_iss' ? 280 : 520;
+    const baseA = env === 'surface_alert' ? 61.74 : 55;
+    const baseB = env === 'surface_alert' ? 92.5 : 110;
+    const targetGain = env === 'surface_alert' ? 0.028 : 0.022;
+
+    this.ambientFilter?.frequency.setTargetAtTime(freqFilter, ctx.currentTime, 0.35);
+    this.ambientDroneA?.frequency.setTargetAtTime(baseA, ctx.currentTime, 0.35);
+    this.ambientDroneB?.frequency.setTargetAtTime(baseB, ctx.currentTime, 0.35);
+    this.ambientGain.gain.setTargetAtTime(targetGain, ctx.currentTime, 0.4);
+  }
+
+  public stopAmbientEnvironment() {
+    try {
+      this.ambientNoise?.stop();
+    } catch {
+      // Ignore already stopped
+    }
+    try {
+      this.ambientDroneA?.stop();
+    } catch {
+      // Ignore
+    }
+    try {
+      this.ambientDroneB?.stop();
+    } catch {
+      // Ignore
+    }
+    this.ambientNoise = null;
+    this.ambientDroneA = null;
+    this.ambientDroneB = null;
+    this.ambientFilter = null;
+    this.ambientGain = null;
+  }
+
+  public stepAmbientMusic(timeSec: number, env: 'earth_jsc' | 'orbital_iss' | 'surface_alert') {
+    if (!this.enabled || !this.musicEnabled) return;
+    if (this.currentAmbientEnv !== env && this.ambientEnabled) {
+      this.setAmbientEnvironment(env);
+    }
+    if (timeSec < this.lastMusicTriggerAt) {
+      this.lastMusicTriggerAt = timeSec - 6.5;
+    }
+    if (timeSec - this.lastMusicTriggerAt < 5.8) return;
+
+    const ctx = this.ensureContext();
+    if (!ctx || ctx.state !== 'running') return;
+    this.lastMusicTriggerAt = timeSec;
+
+    const progressions: Record<typeof env, number[][]> = {
+      earth_jsc: [
+        [174.61, 220.0, 261.63, 329.63], // Fmaj7 optimistic ground prep
+        [130.81, 196.0, 246.94, 293.66], // Cmaj9
+        [146.83, 220.0, 261.63, 349.23], // Dm9
+      ],
+      orbital_iss: [
+        [130.81, 164.81, 196.0, 246.94], // Tranquil orbital Cmaj7
+        [146.83, 174.61, 220.0, 293.66],
+        [164.81, 196.0, 246.94, 329.63],
+      ],
+      surface_alert: [
+        [110.0, 130.81, 164.81, 220.0], // Tense minor Am pad
+        [98.0, 123.47, 146.83, 196.0],  // Gsus / Gm flavor
+        [116.54, 146.83, 174.61, 233.08],
+      ],
+    };
+
+    const safeTime = Number.isFinite(timeSec) ? Math.max(0, timeSec) : 0;
+    const chords = progressions[env] ?? progressions.orbital_iss;
+    const chordIdx = ((Math.floor(safeTime / 5.8) % chords.length) + chords.length) % chords.length;
+    const chord = chords[chordIdx] ?? chords[0];
+    const t0 = ctx.currentTime + 0.05;
+
+    chord.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = idx === 0 ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.linearRampToValueAtTime(idx === 0 ? 0.018 : 0.012, t0 + 1.1);
+      gain.gain.exponentialRampToValueAtTime(0.0002, t0 + 5.4);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 5.5);
     });
   }
 

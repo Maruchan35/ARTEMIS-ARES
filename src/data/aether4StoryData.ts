@@ -5,7 +5,9 @@ export type MissionId =
   | 'manifest_launch'
   | 'act1_2_surface'
   | 'act3_greenhouse'
-  | 'act4_storm_rover';
+  | 'act4_storm_rover'
+  | 'apollo13_aquarius'
+  | 'sts120_p6_solar';
 
 export type EndingId =
   | 'ending_1_duct_tape'
@@ -238,6 +240,70 @@ export const AETHER4_MISSIONS: MissionPhaseConfig[] = [
       'Run return trek on 6,000 kg Rover Console (1 h Solar vs 17 h Kilopower)',
       'Deploy 2 m compacted regolith shield (300 g/cm² / 400 t)',
       'Collect Legacy Note #6 and evaluate Final Ending at Central Console',
+    ],
+  },
+  {
+    id: 'apollo13_aquarius',
+    order: 5,
+    badgeEs: 'HISTÓRICA 1970 · APOLLO 13',
+    badgeEn: 'HISTORICAL 1970 · APOLLO 13',
+    titleEs: 'Apollo 13 — Bote Salvavidas Aquarius y "Mailbox" CO₂',
+    titleEn: 'Apollo 13 — Aquarius Lifeboat & "Mailbox" CO₂',
+    subtitleEs: 'Tanque O₂ #2 (1008→0 psia), Bus 12 A (336 W), racionamiento 0.2 L/d y adaptador LiOH',
+    subtitleEn: 'O₂ Tank #2 (1008→0 psia), 12 A (336 W) bus, 0.2 L/d water ration & LiOH adapter',
+    environmentEs: 'Módulo Lunar LM-7 Aquarius en Tránsito Cislunar Frío (3.3 °C · 0g)',
+    environmentEn: 'LM-7 Aquarius Lifeboat in Cold Cislunar Transit (3.3 °C · 0g)',
+    gravityMs2: NASA_CONSTANTS.GRAVITY.MICROGRAVITY_ORBIT.value,
+    kelvinLabel: '276 K (3.3 °C)',
+    briefingEs:
+      'JACK SWIGERT reporta caída del Tanque O₂ #2 (1008→0 psia), fuga en Tanque #1 (781.9 psia) y buses A/B a 28.5V/29.0V. Migra al bote salvavidas Aquarius (12 A · 336 W), ensambla físicamente el adaptador "Mailbox" (Cartón Plan de Vuelo + Manguera + Duct Tape) para bajar el CO₂ de 14.9 a 1.2 mmHg y raciona agua (0.2 L/d) hasta reentrada.',
+    briefingEn:
+      'JACK SWIGERT reports O₂ Tank #2 failure (1008→0 psia), Tank #1 leak (781.9 psia) and Buses A/B at 28.5V/29.0V. Migrate to Aquarius lifeboat (12 A · 336 W), physically assemble the "Mailbox" CO₂ adapter (Flight Plan Card + Suit Hose + Duct Tape) to drop ppCO₂ from 14.9 to 1.2 mmHg and ration water (0.2 L/d) to reentry.',
+    accentHex: '#F59E0B',
+    iconBg: '#78350F',
+    objectivesEs: [
+      'Agitar tanques criogénicos O₂ y diagnosticar Bus A 28.5V / Bus B 29.0V (781.9 psia)',
+      'Migrar energía al bote salvavidas LM Aquarius (12 A · 336 W)',
+      'Ensamblar "Mailbox" con Plan de Vuelo + Manguera + Cinta e instalarlo (CO₂ 14.9→1.2 mmHg)',
+      'Racionar agua (0.2 L/día · 3.3 °C) y ejecutar reencendido frío de reentrada',
+    ],
+    objectivesEn: [
+      'Stir cryo O₂ tanks and log Bus A 28.5V / Bus B 29.0V fault (781.9 psia)',
+      'Migrate bus power to LM Aquarius lifeboat (12 A · 336 W)',
+      'Assemble "Mailbox" (Flight Plan Card + Hose + Tape) & mount (CO₂ 14.9→1.2 mmHg)',
+      'Enforce 0.2 L/day water ration (3.3 °C) & complete reentry cold power-up',
+    ],
+  },
+  {
+    id: 'sts120_p6_solar',
+    order: 6,
+    badgeEs: 'HISTÓRICA 2007 · STS-120 EVA-4',
+    badgeEn: 'HISTORICAL 2007 · STS-120 EVA-4',
+    titleEs: 'STS-120 — Reparación Ala Solar P6-4B (160V DC Vivos)',
+    titleEn: 'STS-120 — P6-4B Solar Array Wing Repair (Live 160V DC)',
+    subtitleEs: 'Desgarro 2.5 ft (Bahías 29-30), 5 cufflinks, Esclusa Quest y Canadarm2 + OBSS 90 ft',
+    subtitleEn: '2.5 ft tear (Bays 29-30), 5 cufflinks, Quest Airlock & 90 ft Canadarm2 + OBSS',
+    environmentEs: 'Esclusa Quest, Brazo Canadarm2 + OBSS y Estructura Exterior P6-4B (LEO 0g)',
+    environmentEn: 'Quest Airlock, Canadarm2 + OBSS Boom & P6-4B Truss Exterior (LEO 0g)',
+    gravityMs2: NASA_CONSTANTS.GRAVITY.MICROGRAVITY_ORBIT.value,
+    kelvinLabel: '393 K Ala Iluminada',
+    briefingEs:
+      'PEGGY WHITSON alerta un desgarro de 2.5 ft entre las bahías 29 y 30 del ala P6-4B (240 ft envergadura, 160V DC energizados). Fabrica 5 "cufflinks" aislados, despresuriza la esclusa Quest (101.3→70.3→29.6→14.0→2.1 kPa), opera Canadarm2 + OBSS (90 ft), corta el cable enredado con pinza aislada, instala los 5 cufflinks y redespliega medio panel por paso.',
+    briefingEn:
+      'PEGGY WHITSON reports a 2.5 ft tear between Bays 29-30 on the 240 ft P6-4B wing (live 160V DC). Fabricate 5 insulated aluminum cufflinks, depressurize Quest Airlock (101.3→70.3→29.6→14.0→2.1 kPa), rig 90 ft Canadarm2 + OBSS, cut the snagged hinge wire, install all 5 cufflinks and redeploy half-bay at a time.',
+    accentHex: '#38BDF8',
+    iconBg: '#0C4A6E',
+    objectivesEs: [
+      'Diagnosticar desgarro 2.5 ft (Bahías 29-30) del ala P6-4B energizada a 160V DC',
+      'Fabricar 5 "cufflinks" aislados y despresurizar Esclusa Quest hasta 2.1 kPa (MPEV)',
+      'Acoplar Canadarm2 + OBSS (90 ft) y cortar alambre enredado con herramienta aislada',
+      'Instalar los 5 cufflinks y redesplegar P6-4B medio panel a la vez (5 pasos)',
+    ],
+    objectivesEn: [
+      'Diagnose 2.5 ft tear (Bays 29-30) on live 160V DC P6-4B solar wing',
+      'Craft 5 insulated cufflinks & depressurize Quest Airlock to 2.1 kPa (MPEV)',
+      'Rig 90 ft Canadarm2 + OBSS and snip snagged wire with insulated cutter',
+      'Install all 5 cufflinks and redeploy P6-4B half-bay at a time (5 steps)',
     ],
   },
 ];
