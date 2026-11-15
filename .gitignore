@@ -5,3 +5,4 @@ dist/
 .DS_Store
 ai_bridge/.cache/
 __pycache__/
+ai_bridge/tutor_dataset/__pycache__/
