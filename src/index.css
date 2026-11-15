@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --suit-white: #F4F3EE;
+  --suit-trim: #D6D3CD;
+  --aces-orange: #FF4F00;
+  --aces-orange-dark: #B83600;
+  --nasa-blue: #0B3D91;
+  --nasa-blue-bright: #1D5BD6;
+  --visor-gold: #F59E0B;
+  --iss-dark: #141820;
+  --iss-slate: #222834;
+  --iss-panel: #2B3342;
+}
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #141820;
+    color: #F4F3EE;
+    overflow-x: hidden;
+    font-family: 'Consolas', 'Courier New', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  }
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.space-paper-card {
+  background-color: #e6e3dc;
+  background-image:
+    radial-gradient(rgba(15, 37, 71, 0.04) 1px, transparent 0),
+    linear-gradient(to right, transparent 49.6%, rgba(0, 0, 0, 0.08) 49.9%, rgba(255, 255, 255, 0.4) 50.2%, transparent 50.5%),
+    linear-gradient(to bottom, transparent 49.6%, rgba(0, 0, 0, 0.08) 49.9%, rgba(255, 255, 255, 0.4) 50.2%, transparent 50.5%);
+  background-size: 6px 6px, 100% 100%, 100% 100%;
+  color: #111827;
+}
+
+/* Minecraft-inspired crisp 3D pixel bevel buttons using NASA Astronaut Palette */
+.mc-btn {
+  position: relative;
+  border: 3px solid #090C12;
+  background-color: #3A4252;
+  color: #F4F3EE;
+  box-shadow:
+    inset 3px 3px 0px #5B667D,
+    inset -3px -3px 0px #212630;
+  text-shadow: 2px 2px 0px #090C12;
+  transition: transform 60ms steps(2), background-color 80ms linear;
+  user-select: none;
+  cursor: pointer;
+}
+
+.mc-btn:hover:not(:disabled) {
+  background-color: #4B566B;
+  box-shadow:
+    inset 3px 3px 0px #7B88A3,
+    inset -3px -3px 0px #282E3B;
+}
+
+.mc-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset -2px -2px 0px #5B667D,
+    inset 3px 3px 0px #1B2029;
+}
+
+.mc-btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.mc-btn-orange {
+  background-color: #FF4F00;
+  color: #FFFFFF;
+  box-shadow:
+    inset 3px 3px 0px #FF8A4C,
+    inset -3px -3px 0px #A83000;
+}
+
+.mc-btn-orange:hover:not(:disabled) {
+  background-color: #FF631C;
+  box-shadow:
+    inset 3px 3px 0px #FFA270,
+    inset -3px -3px 0px #B83600;
+}
+
+.mc-btn-blue {
+  background-color: #0B3D91;
+  color: #F4F3EE;
+  box-shadow:
+    inset 3px 3px 0px #3B72D4,
+    inset -3px -3px 0px #062152;
+}
+
+.mc-btn-blue:hover:not(:disabled) {
+  background-color: #164EB0;
+  box-shadow:
+    inset 3px 3px 0px #558BEB,
+    inset -3px -3px 0px #082B6B;
+}
+
+.mc-btn-gold {
+  background-color: #D97706;
+  color: #FFFFFF;
+  box-shadow:
+    inset 3px 3px 0px #FBBF24,
+    inset -3px -3px 0px #92400E;
+}
+
+.mc-panel {
+  border: 3px solid #090C12;
+  background-color: #1E2430;
+  box-shadow:
+    inset 3px 3px 0px #353F52,
+    inset -3px -3px 0px #12161E;
+}
+
+.mc-panel-white {
+  border: 3px solid #090C12;
+  background-color: #E5E2DC;
+  color: #141820;
+  box-shadow:
+    inset 3px 3px 0px #FFFFFF,
+    inset -3px -3px 0px #A8A39A;
+}
+
+.mc-slot {
+  border: 3px solid #090C12;
+  background-color: #252B36;
+  box-shadow:
+    inset 2px 2px 0px #13171E,
+    inset -2px -2px 0px #424B5E;
+  user-select: none;
+  cursor: pointer;
+}
+
+.mc-slot-active {
+  border: 3px solid #FF4F00;
+  background-color: #36251F;
+  box-shadow:
+    inset 2px 2px 0px #FF8A4C,
+    inset -2px -2px 0px #8A2A00;
+}
+
+@keyframes mc-splash {
+  0%, 100% {
+    transform: rotate(-8deg) scale(1);
+  }
+  50% {
+    transform: rotate(-8deg) scale(1.07);
+  }
+}
+
+.mc-splash {
+  animation: mc-splash 1.4s ease-in-out infinite;
+  text-shadow: 2px 2px 0px #3f2800;
+}
+
+/* Custom slim scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #12161E;
+}
+::-webkit-scrollbar-thumb {
+  background: #3A4252;
+  border: 2px solid #12161E;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #FF4F00;
+}
