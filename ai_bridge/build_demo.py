@@ -14,6 +14,7 @@ Layout of demo_build/ (served by `mentor_server.py --static demo_build`):
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
@@ -71,7 +72,37 @@ def main() -> None:
         run(["git", "add", "-A"], repo)
         run(["git", "commit", "-q", "-m", f"AETHER-4 web demo build from orbital-quarters@{commit}"], repo)
         run(["git", "push", "-f", remote, f"{BRANCH}:{BRANCH}"], repo)
-    print(f"[demo] Published to branch `{BRANCH}` (orbital-quarters@{commit}).")
+        # 2nd commit: the pages load the heavy files (game bundle, video) from the jsDelivr CDN, pinned to the
+        # commit above (immutable, global, ~1-4 s instead of ~1 min through the Colab tunnel). If the CDN fails,
+        # the browser falls back to the same files served by the tunnel.
+        sha = run(["git", "rev-parse", "HEAD"], repo).strip()
+        slug = re.search(r"github\.com[:/](.+?)(?:\.git)?$", remote).group(1)
+        cdn = f"https://cdn.jsdelivr.net/gh/{slug}@{sha}/"
+        cdnify(repo, cdn)
+        run(["git", "commit", "-qam", f"Load game assets and video from the CDN ({sha[:7]})"], repo)
+        run(["git", "push", remote, f"{BRANCH}:{BRANCH}"], repo)
+    print(f"[demo] Published to branch `{BRANCH}` (orbital-quarters@{commit}), assets via {cdn}")
+
+
+def cdnify(site: Path, cdn: str) -> None:
+    game = site / "jugar.html"
+    html = game.read_text(encoding="utf-8")
+    for tag in re.findall(r'<script[^>]*src="\.?/assets/[^"]+"[^>]*></script>', html):
+        local = re.search(r'src="(\.?/assets/[^"]+)"', tag).group(1)
+        fallback = ("this.remove();var s=document.createElement('script');s.type='module';"
+                    f"s.src='{local}';document.head.appendChild(s)")
+        html = html.replace(tag, tag.replace(f'src="{local}"', f'src="{cdn}{local.lstrip('./')}" onerror="{fallback}"'))
+    for tag in re.findall(r'<link[^>]*href="\.?/assets/[^"]+\.css"[^>]*>', html):
+        local = re.search(r'href="(\.?/assets/[^"]+)"', tag).group(1)
+        html = html.replace(tag, tag.replace(f'href="{local}"', f'href="{cdn}{local.lstrip('./')}" onerror="this.onerror=null;this.href=\'{local}\'"'))
+    assert cdn in html, "no /assets/ references found in jugar.html"
+    game.write_text(html, encoding="utf-8")
+    landing = site / "index.html"
+    page = landing.read_text(encoding="utf-8")
+    page = page.replace('<video src="promo.mp4" poster="poster.jpg"',
+                        f'<video src="{cdn}promo.mp4" poster="{cdn}poster.jpg" '
+                        "onerror=\"this.onerror=null;this.src='promo.mp4';this.poster='poster.jpg'\"")
+    landing.write_text(page, encoding="utf-8")
 
 
 if __name__ == "__main__":
