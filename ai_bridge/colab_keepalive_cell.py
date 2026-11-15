@@ -43,7 +43,9 @@ def start(cmd, log):
 
 def announce(url):
     print("\n" + "=" * 70, flush=True)
-    print(f"[{now()}] URL DEL TÚNEL (pásasela a Claude o al comando local):", flush=True)
+    print(f"[{now()}] URL DEL TÚNEL:", flush=True)
+    if "--static" in ST["srv_cmd"]:
+        print("DEMO WEB PÚBLICA (compártela con los evaluadores):  " + url, flush=True)
     print("MENTOR_URL=" + url, flush=True)
     print("MENTOR_KEY=" + KEY, flush=True)
     print("npm run katherine -- --url " + url + " --key " + KEY, flush=True)
