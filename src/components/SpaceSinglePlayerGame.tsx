@@ -66,6 +66,7 @@ import {
 } from '../game/spaceRoomSimulation';
 import { soundEngine } from '../audio/soundEngine';
 import { SpacePaperCodexModal } from './SpacePaperCodexModal';
+import { MentorHologram } from './MentorHologram';
 import {
   AscanTrainingModal,
   CrewDialogueModal,
@@ -999,6 +1000,9 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     if (screen !== 'room') return;
 
     const onKeyDown = (e: KeyboardEvent) => {
+      // Typing to KATHERINE (mentor chat) must not move the astronaut or trigger actions.
+      const tgt = e.target as HTMLElement | null;
+      if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable)) return;
       keysRef.current[e.code] = true;
       if (e.code === 'KeyQ') {
         ignoreNextUnlockRef.current = true;
@@ -3594,6 +3598,9 @@ export const SpaceSinglePlayerGame: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* KATHERINE · holographic mentor AI (ai_bridge/mentor_server.py + verified offline cards) */}
+      <MentorHologram simRef={simRef} lang={lang} paused={!!activeModal || hud.sleeping} />
 
       {/* MODALS */}
       {activeModal === 'crew_dialogue' && crewDialogue && (

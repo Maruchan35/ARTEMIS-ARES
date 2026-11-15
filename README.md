@@ -7,6 +7,8 @@ Standalone React + TypeScript + Three.js + Tailwind CSS local 3D space habitatio
 - **Replicated 3D Habitation Architecture Across Phases**: Continuous 10-variable life-support simulation (`stepSpaceRoomSimulation`), gravity-aware player locomotion (`stepSpaceRoomPlayer`), spectral lighting modes (`6,300 K`, `630+450 nm` magenta APH/Veggie, `#0F2547` launch blueprint), PBR procedural textures, and multi-part 3D hardware (`ASCAN` treadmill, `WHC` booth, `MEDS` 11-LCD glass cockpit, `Skylab` thermal patch, `KRUSTY`, `SPE`, `APH/Veggie`, 6,000 kg Rover, and 2 m regolith shield).
 - **Space Paper Daily Report & Legacy Codex**: Six retro daily report editions and six mission legacy notes (`src/components/SpacePaperCodexModal.tsx`), plus bilingual `ES` / `EN` support and Web Audio synthesis.
 
+- **KATHERINE · IA mentora holográfica** (`src/components/MentorHologram.tsx`, `src/ai/`): explica cada decisión con datos reales de la NASA, pregunta "¿Entiendes la idea?", hace mini-quiz, cuenta "¿Sabías que…?" de astronautas reales, responde por texto/voz ([T]) y habla con TTS. Se conecta al modelo AstroCopilot (Gemma-4 + LoRA + NASA RAG) con `ai_bridge/` y, si no hay servidor, usa tarjetas verificadas. Ver [ai_bridge/README.md](ai_bridge/README.md).
+
 ## Quickstart
 
 ```bash

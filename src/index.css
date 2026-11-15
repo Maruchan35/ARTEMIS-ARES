@@ -264,3 +264,68 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #FF4F00;
 }
+
+/* ===========================================================================
+   KATHERINE · holographic mentor AI panel
+   =========================================================================== */
+.holo-panel {
+  position: relative;
+  background: linear-gradient(160deg, rgba(8, 24, 44, 0.94), rgba(4, 12, 26, 0.94));
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.25), inset 0 0 24px rgba(56, 189, 248, 0.08);
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+}
+.holo-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(125, 211, 252, 0.05) 0 1px, transparent 1px 3px);
+  animation: holo-scan 6s linear infinite;
+}
+.holo-crisis {
+  box-shadow: 0 0 22px rgba(251, 113, 133, 0.35), inset 0 0 24px rgba(251, 113, 133, 0.1);
+  animation: holo-alert 1.2s ease-in-out 3;
+}
+.holo-btn {
+  font-size: 12px;
+  line-height: 1;
+  padding: 4px 6px;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  background: rgba(14, 40, 70, 0.7);
+  color: #e0f2fe;
+}
+.holo-btn:hover { background: rgba(30, 80, 130, 0.8); }
+.holo-choice {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 8px;
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  background: rgba(12, 52, 92, 0.55);
+  color: #e0f2fe;
+}
+.holo-choice:hover { background: rgba(22, 90, 150, 0.75); border-color: #7dd3fc; }
+.holo-listening { animation: holo-pulse-kf 0.8s ease-in-out infinite; border-color: #fb7185; }
+.holo-spin, .holo-spin-rev, .holo-spin-fast, .holo-pulse, .holo-wave, .holo-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.holo-spin { animation: holo-rot 14s linear infinite; }
+.holo-spin-rev { animation: holo-rot 9s linear infinite reverse; }
+.holo-spin-fast { animation: holo-rot 1.6s linear infinite; }
+.holo-pulse { animation: holo-pulse-kf 3.2s ease-in-out infinite; }
+.holo-blink { animation: holo-blink-kf 5s infinite; }
+.holo-wave { animation: holo-wave-kf 0.5s ease-in-out infinite alternate; }
+.holo-flicker { animation: holo-flicker-kf 7s infinite; filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6)); }
+.holo-fade { animation: holo-fade-kf 0.35s ease-out both; }
+.holo-caret { animation: holo-blink-kf 0.9s steps(1) infinite; color: #7dd3fc; }
+.holo-dots::after { content: '…'; animation: holo-blink-kf 1s steps(1) infinite; }
+@keyframes holo-rot { to { transform: rotate(360deg); } }
+@keyframes holo-pulse-kf { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; transform: scale(1.04); } }
+@keyframes holo-blink-kf { 0%, 92%, 100% { opacity: 1; } 94%, 98% { opacity: 0.1; } }
+@keyframes holo-wave-kf { from { transform: scaleY(0.35); } to { transform: scaleY(1.6); } }
+@keyframes holo-flicker-kf { 0%, 96%, 100% { opacity: 1; } 97% { opacity: 0.55; } 98% { opacity: 0.9; } 99% { opacity: 0.6; } }
+@keyframes holo-fade-kf { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@keyframes holo-scan { from { background-position: 0 0; } to { background-position: 0 120px; } }
+@keyframes holo-alert { 0%, 100% { border-color: rgba(251, 113, 133, 0.6); } 50% { border-color: rgba(251, 113, 133, 1); } }
