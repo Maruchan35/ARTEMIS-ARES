@@ -47,6 +47,32 @@ CACHE_DIR = HERE / ".cache"
 DEFAULT_MODEL_ID = "unsloth/gemma-4-E4B-it"
 USER_AGENT = "katherine-mentor-bridge/1.0"
 MAX_BODY_BYTES = 64 * 1024
+_QUEUE_LOCK = threading.Lock()
+
+
+class RateLimiter:
+    """Per-player sliding window (public demo): limits[path] = max requests per 60 s."""
+
+    def __init__(self, limits: dict[str, int]) -> None:
+        self.limits = limits
+        self.hits: dict[tuple[str, str], list[float]] = {}
+        self.lock = threading.Lock()
+
+    def allow(self, client: str, path: str) -> bool:
+        limit = self.limits.get(path)
+        if not limit:
+            return True
+        now = time.time()
+        with self.lock:
+            q = [t for t in self.hits.get((client, path), []) if now - t < 60]
+            if len(q) >= limit:
+                self.hits[(client, path)] = q
+                return False
+            q.append(now)
+            self.hits[(client, path)] = q
+            if len(self.hits) > 5000:  # forget idle players
+                self.hits = {k: v for k, v in self.hits.items() if v and now - v[-1] < 60}
+            return True
 
 try:  # optional neural voice (ai_bridge/mentor_voice.py + `pip install supertonic`)
     from mentor_voice import VoiceEngine
@@ -497,6 +523,7 @@ class MentorService:
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.voice = voice
+        self._waiting = 0
 
     def health(self) -> dict[str, Any]:
         return {"ok": True, "backend": self.backend.name, "model": self.backend.model, "rag_docs": self.rag.doc_count,
@@ -547,6 +574,19 @@ class MentorService:
         parts.append(f"TASK: {TASKS.get(kind, TASKS['question'])}\n{LEVEL_RULES[level]}\n{LANG_RULE[lang]}\n{out_rule}")
         return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": "\n\n".join(parts)}]
 
+    MAX_WAITING = 3  # players allowed to wait for the GPU at once (public demo); the rest get the verified card
+
+    def _generate(self, messages, max_new_tokens, temperature):
+        with _QUEUE_LOCK:
+            if self._waiting >= self.MAX_WAITING:
+                raise RuntimeError("model busy: too many players waiting")
+            self._waiting += 1
+        try:
+            return self.backend.generate(messages, max_new_tokens, temperature)
+        finally:
+            with _QUEUE_LOCK:
+                self._waiting -= 1
+
     def reply(self, req: dict) -> dict[str, Any]:
         t0 = time.time()
         lang = "en" if req.get("lang") == "en" else "es"
@@ -579,7 +619,7 @@ class MentorService:
 
         raw = None
         try:
-            raw = self.backend.generate(self.build_messages(req, docs, rules), self.max_new_tokens, self.temperature)
+            raw = self._generate(self.build_messages(req, docs, rules), self.max_new_tokens, self.temperature)
         except Exception as exc:
             print(f"[mentor] generation failed: {exc}", flush=True)
 
@@ -617,7 +657,7 @@ class MentorService:
         card = req.get("card") or {}
         raw = None
         try:
-            raw = self.backend.generate(self.build_messages(req, [], []), 160, 0.1)
+            raw = self._generate(self.build_messages(req, [], []), 160, 0.1)
         except Exception as exc:
             print(f"[mentor] grading failed: {exc}", flush=True)
         parsed = parse_model_json(raw) or {}
@@ -646,7 +686,15 @@ class MentorService:
 
 
 # --------------------------------------------------------------------------- HTTP
-def make_handler(service: MentorService, api_key: str, require_key_all: bool):
+MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
+        ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".webp": "image/webp", ".ico": "image/x-icon", ".mp4": "video/mp4", ".webm": "video/webm", ".wav": "audio/wav",
+        ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".woff2": "font/woff2", ".woff": "font/woff", ".txt": "text/plain; charset=utf-8",
+        ".glb": "model/gltf-binary", ".gltf": "model/gltf+json", ".hdr": "application/octet-stream"}
+
+
+def make_handler(service: MentorService, api_key: str, require_key_all: bool,
+                 static_dir: Path | None = None, limiter: RateLimiter | None = None):
     class Handler(BaseHTTPRequestHandler):
         server_version = "KatherineMentor/1.0"
 
@@ -684,14 +732,70 @@ def make_handler(service: MentorService, api_key: str, require_key_all: bool):
             self._cors()
             self.end_headers()
 
+        def _client(self) -> str:
+            # Behind the Cloudflare tunnel every request comes from 127.0.0.1: use the real player IP.
+            return (self.headers.get("CF-Connecting-IP") or self.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+                    or self.client_address[0])
+
+        def _static(self, path: str, head: bool = False) -> None:
+            rel = path.lstrip("/") or "index.html"
+            target = (static_dir / rel).resolve()
+            root_dir = static_dir.resolve()
+            if root_dir not in target.parents and target != root_dir:
+                self._send(404, {"error": "not found"})
+                return
+            if target.is_dir():
+                target = target / "index.html"
+            if not target.is_file():
+                self._send(404, {"error": "not found"})
+                return
+            data = target.read_bytes()
+            total = len(data)
+            m = re.match(r"bytes=(\d*)-(\d*)$", self.headers.get("Range", "").strip())
+            if m and (m.group(1) or m.group(2)):  # video seeking (Safari needs it)
+                start = int(m.group(1)) if m.group(1) else max(0, total - int(m.group(2)))
+                end = min(int(m.group(2)), total - 1) if m.group(1) and m.group(2) else total - 1
+                if start >= total or start > end:
+                    self.send_response(416)
+                    self.send_header("Content-Range", f"bytes */{total}")
+                    self.end_headers()
+                    return
+                data = data[start:end + 1]
+                self.send_response(206)
+                self.send_header("Content-Range", f"bytes {start}-{end}/{total}")
+            else:
+                self.send_response(200)
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Content-Type", MIME.get(target.suffix.lower(), "application/octet-stream"))
+            self.send_header("Content-Length", str(len(data)))
+            # Vite assets carry a content hash: cache them for a long time; pages always fresh.
+            self.send_header("Cache-Control", "public, max-age=31536000, immutable" if "/assets/" in path else "no-cache")
+            self.end_headers()
+            if not head:
+                self.wfile.write(data)
+
+        def do_HEAD(self) -> None:  # noqa: N802
+            path = self.path.split("?")[0]
+            if static_dir and not path.startswith("/api/"):
+                self._static(path, head=True)
+            else:
+                self.send_response(404)
+                self.end_headers()
+
         def do_GET(self) -> None:  # noqa: N802
-            if self.path.split("?")[0] == "/api/health":
+            path = self.path.split("?")[0]
+            if path == "/api/health":
                 self._send(200, service.health())
+            elif static_dir and not path.startswith("/api/"):
+                self._static(path)
             else:
                 self._send(404, {"error": "not found"})
 
         def do_POST(self) -> None:  # noqa: N802
             path = self.path.split("?")[0]
+            if limiter and not limiter.allow(self._client(), path):
+                self._send(429, {"error": "too many requests, wait a minute"})
+                return
             length = int(self.headers.get("Content-Length") or 0)
             if length <= 0 or length > MAX_BODY_BYTES:
                 self._send(413, {"error": "bad body size"})
@@ -714,7 +818,7 @@ def make_handler(service: MentorService, api_key: str, require_key_all: bool):
                     if not service.voice or service.voice.status != "ready":
                         self._send(503, {"error": "voice not available"})
                         return
-                    self._send_audio(service.voice.synthesize(str(body.get("text") or ""), str(body.get("lang") or "es"),
+                    self._send_audio(service.voice.synthesize(str(body.get("text") or "")[:700], str(body.get("lang") or "es"),
                                                               str(body.get("voice") or ""), float(body.get("speed") or 1.0)))
                 elif path == "/api/generate":
                     if not self._authorized():
@@ -754,6 +858,9 @@ def main() -> None:
     ap.add_argument("--temperature", type=float, default=0.6)
     ap.add_argument("--voice", choices=["auto", "off"], default="auto",
                     help="Neural voice with Supertonic 3 on the CPU (needs `pip install supertonic`).")
+    ap.add_argument("--static", help="Also serve the built game (dist/) from this folder: one URL for game + KATHERINE.")
+    ap.add_argument("--public", action="store_true",
+                    help="Public demo: per-player rate limits on /api/mentor and /api/tts (/api/generate still needs the key).")
     ap.add_argument("--voice-steps", type=int, default=8, help="Supertonic quality steps (5 fast … 12 best).")
     args = ap.parse_args()
 
@@ -780,7 +887,14 @@ def main() -> None:
 
     voice = VoiceEngine(args.voice, args.voice_steps) if VoiceEngine and args.voice != "off" else None
     service = MentorService(backend, rag, args.max_new_tokens, args.temperature, voice)
-    httpd = ThreadingHTTPServer((args.host, args.port), make_handler(service, args.api_key, args.require_key_all))
+    static_dir = Path(args.static).resolve() if args.static else None
+    if static_dir and not (static_dir / "index.html").is_file():
+        ap.error(f"--static: {static_dir} has no index.html (run npm run build)")
+    limiter = RateLimiter({"/api/mentor": 12, "/api/tts": 40, "/api/generate": 30}) if args.public else None
+    httpd = ThreadingHTTPServer((args.host, args.port),
+                                make_handler(service, args.api_key, args.require_key_all, static_dir, limiter))
+    if static_dir:
+        print(f"[web] Serving the game from {static_dir} at http://{args.host}:{args.port}/", flush=True)
     print(f"[mentor] KATHERINE listening on http://{args.host}:{args.port} | backend={backend.name} | rag_docs={rag.doc_count:,}", flush=True)
     print("MENTOR_SERVER_READY", flush=True)
     try:

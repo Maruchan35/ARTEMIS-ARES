@@ -1,4 +1,6 @@
 # KATHERINE en Colab (GPU) + túnel de prueba para el juego AETHER-4.
+# Con WEB_DEMO = True además publica la DEMO WEB: una sola URL de internet con la página de presentación,
+# el juego, KATHERINE (modelo + RAG NASA) y las voces HD. Es la URL que se comparte con los evaluadores.
 # Pega esta celda completa en Colab (Entorno de ejecución → GPU: A100 / L4 / T4) y ejecútala.
 # Al final imprime MENTOR_URL y MENTOR_KEY: pásaselos a Claude o úsalos en el bridge local:
 #   npm run katherine -- --url <MENTOR_URL> --key <MENTOR_KEY>   (juego + bridge con voces HD)
@@ -16,6 +18,10 @@ ADAPTER_VERSION = "v3.0-a100-final-mega"    # Release con adapter_*.safetensors 
 ADAPTER = "/content/astrocopilot_gemma4_lora"
 AI_ROOT = "/content/astrocopilot_ai"
 PORT = 8000
+WEB_DEMO = True                            # True: página pública jugable · False: solo la API privada
+WEB_BRANCH = "demo-web"                    # rama con el build web (ai_bridge/build_demo.py --publish)
+WEB_DIR = "/content/aether4_web"
+os.environ["SUPERTONIC_DIR"] = "/content/supertonic3"  # modelo de voz HD (~400 MB, se baja una vez)
 
 for d in (ADAPTER, f"{AI_ROOT}/src", f"{AI_ROOT}/data", "/content/.cache"):
     os.makedirs(d, exist_ok=True)
@@ -34,6 +40,7 @@ raw = f"https://raw.githubusercontent.com/{REPO}"
 fetch(f"{rel}/adapter_config.json", f"{ADAPTER}/adapter_config.json")
 fetch(f"{rel}/adapter_model.safetensors", f"{ADAPTER}/adapter_model.safetensors")
 fetch(f"{raw}/{GAME_BRANCH}/ai_bridge/mentor_server.py", "/content/mentor_server.py", always=True)
+fetch(f"{raw}/{GAME_BRANCH}/ai_bridge/mentor_voice.py", "/content/mentor_voice.py", always=True)
 fetch(f"{raw}/main/src/nasa_rag_engine.py", f"{AI_ROOT}/src/nasa_rag_engine.py", always=True)
 fetch(f"{raw}/main/data/nasa_rag_corpus.jsonl", f"{AI_ROOT}/data/nasa_rag_corpus.jsonl")
 shutil.copy2(f"{AI_ROOT}/data/nasa_rag_corpus.jsonl", "/content/.cache/nasa_rag_corpus.jsonl")
@@ -47,6 +54,20 @@ if not os.path.exists(mega_db) or os.path.getsize(mega_db) < 100_000_000:
         shutil.copyfileobj(fin, fout, 1024 * 1024)
     os.remove(gz)
 
+if WEB_DEMO:  # build web del juego (siempre el último publicado)
+    import zipfile
+    print("Descargando la demo web (juego + página)...", flush=True)
+    zpath = "/content/aether4_web.zip"
+    urllib.request.urlretrieve(f"https://codeload.github.com/{REPO}/zip/refs/heads/{WEB_BRANCH}?t={int(time.time())}", zpath)
+    shutil.rmtree(WEB_DIR, ignore_errors=True)
+    with zipfile.ZipFile(zpath) as z:
+        top = z.namelist()[0].split("/")[0]
+        z.extractall("/content/_web_tmp")
+    shutil.move(f"/content/_web_tmp/{top}", WEB_DIR)
+    shutil.rmtree("/content/_web_tmp", ignore_errors=True)
+    os.remove(zpath)
+    print("  demo web:", open(f"{WEB_DIR}/README.md", encoding="utf-8").read().strip().splitlines()[-1][:120], flush=True)
+
 # Commit del juego que se está usando (para saber que es la versión nueva).
 try:
     with urllib.request.urlopen(f"https://api.github.com/repos/{REPO}/commits/{GAME_BRANCH}", timeout=10) as r:
@@ -57,7 +78,8 @@ except Exception as e:  # la API puede limitar peticiones; no es grave
 
 BASE = json.load(open(f"{ADAPTER}/adapter_config.json", encoding="utf-8"))["base_model_name_or_path"]
 print(f"Adaptador {ADAPTER_VERSION} | base: {BASE}", flush=True)
-subprocess.run([sys.executable, "-m", "pip", "install", "-q", "peft", "bitsandbytes", "accelerate"], check=False)
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "peft", "bitsandbytes", "accelerate"]
+               + (["supertonic"] if WEB_DEMO else []), check=False)
 
 CF = "/content/cloudflared"
 if not os.path.exists(CF):
@@ -72,8 +94,10 @@ KEY = secrets.token_urlsafe(18)
 SRV_CMD = [sys.executable, "/content/mentor_server.py",
            "--backend", "hf", "--rag", "on", "--ai-root", AI_ROOT,
            "--host", "127.0.0.1", "--port", str(PORT), "--max-new-tokens", "280",
-           "--api-key", KEY, "--require-key-all",
+           "--api-key", KEY,
            "--adapter", ADAPTER, "--model-id", BASE]
+# Demo web: el juego y la API del mentor quedan abiertos (con límite por jugador); /api/generate sigue con clave.
+SRV_CMD += ["--static", WEB_DIR, "--public"] if WEB_DEMO else ["--require-key-all", "--voice", "off"]
 CF_CMD = [CF, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{PORT}"]
 # Guardado para la celda guardiana (colab_keepalive_cell.py), que reinicia lo que se caiga.
 json.dump({"key": KEY, "port": PORT, "srv_cmd": SRV_CMD, "cf_cmd": CF_CMD},
@@ -115,6 +139,12 @@ try:
 except Exception as e:
     print("Aviso: el túnel aún no responde (espera 30 s y reintenta):", e, flush=True)
 
+if WEB_DEMO:
+    print("\n" + "=" * 70, flush=True)
+    print("DEMO WEB PÚBLICA (compártela con los evaluadores):", flush=True)
+    print("  " + tunnel_url, flush=True)
+    print("  (la voz HD termina de cargar ~1 min después; el juego funciona desde ya)", flush=True)
+    print("=" * 70, flush=True)
 print("\nLISTO. Pásale esto a Claude:", flush=True)
 print("MENTOR_URL=" + tunnel_url, flush=True)
 print("MENTOR_KEY=" + KEY, flush=True)

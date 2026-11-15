@@ -1,6 +1,7 @@
 // =============================================================================
 // Client for the AstroCopilot mentor server (ai_bridge/mentor_server.py).
-// URL priority: ?mentor=<url> → localStorage 'astro.mentorUrl' → VITE_MENTOR_URL → http://localhost:8765
+// URL priority: ?mentor=<url> → same origin when served from the internet (public demo)
+//   → localStorage 'astro.mentorUrl' → VITE_MENTOR_URL → http://localhost:8765
 // If the server is down the game keeps working with the verified offline cards.
 // =============================================================================
 
@@ -23,6 +24,11 @@ function readUrl(): string {
     if (q) {
       localStorage.setItem('astro.mentorUrl', q);
       return q;
+    }
+    // Public demo (game served by mentor_server.py --static through the tunnel): same origin.
+    const host = window.location.hostname;
+    if (window.location.protocol.startsWith('http') && host !== 'localhost' && host !== '127.0.0.1' && host !== '[::1]') {
+      return window.location.origin;
     }
     const saved = localStorage.getItem('astro.mentorUrl');
     if (saved) return saved;

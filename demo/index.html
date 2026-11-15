@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AETHER-4 · Demo de CodeCraft</title>
+  <meta name="description" content="AETHER-4 · Orbital Quarters: simulador de supervivencia espacial en 3D con KATHERINE, una IA mentora entrenada con datos de la NASA." />
+  <meta property="og:title" content="AETHER-4 · Orbital Quarters — Demo jugable" />
+  <meta property="og:description" content="Sobrevive en una base lunar mientras KATHERINE, una IA entrenada con 387 mil documentos de la NASA, te enseña paso a paso." />
+  <meta property="og:image" content="poster.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #040914;
+      --panel: rgba(9, 20, 40, 0.72);
+      --line: rgba(56, 189, 248, 0.28);
+      --cyan: #38e1ff;
+      --blue: #3b82f6;
+      --text: #e6f1ff;
+      --dim: #8aa4c4;
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --bad: #f87171;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; }
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at 20% -10%, rgba(59, 130, 246, 0.25), transparent 55%),
+        radial-gradient(ellipse at 90% 10%, rgba(56, 225, 255, 0.12), transparent 50%),
+        var(--bg);
+    }
+    .stars { position: fixed; inset: 0; pointer-events: none; opacity: 0.55;
+      background-image:
+        radial-gradient(1px 1px at 12% 22%, #fff, transparent), radial-gradient(1px 1px at 72% 12%, #cfe8ff, transparent),
+        radial-gradient(1.5px 1.5px at 42% 66%, #fff, transparent), radial-gradient(1px 1px at 86% 54%, #fff, transparent),
+        radial-gradient(1px 1px at 26% 84%, #9fd9ff, transparent), radial-gradient(1.5px 1.5px at 58% 38%, #fff, transparent),
+        radial-gradient(1px 1px at 6% 60%, #fff, transparent), radial-gradient(1px 1px at 94% 88%, #cfe8ff, transparent);
+    }
+    main { position: relative; max-width: 1120px; margin: 0 auto; padding: 28px 16px 64px; }
+    header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .brand { font-family: Orbitron, sans-serif; font-weight: 800; letter-spacing: 0.18em; font-size: 13px; color: var(--cyan); }
+    .brand b { color: var(--text); }
+    .status { display: inline-flex; align-items: center; gap: 8px; font: 500 12px 'JetBrains Mono', monospace; color: var(--dim);
+      border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: var(--panel); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 10px currentColor; }
+    .dot.ok { background: var(--ok); } .dot.bad { background: var(--bad); }
+
+    .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 36px; align-items: center; margin-top: 48px; }
+    .kicker { font: 600 12px 'JetBrains Mono', monospace; letter-spacing: 0.22em; color: var(--cyan); text-transform: uppercase; }
+    h1 { font-family: Orbitron, sans-serif; font-weight: 900; font-size: clamp(40px, 6vw, 72px); line-height: 1; margin: 14px 0 6px;
+      letter-spacing: 0.04em; text-shadow: 0 0 30px rgba(56, 225, 255, 0.45); }
+    h1 span { color: var(--cyan); }
+    .sub { font-family: Orbitron, sans-serif; font-size: 14px; letter-spacing: 0.3em; color: var(--dim); margin-bottom: 22px; }
+    .lead { font-size: 17px; line-height: 1.6; color: #c9dbf2; max-width: 52ch; }
+    .cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+    .btn { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-family: Orbitron, sans-serif; font-weight: 800;
+      letter-spacing: 0.12em; font-size: 14px; padding: 16px 26px; border-radius: 12px; transition: transform .15s, box-shadow .15s; }
+    .btn.primary { color: #021124; background: linear-gradient(90deg, var(--cyan), #7dd3fc); box-shadow: 0 0 30px rgba(56, 225, 255, 0.45); }
+    .btn.primary:hover { transform: translateY(-2px); box-shadow: 0 0 44px rgba(56, 225, 255, 0.7); }
+    .btn.ghost { color: var(--text); border: 1px solid var(--line); background: var(--panel); }
+    .btn.ghost:hover { border-color: var(--cyan); }
+    .note { margin-top: 14px; font-size: 13px; color: var(--dim); }
+
+    .video { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid var(--line);
+      box-shadow: 0 0 60px rgba(59, 130, 246, 0.25); background: #000; aspect-ratio: 16 / 9; }
+    .video video { width: 100%; height: 100%; display: block; object-fit: cover; }
+
+    section { margin-top: 64px; }
+    h2 { font-family: Orbitron, sans-serif; font-size: 20px; letter-spacing: 0.14em; margin: 0 0 18px; }
+    h2 small { display: block; font: 500 12px 'JetBrains Mono', monospace; color: var(--cyan); letter-spacing: 0.2em; margin-bottom: 8px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; backdrop-filter: blur(6px); }
+    .card h3 { margin: 0 0 8px; font-size: 16px; }
+    .card p { margin: 0; color: #b8cbe4; font-size: 14px; line-height: 1.55; }
+    .card .ico { font-size: 22px; margin-bottom: 10px; }
+
+    .keys { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 28px; }
+    .key { display: flex; align-items: center; gap: 12px; font-size: 14px; color: #c9dbf2; }
+    kbd { min-width: 64px; text-align: center; font: 600 12px 'JetBrains Mono', monospace; color: var(--cyan); background: rgba(2, 10, 24, 0.9);
+      border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 8px; padding: 6px 8px; }
+
+    ol.steps { margin: 0; padding-left: 20px; color: #c9dbf2; line-height: 1.8; font-size: 15px; }
+    ol.steps b { color: var(--text); }
+    .warn { margin-top: 16px; border-left: 3px solid var(--warn); padding: 10px 14px; background: rgba(251, 191, 36, 0.07);
+      color: #f3e2b5; font-size: 14px; border-radius: 0 10px 10px 0; line-height: 1.55; }
+
+    .tech { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { font: 500 12px 'JetBrains Mono', monospace; color: #cfe7ff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
+      background: rgba(2, 10, 24, 0.6); }
+
+    footer { margin-top: 72px; padding-top: 22px; border-top: 1px solid var(--line); display: flex; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; color: var(--dim); font-size: 13px; }
+    footer .brand { font-size: 12px; }
+
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; margin-top: 28px; }
+      .grid { grid-template-columns: 1fr; }
+      .keys { grid-template-columns: 1fr; }
+      section { margin-top: 48px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stars"></div>
+  <main>
+    <header class="top">
+      <div class="brand"><b>CODECRAFT</b> · PRESENTA</div>
+      <div class="status" id="status"><span class="dot" id="dot"></span><span id="statusText">Conectando con KATHERINE…</span></div>
+    </header>
+
+    <div class="hero">
+      <div>
+        <div class="kicker">Demo jugable · Navegador</div>
+        <h1>AETHER<span>-4</span></h1>
+        <div class="sub">ORBITAL QUARTERS</div>
+        <p class="lead">
+          Eres un cadete en una base lunar. Administra el aire, el agua y la energía, resuelve crisis reales y toma decisiones
+          que deciden si la tripulación vuelve a casa. A tu lado está <b>KATHERINE</b>, una IA mentora entrenada con datos de la NASA
+          que te explica cada decisión según tu edad y te pregunta si entendiste.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="jugar.html">▶ JUGAR AHORA</a>
+          <a class="btn ghost" href="#como-jugar">CÓMO JUGAR</a>
+        </div>
+        <div class="note">Usa una computadora con teclado y mouse, en Chrome o Edge, con el sonido encendido.</div>
+      </div>
+      <div class="video">
+        <video src="promo.mp4" poster="poster.jpg" controls playsinline preload="metadata"></video>
+      </div>
+    </div>
+
+    <section>
+      <h2><small>01 · QUÉ VAS A PROBAR</small>Una mentora, no un manual</h2>
+      <div class="grid">
+        <div class="card"><div class="ico">🧠</div><h3>IA entrenada</h3>
+          <p>Gemma-4 ajustado con QLoRA (AstroCopilot v3.0). Corre en una GPU en la nube y responde en español o inglés.</p></div>
+        <div class="card"><div class="ico">🛰️</div><h3>Datos reales de la NASA</h3>
+          <p>Cada respuesta se apoya en 387 mil documentos de la NASA. Un verificador descarta cualquier número que el modelo invente.</p></div>
+        <div class="card"><div class="ico">🎓</div><h3>Enseña por edades</h3>
+          <p>Explorador (6–9), Cadete (10–14) o Ingeniero (15+). Pregunta "¿Entiendes la idea?", hace mini-quiz y repasa lo que costó.</p></div>
+        <div class="card"><div class="ico">🔊</div><h3>Voz neuronal HD</h3>
+          <p>10 voces naturales (Supertonic 3). Elígelas en ⚙ Ajustes; "KATHERINE · cálida" es la recomendada.</p></div>
+        <div class="card"><div class="ico">🌕</div><h3>Simulación 3D</h3>
+          <p>Base en Tierra, plataforma LC-39B, Orion y superficie lunar, con física y telemetría de soporte vital en tiempo real.</p></div>
+        <div class="card"><div class="ico">💬</div><h3>Pregúntale lo que quieras</h3>
+          <p>Presiona <b>T</b> y escribe (o habla con el micrófono): "¿por qué reciclan el agua?", "¿qué pasa si falla el CO₂?".</p></div>
+      </div>
+    </section>
+
+    <section id="como-jugar">
+      <h2><small>02 · CONTROLES</small>Cómo jugar</h2>
+      <div class="card">
+        <div class="keys">
+          <div class="key"><kbd>W A S D</kbd>Moverte</div>
+          <div class="key"><kbd>Clic</kbd>Mirar / interactuar</div>
+          <div class="key"><kbd>E</kbd>Usar objeto</div>
+          <div class="key"><kbd>1 – 5</kbd>Casillas del inventario</div>
+          <div class="key"><kbd>B</kbd>Mochila</div>
+          <div class="key"><kbd>M</kbd>Mapa</div>
+          <div class="key"><kbd>T</kbd>Hablar con KATHERINE</div>
+          <div class="key"><kbd>F1 – F4</kbd>Responder a KATHERINE</div>
+          <div class="key"><kbd>N</kbd>Voz de KATHERINE on/off</div>
+          <div class="key"><kbd>Esc</kbd>Menú y ajustes</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2><small>03 · PARA EVALUADORES</small>Recorrido sugerido (5 minutos)</h2>
+      <div class="card">
+        <ol class="steps">
+          <li>Pulsa <b>Jugar ahora</b> y entra a <b>Campaña · Fase 0</b>.</li>
+          <li>KATHERINE te pregunta quién juega: elige tu nivel con <b>F1</b>, <b>F2</b> o <b>F3</b>.</li>
+          <li>Completa el primer objetivo (arriba a la izquierda) y escucha cómo te explica la decisión y te pregunta si la entendiste.</li>
+          <li>Presiona <b>T</b> y hazle una pregunta libre de ciencia espacial.</li>
+          <li>Cambia la voz en <b>Esc → ⚙ Ajustes</b> y prueba el idioma inglés.</li>
+        </ol>
+        <div class="warn">
+          La IA corre en una sola GPU compartida: cada respuesta del modelo tarda entre 20 y 30 segundos. Si hay muchas personas jugando
+          a la vez, KATHERINE contesta al instante con sus fichas verificadas de la NASA mientras la GPU se libera.
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2><small>04 · TECNOLOGÍA</small>Cómo está hecho</h2>
+      <div class="tech">
+        <span class="chip">React 18 + TypeScript</span><span class="chip">Three.js</span><span class="chip">Vite</span>
+        <span class="chip">Gemma-4-E4B + QLoRA</span><span class="chip">RAG híbrido NASA · 387k docs</span>
+        <span class="chip">Verificador de datos</span><span class="chip">Supertonic 3 TTS</span><span class="chip">Google Colab GPU</span>
+        <span class="chip">Cloudflare Tunnel</span>
+      </div>
+    </section>
+
+    <footer>
+      <div class="brand"><b>CODECRAFT</b> · AETHER-4 · ORBITAL QUARTERS</div>
+      <div>Demo académica. Los datos científicos provienen de fuentes públicas de la NASA.</div>
+    </footer>
+  </main>
+
+  <script>
+    // Live status of KATHERINE's brain (same server that hosts this page).
+    (async function () {
+      var dot = document.getElementById('dot');
+      var text = document.getElementById('statusText');
+      try {
+        var res = await fetch('api/health', { cache: 'no-store' });
+        var h = await res.json();
+        var voices = (h.voice && h.voice.voices) ? h.voice.voices.length : 0;
+        if (h.ok && h.backend !== 'offline') {
+          dot.className = 'dot ok';
+          text.textContent = 'KATHERINE en línea · ' + (h.rag_docs || 0).toLocaleString('es-MX') + ' docs NASA' + (voices ? ' · ' + voices + ' voces HD' : '');
+        } else {
+          dot.className = 'dot';
+          text.textContent = 'KATHERINE en modo respaldo (fichas verificadas)';
+        }
+      } catch (e) {
+        dot.className = 'dot bad';
+        text.textContent = 'IA no disponible · el juego funciona igual';
+      }
+    })();
+  </script>
+</body>
+</html>
