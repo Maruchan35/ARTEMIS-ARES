@@ -3249,8 +3249,8 @@ export const SpaceSinglePlayerGame: React.FC = () => {
                   {!mentorVoice.getNeuralStatus().ready && (
                     <div className="text-[10px] text-slate-500 leading-snug">
                       {lang === 'es'
-                        ? 'Para desbloquear las 10 voces neuronales HD (F1–F5, M1–M5), inicia ai_bridge con supertonic en :8765.'
-                        : 'To unlock the 10 HD neural voices (F1–F5, M1–M5), start ai_bridge with supertonic on :8765.'}
+                        ? 'Para desbloquear las 10 voces neuronales HD (F1–F5, M1–M5), abre el juego con  npm run katherine  (arranca el bridge con Supertonic).'
+                        : 'To unlock the 10 HD neural voices (F1–F5, M1–M5), launch the game with  npm run katherine  (starts the bridge with Supertonic).'}
                     </div>
                   )}
 

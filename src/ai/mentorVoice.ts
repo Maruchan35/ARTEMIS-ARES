@@ -320,13 +320,9 @@ export const mentorVoice = {
           neural: true,
         }))
       : [];
-    const primary = browserVoices(l).map((v) => ({ voiceURI: v.voiceURI, name: v.name, lang: v.lang }));
-    const seen = new Set(primary.map((v) => v.voiceURI));
-    const secondary = (synth()?.getVoices() ?? [])
-      .filter((v) => !seen.has(v.voiceURI) && !/undefined/i.test(v.name))
-      .slice(0, 12)
-      .map((v) => ({ voiceURI: v.voiceURI, name: `${v.name} · Alt`, lang: v.lang }));
-    return [...hd, ...primary, ...secondary];
+    // Only voices of the current language: other-language voices mispronounce Spanish/English text.
+    const browser = browserVoices(l).map((v) => ({ voiceURI: v.voiceURI, name: v.name, lang: v.lang }));
+    return [...hd, ...browser];
   },
 
   getNeuralStatus(): { ready: boolean; count: number } {

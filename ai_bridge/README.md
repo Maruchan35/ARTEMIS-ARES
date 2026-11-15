@@ -1,5 +1,18 @@
 # KATHERINE · IA mentora del juego (puente con AstroCopilot)
 
+## Arranque rápido (juego + KATHERINE con voces HD)
+
+```bash
+pip install supertonic        # una sola vez: voces neuronales HD (F1–F5, M1–M5)
+npm run katherine             # bridge offline + juego en http://localhost:5174
+npm run katherine -- --url <MENTOR_URL> --key <MENTOR_KEY>   # con el modelo real en Colab
+```
+
+Las voces HD se generan en tu PC, así que solo aparecen en ⚙ Ajustes cuando el juego se abre con
+`npm run katherine` (con `npm run dev` solo verás las voces del navegador). Para Colab usa la celda
+`ai_bridge/colab_katherine_cell.py`: al final imprime el comando exacto.
+
+
 KATHERINE es la IA holográfica que acompaña al cadete: observa la simulación, explica cada decisión con datos
 reales de la NASA, pregunta **"¿Entiendes la idea?"**, hace un mini-quiz, cuenta **"¿Sabías que…?"** de
 astronautas reales y responde preguntas por texto o voz.

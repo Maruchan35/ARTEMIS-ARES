@@ -1,7 +1,7 @@
 # KATHERINE en Colab (GPU) + túnel de prueba para el juego AETHER-4.
 # Pega esta celda completa en Colab (Entorno de ejecución → GPU: A100 / L4 / T4) y ejecútala.
 # Al final imprime MENTOR_URL y MENTOR_KEY: pásaselos a Claude o úsalos en el bridge local:
-#   python ai_bridge/mentor_server.py --backend remote --remote-url <MENTOR_URL> --api-key <MENTOR_KEY>
+#   npm run katherine -- --url <MENTOR_URL> --key <MENTOR_KEY>   (juego + bridge con voces HD)
 #
 # Diferencias con la celda v3.0:
 #  - El código (mentor_server.py) se descarga SIEMPRE de la rama del juego, así cada vez que
@@ -113,4 +113,5 @@ except Exception as e:
 print("\nLISTO. Pásale esto a Claude:", flush=True)
 print("MENTOR_URL=" + tunnel_url, flush=True)
 print("MENTOR_KEY=" + KEY, flush=True)
+print("En tu PC (voces HD + RAG):  npm run katherine -- --url " + tunnel_url + " --key " + KEY, flush=True)
 print("Cuando termines: Entorno de ejecución → Desconectar y borrar (para no gastar unidades).", flush=True)

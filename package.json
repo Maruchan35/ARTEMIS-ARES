@@ -6,6 +6,7 @@
   "description": "ORBITAL QUARTERS - Standalone Local Single-Player Space Habitation Trainer",
   "scripts": {
     "dev": "vite --port 5174",
+    "katherine": "python ai_bridge/start_katherine.py",
     "build": "tsc && vite build",
     "preview": "vite preview --port 4174"
   },
