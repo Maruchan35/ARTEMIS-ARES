@@ -770,15 +770,25 @@ export function createFirstPersonHandsRig(suitColorIdx: number): FirstPersonHand
     const handGroup = new THREE.Group();
     shoulder.add(handGroup);
 
-    // Forearm receding toward viewer (+Z is behind camera) + crimson mission stripe cuff
-    const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.054, 0.26, 6, 12), sleeveMat);
-    forearm.rotation.x = Math.PI / 2;
-    forearm.position.set(0, -0.01, 0.15);
+    // Bent forearm descending from wrist to elbow + crimson mission stripe cuff
+    const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.050, 0.21, 6, 12), sleeveMat);
+    forearm.rotation.set(Math.PI / 2 - 0.42, 0, -sideSign * 0.15);
+    forearm.position.set(sideSign * 0.022, -0.052, 0.13);
     handGroup.add(forearm);
 
-    const crimsonBand = new THREE.Mesh(new THREE.CylinderGeometry(0.057, 0.057, 0.018, 16), crimsonMat);
-    crimsonBand.rotation.x = Math.PI / 2;
-    crimsonBand.position.set(0, -0.006, 0.055);
+    const elbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.053, 10, 8), sleeveMat);
+    elbowJoint.position.set(sideSign * 0.048, -0.105, 0.225);
+    handGroup.add(elbowJoint);
+
+    // Lowered upper arm segment angled sharply downward toward shoulder
+    const upperArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.056, 0.22, 6, 10), sleeveMat);
+    upperArm.rotation.set(Math.PI / 2 - 1.18, 0, -sideSign * 0.22);
+    upperArm.position.set(sideSign * 0.078, -0.215, 0.268);
+    handGroup.add(upperArm);
+
+    const crimsonBand = new THREE.Mesh(new THREE.CylinderGeometry(0.053, 0.053, 0.018, 16), crimsonMat);
+    crimsonBand.rotation.set(Math.PI / 2 - 0.32, 0, -sideSign * 0.1);
+    crimsonBand.position.set(sideSign * 0.008, -0.018, 0.052);
     handGroup.add(crimsonBand);
 
     // Metallic EVA wrist disconnect collar + status LED
@@ -832,8 +842,8 @@ export function createFirstPersonHandsRig(suitColorIdx: number): FirstPersonHand
   const left = buildFpArm(-1);
   const right = buildFpArm(1);
 
-  left.shoulder.position.set(-0.26, -0.23, -0.38);
-  right.shoulder.position.set(0.27, -0.22, -0.38);
+  left.shoulder.position.set(-0.27, -0.34, -0.30);
+  right.shoulder.position.set(0.28, -0.33, -0.30);
 
   const heldItemMount = new THREE.Group();
   heldItemMount.position.set(-0.02, 0.045, -0.105);
@@ -916,58 +926,54 @@ export function updateFirstPersonHandsRig(rig: FirstPersonHandsRig, params: Firs
   const consumeCurve = Math.sin(consumePulse * Math.PI);
   const crouchShift = crouching ? 0.03 : 0;
 
-  // Apply Left Hand transform (reaches out to press cockpit switches, bed, buttons, valves)
+  // Left Hand stays lowered & slightly bent at side, subtly steadying during reach
   rig.leftShoulder.position.set(
-    -0.25 + rig.swayX * 0.9 - idleBreathX + reachCurve * 0.17,
-    -0.22 + rig.swayY + idleBreathY + Math.abs(leftSwingSin) * pumpAmpY + reachCurve * 0.12 - crouchShift - swapCurve * 0.16,
-    -0.38 + leftSwingSin * pumpAmpZ - reachCurve * 0.24
+    -0.27 + rig.swayX * 0.85 - idleBreathX - reachCurve * 0.02,
+    -0.34 + rig.swayY + idleBreathY + Math.abs(leftSwingSin) * pumpAmpY * 0.8 - crouchShift - swapCurve * 0.14 - reachCurve * 0.03,
+    -0.30 + leftSwingSin * pumpAmpZ * 0.85 + reachCurve * 0.04
   );
   rig.leftHand.rotation.set(
-    0.16 + leftSwingSin * 0.26 * speedRatio + reachCurve * 0.18,
-    0.18 + rig.swayX * 2.1 - reachCurve * 0.24,
-    -0.18 - reachCurve * 0.14
+    -0.18 + leftSwingSin * 0.22 * speedRatio,
+    0.26 + rig.swayX * 1.9,
+    -0.24
   );
 
-  // Curl / extend Left phalanges cleanly (index extends stiffly when pushing buttons)
+  // Relaxed finger curl on left hand
   rig.leftCurlFingers.forEach((f, idx) => {
-    const isIndex = idx === 0;
-    const baseAngle = -0.18 + Math.sin(timeSec * 2.1 + idx * 0.35) * 0.05;
-    if (isIndex && reachCurve > 0.05) {
-      f.rotation.x = 0.06 * reachCurve;
-    } else {
-      f.rotation.x = baseAngle - reachCurve * 0.85;
-    }
+    f.rotation.x = -0.30 + Math.sin(timeSec * 2.1 + idx * 0.35) * 0.05;
   });
 
-  // Apply Right Hand transform (tool grip, screwdriver twist, or drink/eat gesture toward helmet)
+  // Right Hand rests low & bent when idle/walking, and extends straight forward on click (reach/use)
   const holdBiasX = heldItemKey ? -0.045 : 0;
-  const holdBiasY = heldItemKey ? 0.032 : 0;
-  const holdBiasZ = heldItemKey ? -0.058 : 0;
+  const holdBiasY = heldItemKey ? 0.065 : 0;
+  const holdBiasZ = heldItemKey ? -0.068 : 0;
+  const actionReach = Math.max(reachCurve, useCurve);
   const isTwistTool = heldItemKey === 'DA_ScrewDriver' || heldItemKey === 'DA_DuctTapeKit';
-  const twistRoll = isTwistTool ? Math.sin(usePulse * Math.PI * 2.0) * 0.72 : useCurve * 0.48;
+  const twistRoll = isTwistTool ? Math.sin(usePulse * Math.PI * 2.0) * 0.72 : actionReach * 0.14;
 
   rig.rightShoulder.position.set(
-    0.26 + rig.swayX * 0.9 + idleBreathX + holdBiasX - useCurve * 0.065 - consumeCurve * 0.14,
-    -0.21 +
+    0.28 + rig.swayX * 0.85 + idleBreathX + holdBiasX - actionReach * 0.13 - consumeCurve * 0.14,
+    -0.33 +
       rig.swayY +
       idleBreathY +
-      Math.abs(rightSwingSin) * pumpAmpY +
+      Math.abs(rightSwingSin) * pumpAmpY * 0.8 +
       holdBiasY +
-      useCurve * 0.06 +
-      consumeCurve * 0.16 -
+      actionReach * 0.14 +
+      consumeCurve * 0.22 -
       crouchShift -
-      swapCurve * 0.18,
-    -0.37 + rightSwingSin * pumpAmpZ + holdBiasZ - useCurve * 0.16 + consumeCurve * 0.08
+      swapCurve * 0.16,
+    -0.30 + rightSwingSin * pumpAmpZ * 0.85 + holdBiasZ - actionReach * 0.24 + consumeCurve * 0.08
   );
   rig.rightHand.rotation.set(
-    0.15 + rightSwingSin * 0.26 * speedRatio + (heldItemKey ? 0.22 : 0) - useCurve * 0.55 + consumeCurve * 0.45,
-    -0.22 + rig.swayX * 2.1 + (heldItemKey ? 0.28 : 0) + consumeCurve * 0.4,
-    0.20 + twistRoll
+    -0.16 + rightSwingSin * 0.22 * speedRatio + (heldItemKey ? 0.26 : 0) + actionReach * 0.22 + consumeCurve * 0.45,
+    -0.26 + rig.swayX * 1.9 + (heldItemKey ? 0.28 : 0) + actionReach * 0.16 + consumeCurve * 0.4,
+    0.22 + twistRoll
   );
 
-  // Curl Right phalanges firmly around gripped tool
+  // Curl Right phalanges firmly around gripped tool or during grab/click reach
   rig.rightCurlFingers.forEach((f, idx) => {
-    const gripOffset = heldItemKey ? -0.92 : -0.18 + Math.sin(timeSec * 2.1 + idx * 0.35) * 0.05;
+    const baseRelax = -0.28 + Math.sin(timeSec * 2.1 + idx * 0.35) * 0.05;
+    const gripOffset = heldItemKey ? -0.92 : baseRelax - actionReach * 0.62;
     f.rotation.x = gripOffset;
   });
 }

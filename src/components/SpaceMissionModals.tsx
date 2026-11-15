@@ -548,6 +548,7 @@ export const LaunchTransitModal: React.FC<{
   const [yawErr, setYawErr] = useState(0);
   const [descentAltM, setDescentAltM] = useState(180);
   const [descentVelMs, setDescentVelMs] = useState(28);
+  const [descentOffsetM, setDescentOffsetM] = useState(4.3);
   const [retroActive, setRetroActive] = useState(false);
   const [landingMsg, setLandingMsg] = useState<string | null>(null);
   const [chkHatch, setChkHatch] = useState(false);
@@ -566,6 +567,10 @@ export const LaunchTransitModal: React.FC<{
     yawErr: 0,
     descentAltM: 180,
     descentVelMs: 28,
+    descentX: 3.6,
+    descentZ: -2.4,
+    descentVx: 0,
+    descentVz: 0,
     retroActive: false,
     keys: new Set<string>(),
     steerCmdX: 0,
@@ -662,23 +667,38 @@ export const LaunchTransitModal: React.FC<{
         s.yawErr = Math.max(-24, Math.min(24, s.yawErr + (driftX + pxIn * 18) * dt));
         s.pitchErr = Math.max(-24, Math.min(24, s.pitchErr + (driftY + pyIn * 18) * dt));
       } else if (s.phase === 'descent') {
-        s.yawErr = Math.max(-18, Math.min(18, s.yawErr * 0.94 + pxIn * 15 * dt));
-        s.pitchErr = Math.max(-18, Math.min(18, s.pitchErr * 0.94 + pyIn * 15 * dt));
+        s.yawErr = Math.max(-18, Math.min(18, s.yawErr * 0.92 + pxIn * 15 * dt));
+        s.pitchErr = Math.max(-18, Math.min(18, s.pitchErr * 0.92 + pyIn * 15 * dt));
+
+        // Active RCS Lateral Translation over Lunar/Martian Landing Circle (WASD / Arrows / UI Pads)
+        s.descentVx = s.descentVx * Math.pow(0.28, dt) + pxIn * 6.8 * dt;
+        s.descentVz = s.descentVz * Math.pow(0.28, dt) + pyIn * 6.8 * dt;
+        s.descentX = Math.max(-18, Math.min(18, s.descentX + s.descentVx * dt));
+        s.descentZ = Math.max(-18, Math.min(18, s.descentZ + s.descentVz * dt));
 
         // 1D Vertical Descent under real destination gravity (Moon 1.62 / Mars 3.70 m/s^2)
         const retroAccel = s.retroActive ? targetG * 2.95 + 3.8 : 0;
         const netAccel = targetG - retroAccel;
         s.descentVelMs = Math.max(-2.5, Math.min(48, s.descentVelMs + netAccel * dt));
         s.descentAltM = Math.max(0, s.descentAltM - s.descentVelMs * dt);
-        soundEngine.setRocketThruster(s.retroActive ? 0.72 : 0.18);
+        soundEngine.setRocketThruster(s.retroActive ? 0.72 : Math.abs(pxIn) + Math.abs(pyIn) > 0 ? 0.34 : 0.18);
 
         if (s.descentAltM <= 0.01) {
+          const padOffset = Math.hypot(s.descentX, s.descentZ);
           if (Math.abs(s.descentVelMs) <= 6.2) {
             s.phase = 'landed';
             soundEngine.setRocketThruster(0);
             soundEngine.playSuccess();
             setPhase('landed');
-            setLandingMsg(null);
+            setLandingMsg(
+              padOffset <= 4.0
+                ? lang === 'es'
+                  ? `Aterrizaje en centro de diana (${padOffset.toFixed(1)} m del eje).`
+                  : `Precision center-pad touchdown (${padOffset.toFixed(1)} m offset).`
+                : lang === 'es'
+                ? `Contacto estabilizado en zona segura (${padOffset.toFixed(1)} m del anillo central).`
+                : `Touchdown stabilized in safe zone (${padOffset.toFixed(1)} m from beacon ring).`
+            );
           } else {
             // NASA Go-Around abort back to 58 m so pilot retries retro-thrust cleanly
             const hitVel = Math.abs(s.descentVelMs);
@@ -701,6 +721,7 @@ export const LaunchTransitModal: React.FC<{
         setYawErr(s.yawErr);
         setDescentAltM(s.descentAltM);
         setDescentVelMs(s.descentVelMs);
+        setDescentOffsetM(Math.hypot(s.descentX, s.descentZ));
       }
     }, 33);
     return () => {
@@ -751,36 +772,49 @@ export const LaunchTransitModal: React.FC<{
       return tex;
     };
 
-    // 1. SLS Core Stage Cryogenic SOFI Foam + Intertank Roll Pattern + USA Decal
+    // 1. SLS Core Stage Cryogenic SOFI Foam + Intertank Stringers + Frost Collar & NASA Decal
     const coreTankTex = mkPixelTex(128, 256, (ctx) => {
       ctx.fillStyle = '#c2410c';
       ctx.fillRect(0, 0, 128, 256);
+      const cellHash = (x: number, y: number) => {
+        const v = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+        return v - Math.floor(v);
+      };
       for (let y = 0; y < 256; y += 2) {
         for (let x = 0; x < 128; x += 2) {
-          const bayer = ((x >> 1) + (y >> 1)) % 3;
-          ctx.fillStyle = bayer === 0 ? '#ea580c' : bayer === 1 ? '#b43c0b' : '#d95416';
+          const r = cellHash(x >> 2, y >> 2);
+          ctx.fillStyle = r < 0.28 ? '#b83c0c' : r < 0.72 ? '#cc4712' : '#dc5419';
           ctx.fillRect(x, y, 2, 2);
         }
       }
-      // Vertical structural stringers
+      // Cryogenic spray-on foam horizontal weld rings & LOX/LH2 insulation ribs
+      for (const wy of [28, 76, 152, 214]) {
+        ctx.fillStyle = '#9a3412';
+        ctx.fillRect(0, wy, 128, 3);
+        ctx.fillStyle = '#ea580c';
+        ctx.fillRect(0, wy + 3, 128, 2);
+      }
       ctx.fillStyle = '#9a3412';
-      for (let sx = 0; sx < 128; sx += 8) ctx.fillRect(sx, 0, 2, 256);
+      for (let sx = 0; sx < 128; sx += 16) ctx.fillRect(sx, 0, 2, 256);
       // Black & White SLS/Saturn Intertank telemetry roll pattern band
       ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(0, 48, 128, 26);
+      ctx.fillRect(0, 44, 128, 24);
       ctx.fillStyle = '#0f172a';
-      for (let bx = 0; bx < 128; bx += 16) ctx.fillRect(bx, 48, 8, 26);
+      for (let bx = 0; bx < 128; bx += 16) ctx.fillRect(bx, 44, 8, 24);
+      // Metallic cryogenic collar + Artemis blue accent stripe
       ctx.fillStyle = '#e2e8f0';
       ctx.fillRect(0, 186, 128, 12);
       ctx.fillStyle = '#0b3d91';
-      ctx.fillRect(0, 198, 128, 6);
-      // NASA USA stencil block
+      ctx.fillRect(0, 198, 128, 8);
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 232, 128, 24);
+      // Crisp NASA USA markings
       ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 18px monospace';
-      ctx.fillText('USA', 20, 122);
-      ctx.fillText('NASA', 74, 122);
+      ctx.font = 'bold 16px monospace';
+      ctx.fillText('USA', 20, 120);
+      ctx.fillText('NASA', 72, 120);
       ctx.fillStyle = '#ff4f00';
-      ctx.fillRect(18, 130, 92, 4);
+      ctx.fillRect(18, 126, 94, 4);
     });
 
     // 2. Twin 5-Segment Solid Rocket Booster Casing Texture
@@ -788,8 +822,12 @@ export const LaunchTransitModal: React.FC<{
       ctx.fillStyle = '#e2e8f0';
       ctx.fillRect(0, 0, 64, 256);
       for (let y = 0; y < 256; y += 4) {
-        ctx.fillStyle = y % 8 === 0 ? '#f8fafc' : '#cbd5e1';
+        ctx.fillStyle = y % 8 === 0 ? '#f8fafc' : '#d5dee9';
         ctx.fillRect(0, y, 64, 2);
+      }
+      for (let sx = 0; sx < 64; sx += 16) {
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(sx, 0, 1, 256);
       }
       // 5 segment black field joints + red safety bands
       for (const jy of [38, 86, 134, 182, 224]) {
@@ -841,33 +879,66 @@ export const LaunchTransitModal: React.FC<{
       ctx.fillRect(0, 61, 128, 3);
     });
 
-    // 5. Cratered Moon / Mars Surface Pixel-Art Texture
+    // 5. Authentic Non-Checkerboard Cratered Moon / Mars Regolith Pixel Texture
     const isMars = toMissionId === 'act3_greenhouse';
     const terrainTex = mkPixelTex(256, 256, (ctx) => {
-      ctx.fillStyle = isMars ? '#7c2d12' : '#475569';
-      ctx.fillRect(0, 0, 256, 256);
-      for (let y = 0; y < 256; y += 4) {
-        for (let x = 0; x < 256; x += 4) {
-          const n = ((x * 37 + y * 91) ^ (x * y)) & 7;
-          ctx.fillStyle = isMars
-            ? n < 3 ? '#9a3412' : n < 6 ? '#6c240c' : '#b45309'
-            : n < 3 ? '#64748b' : n < 6 ? '#334155' : '#94a3b8';
-          ctx.fillRect(x, y, 4, 4);
+      const hash2 = (ix: number, iy: number) => {
+        const s = Math.sin(ix * 127.1 + iy * 311.7) * 43758.5453123;
+        return s - Math.floor(s);
+      };
+      const smoothNoise = (fx: number, fy: number) => {
+        const ix = Math.floor(fx);
+        const iy = Math.floor(fy);
+        const tx = fx - ix;
+        const ty = fy - iy;
+        const a = hash2(ix, iy);
+        const b = hash2(ix + 1, iy);
+        const c = hash2(ix, iy + 1);
+        const d = hash2(ix + 1, iy + 1);
+        const ux = tx * tx * (3 - 2 * tx);
+        const uy = ty * ty * (3 - 2 * ty);
+        return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+      };
+      const pal = isMars
+        ? ['#4a1d0b', '#66280f', '#7c3314', '#94411b', '#ab5224', '#c26b36']
+        : ['#2b3441', '#384353', '#475569', '#5a687c', '#6e7e94', '#8696ab'];
+
+      for (let y = 0; y < 256; y += 2) {
+        for (let x = 0; x < 256; x += 2) {
+          const n0 = smoothNoise(x / 36, y / 36);
+          const n1 = smoothNoise(x / 12 + 7, y / 12 + 13) * 0.55;
+          const n2 = hash2(x >> 1, y >> 1) * 0.22;
+          const v = Math.min(0.99, Math.max(0, (n0 * 0.62 + n1 * 0.48 + n2 * 0.3) - 0.14));
+          const ci = Math.min(pal.length - 1, Math.floor(v * pal.length));
+          ctx.fillStyle = pal[ci];
+          ctx.fillRect(x, y, 2, 2);
         }
       }
-      // Subtle pixel crater rings
-      const craters = [[52, 58, 22], [184, 72, 28], [88, 188, 32], [198, 196, 18]];
-      for (const [cx, cy, cr] of craters) {
-        ctx.strokeStyle = isMars ? '#451a03' : '#1e293b';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(cx, cy, cr, 0, Math.PI * 2);
-        ctx.stroke();
+      // Pixel-Art Rim-Lit Impact Craters & Regolith Pebbles
+      const craterList = [
+        [46, 52, 22], [186, 62, 26], [84, 186, 30], [202, 192, 19],
+        [130, 114, 14], [32, 152, 15], [220, 128, 12], [122, 34, 13],
+      ];
+      for (const [cx, cy, cr] of craterList) {
+        ctx.fillStyle = isMars ? '#5a220c' : '#2f3a4a';
+        ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = isMars ? '#3d1506' : '#1e2736';
+        ctx.beginPath(); ctx.arc(cx - cr * 0.12, cy - cr * 0.12, cr * 0.72, 0, Math.PI * 2); ctx.fill();
+        // Sun-facing bright rim highlight
+        ctx.strokeStyle = isMars ? '#b45c2c' : '#7b8ba1';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(cx, cy, cr, -Math.PI * 0.3, Math.PI * 0.65); ctx.stroke();
+      }
+      // Subtle scattered basalt rocks / dust flecks
+      for (let i = 0; i < 64; i++) {
+        const rx = Math.floor(hash2(i, 19) * 250);
+        const ry = Math.floor(hash2(i, 83) * 250);
+        ctx.fillStyle = i % 3 === 0 ? (isMars ? '#d47c44' : '#9aa9be') : (isMars ? '#3b1506' : '#232c3b');
+        ctx.fillRect(rx, ry, i % 4 === 0 ? 4 : 2, 2);
       }
     });
-    terrainTex.wrapS = THREE.RepeatWrapping;
-    terrainTex.wrapT = THREE.RepeatWrapping;
-    terrainTex.repeat.set(6, 6);
+    terrainTex.wrapS = THREE.ClampToEdgeWrapping;
+    terrainTex.wrapT = THREE.ClampToEdgeWrapping;
 
     // 6. Earth Horizon Texture (Ocean, Continents, Clouds)
     const earthTex = mkPixelTex(256, 128, (ctx) => {
@@ -1042,15 +1113,21 @@ export const LaunchTransitModal: React.FC<{
     const goldFoilMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.25, metalness: 0.85 });
     const nozzleGlowMat = new THREE.MeshBasicMaterial({ color: 0xbae6fd });
 
-    // Core Stage (SOFI orange cryo tank + tapered LOX nose + white/black ICPS adapter)
-    const coreTank = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 3.6, 24), coreMat);
-    const coreNoseCone = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.46, 0.58, 24), coreMat);
+    // Core Stage (SOFI orange cryo tank + metallic structural collars + external LOX feedline + ICPS)
+    const coreTank = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 3.6, 28), coreMat);
+    const coreUpperRing = new THREE.Mesh(new THREE.CylinderGeometry(0.478, 0.478, 0.14, 28), whiteStageMat);
+    coreUpperRing.position.y = 1.48;
+    const coreLowerRing = new THREE.Mesh(new THREE.CylinderGeometry(0.478, 0.478, 0.14, 28), darkSteelMat);
+    coreLowerRing.position.y = -1.35;
+    const loxFeedLine = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 3.35, 10), whiteStageMat);
+    loxFeedLine.position.set(0.46, -0.08, 0.12);
+    const coreNoseCone = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.46, 0.58, 28), coreMat);
     coreNoseCone.position.y = 2.09;
     const icpsStage = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.35, 0.62, 24), whiteStageMat);
     icpsStage.position.y = 2.66;
     const boattail = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.40, 0.42, 24), whiteStageMat);
     boattail.position.y = -2.01;
-    rocketGroup.add(coreTank, coreNoseCone, icpsStage, boattail);
+    rocketGroup.add(coreTank, coreUpperRing, coreLowerRing, loxFeedLine, coreNoseCone, icpsStage, boattail);
 
     // 4 Gimbaled RS-25 Core Engine Bells + Inner Mach Glow
     for (const [ex, ez] of [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]]) {
@@ -1062,18 +1139,24 @@ export const LaunchTransitModal: React.FC<{
       rocketGroup.add(bell, inner);
     }
 
-    // Orion Service Module (ESM) + Cruciform Solar Arrays + Crew Capsule + Heatshield
+    // Orion Service Module (ESM) + RCS Thruster Pods + Cruciform Solar Arrays + Crew Capsule + Heatshield
     const upperCraftGrp = new THREE.Group();
     upperCraftGrp.position.y = 3.22;
-    const esmBody = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.52, 20), darkSteelMat);
-    const esmBand = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.14, 20), whiteStageMat);
+    const esmBody = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.52, 24), darkSteelMat);
+    const esmBand = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.14, 24), whiteStageMat);
     esmBand.position.y = 0.08;
+    for (let rcsI = 0; rcsI < 4; rcsI++) {
+      const ra = (rcsI * Math.PI) / 2;
+      const rcsPod = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.16, 0.09), whiteStageMat);
+      rcsPod.position.set(Math.cos(ra) * 0.36, -0.08, Math.sin(ra) * 0.36);
+      upperCraftGrp.add(rcsPod);
+    }
     const crewCone = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.14, 0.40, 0.68, 20),
+      new THREE.CylinderGeometry(0.14, 0.40, 0.68, 24),
       new THREE.MeshStandardMaterial({ map: orionTpsTex, roughness: 0.35, metalness: 0.25 })
     );
     crewCone.position.y = 0.60;
-    const heatshield = new THREE.Mesh(new THREE.CylinderGeometry(0.40, 0.37, 0.09, 20), goldFoilMat);
+    const heatshield = new THREE.Mesh(new THREE.CylinderGeometry(0.40, 0.37, 0.09, 24), goldFoilMat);
     heatshield.position.y = 0.24;
     upperCraftGrp.add(esmBody, esmBand, crewCone, heatshield);
 
@@ -1265,33 +1348,95 @@ export const LaunchTransitModal: React.FC<{
     earthGroup.add(earthSphere, earthAtmo);
     scene.add(earthGroup);
 
-    // Textured Cratered Planetary Landing Surface + Beacon Pad
-    const surfGeo = new THREE.PlaneGeometry(360, 360, 44, 44);
+    // 3D Cratered Lunar / Martian Regolith Terrain + Boulders + Centered Artemis Landing Apron
+    const surfGeo = new THREE.PlaneGeometry(180, 180, 96, 96);
     surfGeo.rotateX(-Math.PI / 2);
+    const craterSpecs: Array<[number, number, number, number]> = [
+      [-22, -16, 8.5, 2.2], [19, -20, 10.2, 2.6], [-28, 14, 11.4, 2.9], [24, 16, 7.6, 1.9],
+      [-12, -38, 13.0, 3.1], [32, -8, 12.2, 2.8], [-38, -28, 14.5, 3.4], [14, -46, 9.8, 2.1],
+      [-8, 26, 7.2, 1.6], [36, 28, 11.5, 2.5], [-44, 6, 9.5, 2.1], [28, -36, 8.4, 1.8],
+      [-54, -44, 18.0, 4.2], [52, -48, 16.5, 3.8], [0, -64, 22.0, 5.1], [-58, 32, 15.0, 3.3],
+    ];
     const posAttr = surfGeo.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < posAttr.count; i++) {
       const vx = posAttr.getX(i);
       const vz = posAttr.getZ(i);
       const d = Math.hypot(vx, vz);
-      const crater = Math.sin(vx * 0.14) * Math.cos(vz * 0.14) * 2.3 + (d < 16 ? 0 : Math.sin(d * 0.25) * 1.4);
-      posAttr.setY(i, crater);
+      let h = 0;
+      if (d > 8.5) {
+        const apronBlend = Math.min(1, (d - 8.5) / 6.5);
+        h += (Math.sin(vx * 0.09) * Math.cos(vz * 0.08) * 1.15 + Math.sin(vx * 0.21 + vz * 0.17) * 0.42) * apronBlend;
+        for (const [cx, cz, cr, cDepth] of craterSpecs) {
+          const cd = Math.hypot(vx - cx, vz - cz);
+          if (cd < cr * 1.45) {
+            const u = cd / cr;
+            const profile = u < 1 ? (u * u - 1) * cDepth : Math.exp(-Math.pow((u - 1.06) / 0.24, 2)) * (cDepth * 0.34);
+            h += profile * apronBlend;
+          }
+        }
+        // Distant lunar/Mars crater rim mountains framing horizon
+        if (d > 54) {
+          h += Math.pow((d - 54) / 28, 1.5) * (6.2 + Math.sin(Math.atan2(vz, vx) * 7) * 2.8);
+        }
+      }
+      posAttr.setY(i, h);
     }
     surfGeo.computeVertexNormals();
     const surfaceGroup = new THREE.Group();
-    const surfMesh = new THREE.Mesh(surfGeo, new THREE.MeshStandardMaterial({ map: terrainTex, roughness: 0.92 }));
+    const surfMesh = new THREE.Mesh(
+      surfGeo,
+      new THREE.MeshStandardMaterial({ map: terrainTex, roughness: 0.94, metalness: 0.04 })
+    );
+
+    // Sintered regolith landing pad deck & beacons centered directly at (0,0,0) beneath descent trajectory
+    const padApron = new THREE.Mesh(
+      new THREE.CylinderGeometry(6.6, 7.1, 0.06, 16),
+      new THREE.MeshStandardMaterial({ color: isMars ? 0x3b2319 : 0x1f2937, roughness: 0.85, metalness: 0.25 })
+    );
+    padApron.position.y = 0.02;
     const padBeacon = new THREE.Mesh(
-      new THREE.RingGeometry(4.5, 5.5, 32),
+      new THREE.RingGeometry(4.1, 4.7, 36),
       new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
     );
     padBeacon.rotation.x = -Math.PI / 2;
-    padBeacon.position.y = 0.25;
+    padBeacon.position.y = 0.065;
     const padCenterCross = new THREE.Mesh(
-      new THREE.RingGeometry(1.5, 2.0, 24),
+      new THREE.RingGeometry(1.4, 1.9, 28),
       new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide })
     );
     padCenterCross.rotation.x = -Math.PI / 2;
-    padCenterCross.position.y = 0.28;
-    surfaceGroup.add(surfMesh, padBeacon, padCenterCross);
+    padCenterCross.position.y = 0.07;
+    const padBarX = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 0.26), new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide }));
+    padBarX.rotation.x = -Math.PI / 2;
+    padBarX.position.y = 0.068;
+    const padBarZ = padBarX.clone();
+    padBarZ.rotation.z = Math.PI / 2;
+    surfaceGroup.add(surfMesh, padApron, padBeacon, padCenterCross, padBarX, padBarZ);
+
+    // 4 Corner Approach Strobe Beacons around Landing Circle
+    for (const [bx, bz] of [[-4.8, -4.8], [4.8, -4.8], [-4.8, 4.8], [4.8, 4.8]]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.55, 8), darkSteelMat);
+      post.position.set(bx, 0.28, bz);
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+      lamp.position.set(bx, 0.62, bz);
+      surfaceGroup.add(post, lamp);
+    }
+
+    // 28 3D Regolith & Basalt Boulders scattered beyond the pad perimeter
+    const rockMat = new THREE.MeshStandardMaterial({ color: isMars ? 0x5c2410 : 0x3f4a5c, roughness: 0.92, flatShading: true });
+    for (let ri = 0; ri < 28; ri++) {
+      const ang = ri * 2.39996;
+      const rad = 11.5 + ((ri * 7.3) % 34);
+      const rx = Math.cos(ang) * rad;
+      const rz = Math.sin(ang) * rad;
+      const scale = 0.28 + ((ri * 19) % 10) * 0.095;
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(scale, 0), rockMat);
+      rock.scale.set(1.2, 0.68, 0.95);
+      rock.rotation.set(ri * 0.7, ri * 1.1, ri * 0.4);
+      rock.position.set(rx, scale * 0.28, rz);
+      surfaceGroup.add(rock);
+    }
+
     surfaceGroup.visible = false;
     scene.add(surfaceGroup);
 
@@ -1342,7 +1487,9 @@ export const LaunchTransitModal: React.FC<{
         ctx.fillStyle = '#f8fafc';
         ctx.font = 'bold 13px monospace';
         ctx.fillText(
-          s.phase === 'ascent' ? `ALT ${frame.altKm} km · ${frame.velKms.toFixed(2)} km/s` : `ALT ${s.descentAltM.toFixed(0)} m · Vz -${s.descentVelMs.toFixed(1)} m/s`,
+          s.phase === 'ascent'
+            ? `ALT ${frame.altKm} km · ${frame.velKms.toFixed(2)} km/s`
+            : `ALT ${s.descentAltM.toFixed(0)} m · ΔPAD ${Math.hypot(s.descentX, s.descentZ).toFixed(1)}m`,
           14,
           208
         );
@@ -1574,26 +1721,29 @@ export const LaunchTransitModal: React.FC<{
         landerLegsGrp.visible = true;
         for (const w of solarWings) w.scale.set(1, 1, 1);
 
-        plumeGrp.visible = s.retroActive;
+        plumeGrp.visible = s.retroActive && s.phase === 'descent';
         plumeGrp.scale.set(0.85, 0.8 + Math.sin(tSec * 28) * 0.15, 0.85);
-        surfaceGroup.position.set(0, -(s.descentAltM * 0.32 + 2.2), -24);
+        surfaceGroup.position.set(-s.descentX, -(s.descentAltM * 0.34 + 1.12), -14 - s.descentZ);
         rocketGroup.position.set(0, 1.8, -14);
-        rocketGroup.rotation.set(s.pitchErr * 0.015, tSec * 0.25, -s.yawErr * 0.015);
+        const tiltX = s.phase === 'landed' ? 0 : s.pitchErr * 0.014;
+        const tiltZ = s.phase === 'landed' ? 0 : -s.yawErr * 0.014;
+        const spinY = s.phase === 'landed' ? 0.35 : tSec * 0.22;
+        rocketGroup.rotation.set(tiltX, spinY, tiltZ);
       }
 
       if (s.camView === 'cockpit') {
         cockpitGroup.visible = true;
         rocketGroup.visible = false;
         stick.rotation.set(s.pitchErr * 0.018, 0, -s.yawErr * 0.018);
-        const vib = (s.ignited && s.stageIdx === 1) || s.retroActive ? Math.sin(tSec * 45) * 0.009 : 0;
+        const vib = (s.ignited && s.stageIdx === 1) || (s.retroActive && s.phase === 'descent') ? Math.sin(tSec * 45) * 0.009 : 0;
         camera.position.set(vib, 1.24 + vib * 0.5, 0.24);
-        const lookY = s.phase === 'descent' ? 0.88 - s.pitchErr * 0.015 : 1.07 - s.pitchErr * 0.015;
+        const lookY = s.phase === 'descent' ? 0.82 - s.pitchErr * 0.015 : 1.07 - s.pitchErr * 0.015;
         camera.lookAt(s.yawErr * 0.02, lookY, -14);
       } else {
         cockpitGroup.visible = false;
         rocketGroup.visible = true;
-        camera.position.set(6.2, 2.6, -9.8);
-        camera.lookAt(rocketGroup.position.x, rocketGroup.position.y + 0.5, rocketGroup.position.z);
+        camera.position.set(6.2, s.phase === 'ascent' ? 2.6 : 3.2, -9.2);
+        camera.lookAt(rocketGroup.position.x, rocketGroup.position.y + 0.15, rocketGroup.position.z - 0.5);
       }
 
       renderer.render(scene, camera);
@@ -1668,7 +1818,11 @@ export const LaunchTransitModal: React.FC<{
         </div>
 
         {landingMsg && (
-          <div className="bg-rose-500/20 border border-rose-300/60 rounded px-3 py-1.5 text-[11px] text-rose-100 font-mono">
+          <div className={`rounded px-3 py-1.5 text-[11px] font-mono border ${
+            phase === 'landed'
+              ? 'bg-emerald-500/20 border-emerald-300/60 text-emerald-100'
+              : 'bg-rose-500/20 border-rose-300/60 text-rose-100'
+          }`}>
             {landingMsg}
           </div>
         )}
@@ -1739,9 +1893,9 @@ export const LaunchTransitModal: React.FC<{
               </div>
             </div>
             <div className="bg-white/[0.06] border border-white/15 rounded p-2">
-              <div className="text-[10px] text-zinc-400">ACEL (+G)</div>
+              <div className="text-[10px] text-zinc-400">{phase === 'ascent' ? 'ACEL (+G)' : 'PAD Δ'}</div>
               <div className="font-semibold text-amber-300">
-                {phase === 'ascent' ? `${frame.gLoad.toFixed(2)} G` : `${(targetG / 9.81).toFixed(2)} G`}
+                {phase === 'ascent' ? `${frame.gLoad.toFixed(2)} G` : `${descentOffsetM.toFixed(1)} m`}
               </div>
             </div>
           </div>
@@ -2222,6 +2376,7 @@ export const OrionPreFlightModal: React.FC<{
   const [emergencyKitBypass, setEmergencyKitBypass] = useState(false);
 
   const [switches, setSwitches] = useState([false, false, false, false, false]);
+  const [levelsVerified, setLevelsVerified] = useState(false);
   const switchNames = [
     '1. BAT BUS MAIN (28 VDC)',
     '2. IMU / GNC FLIGHT COMPUTERS',
@@ -2234,7 +2389,7 @@ export const OrionPreFlightModal: React.FC<{
   const hasFuse = inventoryKeys.includes('DA_EmergencyFuse') || emergencyKitBypass;
   const hasWrench = inventoryKeys.includes('DA_TorqueWrench') || emergencyKitBypass;
   const repairReady = cryoPurged && fuseReplaced && flangeTorqued;
-  const allSwitchesOn = switches.every(Boolean);
+  const allSwitchesOn = switches.every(Boolean) && levelsVerified;
   const suppliesOk = sim.o2Percent >= 19.5 && sim.waterLiters >= 10 && sim.foodKg >= 2 && sim.objectives.manifestConfigured && sim.objectives.preflightRepaired;
 
   return (
@@ -2300,14 +2455,35 @@ export const OrionPreFlightModal: React.FC<{
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-center text-[11px]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono text-center text-[11px]">
               <div className="bg-white/[0.06] border border-white/15 rounded p-2">O₂ {sim.o2Percent.toFixed(1)}%</div>
               <div className="bg-white/[0.06] border border-white/15 rounded p-2">CO₂ {Math.round(sim.co2Ppm)} ppm</div>
               <div className="bg-white/[0.06] border border-white/15 rounded p-2">H₂O {sim.waterLiters.toFixed(1)} L</div>
+              <div className="bg-white/[0.06] border border-white/15 rounded p-2">CAB {sim.cabinPressureKpa.toFixed(1)} kPa</div>
+              <div className="bg-white/[0.06] border border-white/15 rounded p-2">TRAJE O₂ {Math.round(sim.suitO2Percent)}%</div>
               <div className={`border rounded p-2 ${suppliesOk ? 'bg-emerald-500/20 border-emerald-300 text-emerald-200' : 'bg-rose-500/20 border-rose-300 text-rose-200'}`}>
                 {suppliesOk ? 'CARGA OK' : 'FALTA MANIFIESTO'}
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                soundEngine.playClick();
+                setLevelsVerified((v) => !v);
+              }}
+              className={`w-full p-2.5 rounded border flex items-center justify-between ${
+                levelsVerified ? 'bg-emerald-500/25 border-emerald-300 text-emerald-100' : 'bg-amber-500/15 border-amber-300/60 text-amber-100'
+              }`}
+            >
+              <span className="font-mono font-semibold">
+                {lang === 'es'
+                  ? '0. COMPROBAR TODOS LOS NIVELES (O₂ · CO₂ · H₂O · 101.3 kPa · TRAJE · MANIFIESTO)'
+                  : '0. VERIFY ALL TELEMETRY LEVELS (O₂ · CO₂ · H₂O · 101.3 kPa · SUIT · MANIFEST)'}
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${levelsVerified ? 'bg-emerald-400 text-zinc-950' : 'bg-amber-400 text-zinc-950'}`}>
+                {levelsVerified ? 'VERIFICADO' : 'COMPROBAR'}
+              </span>
+            </button>
             <div className="space-y-1.5">
               {switchNames.map((sw, idx) => (
                 <button

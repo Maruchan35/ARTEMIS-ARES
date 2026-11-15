@@ -1,7 +1,7 @@
 {
   "name": "orbital-quarters",
   "private": true,
-  "version": "1.0.0",
+  "version": "3.1.0",
   "type": "module",
   "description": "ORBITAL QUARTERS - Standalone Local Single-Player Space Habitation Trainer",
   "scripts": {

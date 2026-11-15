@@ -646,6 +646,11 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       }
     }
 
+    if (!target.kind) {
+      animPulsesRef.current.reach = 1.0;
+      return;
+    }
+
     if (target.kind === 'item') {
       const idx = sim.worldItems.findIndex((i) => i.uid === target.id);
       if (idx === -1) return;
@@ -1889,13 +1894,36 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     }
 
     // =========================================================================
-    // SOUTH HANGAR: WALKABLE 3D ORION CREW MODULE (`6.8..13.2, -8.2..-1.4`)
+    // SOUTH HANGAR: LC-39B LAUNCH BAY GANTRY + WALKABLE 3D ORION CREW MODULE
     // =========================================================================
     const hatchStatusLedMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
     const orionFaultLedMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
     const orionPowerLedMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
     const orionTileMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.72, metalness: 0.45 });
     const orionShellMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.35, metalness: 0.4 });
+    const gantryDeckMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.65, metalness: 0.6 });
+    const gantryStripeMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5, metalness: 0.25 });
+    const gantryRailMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4, metalness: 0.55 });
+
+    // Launch Bay Boarding Gantry Catwalk leading from South Corridor (Z=-1.4) to Orion Hatch (Z=-4.46)
+    addBox(10.00, 0.03, -2.95, 2.35, 0.06, 2.95, gantryDeckMat, false);
+    addBox(8.88, 0.065, -2.95, 0.10, 0.02, 2.92, gantryStripeMat, false);
+    addBox(11.12, 0.065, -2.95, 0.10, 0.02, 2.92, gantryStripeMat, false);
+    // Yellow gantry handrails & cryo umbilical pipes on outer sides (outside X=8.9..11.1 walkable path)
+    for (const rx of [8.64, 11.36]) {
+      addBox(rx, 0.92, -2.95, 0.06, 0.06, 2.88, gantryRailMat, false);
+      addBox(rx, 0.52, -2.95, 0.05, 0.05, 2.88, gantryRailMat, false);
+      for (const pz of [-1.75, -2.95, -4.15]) {
+        addBox(rx, 0.48, pz, 0.08, 0.96, 0.08, darkMetalMat, false);
+      }
+      // Cryo & power umbilical hose arcing overhead toward Orion fairing
+      const umbilical = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 2.85, 8), cyanLedMat);
+      umbilical.rotation.x = Math.PI / 2;
+      umbilical.position.set(rx + (rx < 10 ? -0.35 : 0.35), 2.15, -2.95);
+      roomGroup.add(umbilical);
+    }
+    addSignPlate('BAHÍA DE LANZAMIENTO LC-39B · PASARELA ORION', '#0ea5e9', 10.00, 2.45, -1.62, Math.PI);
+
     // Port & Starboard pressure fuselage walls matching Furn_OrionHull_W/E
     addBox(7.535, 1.32, -6.365, 1.43, 2.64, 3.63, orionShellMat);
     addBox(12.465, 1.32, -6.365, 1.43, 2.64, 3.63, orionShellMat);
@@ -1907,6 +1935,30 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     const orionRing = new THREE.Mesh(new THREE.TorusGeometry(1.18, 0.09, 12, 32), amberLedMat);
     orionRing.position.set(10.00, 1.68, -4.46);
     roomGroup.add(orionRing);
+
+    // Animated 3D Orion Pressure Hatch Door (`orionHatchGroup` at Z=-4.55) with viewport window & lock wheel
+    const orionHatchGroup = new THREE.Group();
+    orionHatchGroup.position.set(10.00, 1.12, -4.55);
+    const hatchLeaf = new THREE.Mesh(
+      new THREE.BoxGeometry(2.18, 2.24, 0.14),
+      new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.35, metalness: 0.65 })
+    );
+    const hatchRim = new THREE.Mesh(
+      new THREE.BoxGeometry(2.26, 2.30, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.45, metalness: 0.7 })
+    );
+    const hatchWindow = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.28, 0.28, 0.18, 16),
+      new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.35, transparent: true, opacity: 0.58 })
+    );
+    hatchWindow.rotation.x = Math.PI / 2;
+    hatchWindow.position.set(0, 0.36, 0);
+    const hatchWheelOuter = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.025, 8, 18), gantryRailMat);
+    hatchWheelOuter.position.set(0.55, -0.10, 0.11);
+    const hatchWheelInner = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.025, 8, 18), gantryRailMat);
+    hatchWheelInner.position.set(0.55, -0.10, -0.11);
+    orionHatchGroup.add(hatchRim, hatchLeaf, hatchWindow, hatchWheelOuter, hatchWheelInner);
+    roomGroup.add(orionHatchGroup);
 
     // Port Console (`orion_fault_panel` at 8.82, -6.10): Cryo Manifold + RS-25 Fuse Box
     addBox(8.515, 0.60, -6.15, 0.53, 1.20, 1.80, wallMetalMat);
@@ -2508,6 +2560,13 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       }
       orionFaultLedMat.color.setHex(sim.objectives.preflightRepaired ? 0x22c55e : 0xef4444);
       orionPowerLedMat.color.setHex(sim.objectives.preflightSystemsOn ? 0x22c55e : 0xf59e0b);
+      const orionHatchDoorState = sim.doors.find((d) => d.id === 'door_orion_hatch');
+      const hatchProg = orionHatchDoorState?.openProgress ?? (sim.orionHatchOpen ? 1 : 0);
+      orionHatchGroup.position.x = 10.00 + hatchProg * 2.15;
+      orionHatchGroup.visible = hatchProg < 0.98;
+      hatchStatusLedMat.color.setHex(
+        sim.orionHatchSealed ? 0x22c55e : sim.orionHatchOpen ? 0x38bdf8 : 0xf59e0b
+      );
 
       // Drive Machine-Room 3D Gauges, Breakers, MPEV Handwheels & Historical Props
       ogaLedMat.color.setHex(sim.suitO2Percent >= 75 ? 0x22c55e : 0xf59e0b);
@@ -2769,7 +2828,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
             <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-900/12">
               <div className="flex items-center gap-2 text-[11px] font-mono tracking-wider text-slate-600">
                 <span className="w-2 h-2 rounded-full bg-sky-600" />
-                NASA BVAD · ESDMD-001
+                NASA BVAD · ESDMD-001 · v3.1.0
               </div>
               <div className="flex items-center gap-1.5">
                 <button
@@ -2807,7 +2866,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
                 AETHER<span className="font-semibold text-sky-700">-4</span>
               </h1>
               <div className="text-xs font-mono tracking-[0.18em] text-slate-600 uppercase">
-                ARTEMIS–ARES · ORBITAL QUARTERS 3D
+                ARTEMIS–ARES · ORBITAL QUARTERS 3D · v3.1.0
               </div>
             </div>
 
@@ -3945,7 +4004,10 @@ export const SpaceSinglePlayerGame: React.FC = () => {
             const sim = simRef.current;
             const kind: RoomStationKind = mode === 'fault_repair' ? 'orion_fault_panel' : 'orion_power_panel';
             if (mode === 'fault_repair') sim.objectives.preflightRepaired = true;
-            if (mode === 'power_switches') sim.objectives.preflightSystemsOn = true;
+            if (mode === 'power_switches') {
+              sim.objectives.preflightSystemsOn = true;
+              sim.orionLevelsChecked = true;
+            }
             const st = sim.stations.find((s) => s.kind === kind);
             if (st) st.done = true;
             const brief = getStationTrainingBrief(kind);
