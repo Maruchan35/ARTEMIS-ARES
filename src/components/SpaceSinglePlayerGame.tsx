@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import {
+  Activity,
   Compass,
   DoorOpen,
+  Droplets,
+  Heart,
   Info,
   Layers,
   MapPin,
@@ -10,11 +13,15 @@ import {
   Newspaper,
   Package,
   Rocket,
+  Shield,
   Sliders,
   Sparkles,
   User,
+  Utensils,
   Volume2,
   VolumeX,
+  Wind,
+  Zap,
 } from 'lucide-react';
 import { NASA_CONSTANTS } from '../data/nasaConstants';
 import {
@@ -152,6 +159,12 @@ function getMissionObjectiveSummary(missionId: MissionId, obj: SpaceRoomState['o
 
 export const SpaceSinglePlayerGame: React.FC = () => {
   const [screen, setScreen] = useState<ScreenMode>('menu');
+  const screenRef = useRef<ScreenMode>('menu');
+  screenRef.current = screen;
+  const [escTabReq, setEscTabReq] = useState<{
+    tab?: 'map_ops' | 'telemetry' | 'phases_settings';
+    nonce: number;
+  }>({ nonce: 0 });
   const [lang, setLang] = useState<LangMode>('es');
   const [audioOn, setAudioOn] = useState(soundEngine.enabled);
   const [musicOn, setMusicOn] = useState(soundEngine.musicEnabled);
@@ -186,6 +199,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     from: MissionId;
     to: MissionId;
     preserveCarry: boolean;
+    origin: 'menu' | 'esc_menu' | 'station';
   } | null>(null);
 
   const [codexInit, setCodexInit] = useState<{ tab: 'papers' | 'notes'; paperId: number; noteId: number }>({
@@ -245,6 +259,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     pressureKpa: simRef.current.cabinPressureKpa,
     suitO2Percent: simRef.current.suitO2Percent,
     hydrationPercent: simRef.current.hydrationPercent,
+    nutritionPercent: simRef.current.nutritionPercent,
     airlockStep: simRef.current.airlockStep,
     airlockPressureKpa: simRef.current.airlockPressureKpa,
     rpcmLoadKwe: simRef.current.rpcmLoadKwe,
@@ -312,6 +327,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       pressureKpa: s.cabinPressureKpa,
       suitO2Percent: s.suitO2Percent,
       hydrationPercent: s.hydrationPercent,
+      nutritionPercent: s.nutritionPercent,
       airlockStep: s.airlockStep,
       airlockPressureKpa: s.airlockPressureKpa,
       rpcmLoadKwe: s.rpcmLoadKwe,
@@ -476,10 +492,16 @@ export const SpaceSinglePlayerGame: React.FC = () => {
         return;
       }
       const fromId = simRef.current.currentMissionId;
+      const origin: 'menu' | 'esc_menu' | 'station' =
+        screenRef.current === 'menu'
+          ? 'menu'
+          : activeModalRef.current === 'esc_menu'
+          ? 'esc_menu'
+          : 'station';
       ignoreNextUnlockRef.current = true;
       document.exitPointerLock?.();
       setScreen('room');
-      setLaunchTransitTarget({ from: fromId, to: missionId, preserveCarry });
+      setLaunchTransitTarget({ from: fromId, to: missionId, preserveCarry, origin });
       setActiveModal('launch_transit');
     },
     [applyMissionLoad]
@@ -624,6 +646,8 @@ export const SpaceSinglePlayerGame: React.FC = () => {
           sim.hydrationPercent = 100;
           sim.heartRateBpm = Math.max(66, sim.heartRateBpm - 6);
         } else {
+          sim.nutritionPercent = 100;
+          sim.foodKg = Math.max(2.0, Number((sim.foodKg - 0.27).toFixed(2)));
           sim.crewMoralePercent = Math.min(100, sim.crewMoralePercent + 4);
         }
         animPulsesRef.current.consume = 1.0;
@@ -744,6 +768,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
           from: res.openLaunchTransit.from,
           to: res.openLaunchTransit.to,
           preserveCarry: true,
+          origin: 'station',
         });
         setActiveModal('launch_transit');
         return;
@@ -1020,7 +1045,15 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       const tgt = e.target as HTMLElement | null;
       if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT' || tgt.isContentEditable)) return;
       keysRef.current[e.code] = true;
-      if (e.code === 'KeyQ') {
+      if (e.code === 'KeyM' && (!activeModalRef.current || activeModalRef.current === 'esc_menu')) {
+        e.preventDefault();
+        ignoreNextUnlockRef.current = true;
+        document.exitPointerLock?.();
+        lastEscOpenMsRef.current = performance.now();
+        soundEngine.playClick();
+        setEscTabReq((r) => ({ tab: 'map_ops', nonce: r.nonce + 1 }));
+        setActiveModal((m) => (m === 'esc_menu' ? null : 'esc_menu'));
+      } else if (e.code === 'KeyQ') {
         ignoreNextUnlockRef.current = true;
         document.exitPointerLock?.();
         setActiveModal((m) => (m === 'esc_menu' ? null : 'esc_menu'));
@@ -1344,13 +1377,13 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     const stripAmber = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
     const stripPurple = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
     const stripCrimson = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
-    addBox(7.2, 0.008, 3.5, 4.6, 0.014, 0.14, stripCyan, false); // West Hab -> Hub
-    addBox(12.8, 0.008, 3.5, 4.8, 0.014, 0.14, stripGreen, false); // Hub -> East Lab
-    addBox(10.0, 0.008, 7.2, 0.14, 0.014, 5.4, stripOrange, false); // Hub -> North MEDS
-    addBox(10.0, 0.008, -0.4, 0.14, 0.014, 6.2, stripAmber, false); // Hub -> South Airlock
-    addBox(3.1, 0.008, -1.2, 0.14, 0.014, 3.2, stripCyan, false); // West Hab -> SW NBL Pool
-    addBox(19.3, 0.008, 8.2, 0.14, 0.014, 3.2, stripPurple, false); // East Lab -> NE Centrifuge
-    addBox(19.3, 0.008, -1.2, 0.14, 0.014, 3.2, stripCrimson, false); // East Lab -> SE Fire Chamber
+    addBox(8.5, 0.008, 4.0, 4.6, 0.014, 0.14, stripCyan, false); // West Hab -> Hub
+    addBox(16.7, 0.008, 4.0, 4.6, 0.014, 0.14, stripGreen, false); // Hub -> East Lab
+    addBox(12.6, 0.008, 8.8, 0.14, 0.014, 5.2, stripOrange, false); // Hub -> North MEDS
+    addBox(12.6, 0.008, -0.8, 0.14, 0.014, 5.2, stripAmber, false); // Hub -> South Airlock
+    addBox(2.8, 0.008, -2.3, 0.14, 0.014, 4.8, stripCyan, false); // West Hab -> SW NBL Pool
+    addBox(24.4, 0.008, 10.3, 0.14, 0.014, 4.8, stripPurple, false); // East Lab -> NE Centrifuge
+    addBox(24.4, 0.008, -2.3, 0.14, 0.014, 4.8, stripCrimson, false); // East Lab -> SE Machine/Fire Hall
 
     // Render Non-overlapping Outer & Interior Bulkhead Partitions directly from colliders (skip Wall_WestHab_N_Win for viewport cutout!)
     for (const b of SPACE_ROOM_COLLIDERS.slice(0, WALL_COLLIDER_COUNT)) {
@@ -1363,52 +1396,52 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       addBox(cx, 0.45, cy, w + 0.02, 0.9, d + 0.02, wallMetalMat, true);
     }
 
-    // North West-Hab Wall with Impenetrable Panoramic Viewport Window (X=0..6.45, Y=7.0..7.25, centered X=3.20)
-    addBox(0.925, 1.7, 7.12, 1.85, 3.4, 0.25, wallPaddedMat, false);
-    addBox(0.925, 0.45, 7.12, 1.88, 0.9, 0.28, wallMetalMat, true);
-    addBox(5.50, 1.7, 7.12, 1.90, 3.4, 0.25, wallPaddedMat, false);
-    addBox(5.50, 0.45, 7.12, 1.93, 0.9, 0.28, wallMetalMat, true);
-    addBox(3.20, 0.525, 7.12, 2.70, 1.05, 0.25, wallMetalMat, true);
-    addBox(3.20, 2.975, 7.12, 2.70, 0.85, 0.25, wallPaddedMat, false);
-    addBox(3.20, 1.06, 7.04, 2.76, 0.08, 0.34, wallMetalMat);
-    addBox(3.20, 2.54, 7.04, 2.76, 0.08, 0.34, wallMetalMat);
-    addBox(1.86, 1.80, 7.04, 0.1, 1.5, 0.34, wallMetalMat);
-    addBox(4.54, 1.80, 7.04, 0.1, 1.5, 0.34, wallMetalMat);
-    addBox(3.20, 1.80, 7.08, 0.07, 1.48, 0.24, wallMetalMat);
+    // North West-Hab Wall with Impenetrable Panoramic Viewport Window (X=-1.4..7.05, Y=8.6..8.85, centered X=2.80)
+    addBox(-0.10, 1.7, 8.725, 2.60, 3.4, 0.25, wallPaddedMat, false);
+    addBox(-0.10, 0.45, 8.725, 2.63, 0.9, 0.28, wallMetalMat, true);
+    addBox(5.725, 1.7, 8.725, 2.65, 3.4, 0.25, wallPaddedMat, false);
+    addBox(5.725, 0.45, 8.725, 2.68, 0.9, 0.28, wallMetalMat, true);
+    addBox(2.80, 0.525, 8.725, 3.20, 1.05, 0.25, wallMetalMat, true);
+    addBox(2.80, 2.975, 8.725, 3.20, 0.85, 0.25, wallPaddedMat, false);
+    addBox(2.80, 1.06, 8.64, 3.26, 0.08, 0.34, wallMetalMat);
+    addBox(2.80, 2.54, 8.64, 3.26, 0.08, 0.34, wallMetalMat);
+    addBox(1.20, 1.80, 8.64, 0.1, 1.5, 0.34, wallMetalMat);
+    addBox(4.40, 1.80, 8.64, 0.1, 1.5, 0.34, wallMetalMat);
+    addBox(2.80, 1.80, 8.68, 0.07, 1.48, 0.24, wallMetalMat);
 
-    // 14 Portal Lintels + Overhead Signage between Modules and Corridors
+    // 14 Enlarged 2.8m Portal Lintels + Overhead Signage between Modules and Corridors (matched 1:1 with Lintel_* AABBs!)
     const doorways: Array<{ cx: number; cy: number; alongX: boolean; hex: number; signA: string; signB: string }> = [
-      { cx: 6.32, cy: 3.5, alongX: false, hex: 0x38bdf8, signA: 'CORREDOR OESTE →', signB: '← DORM / GALLEY' },
-      { cx: 8.28, cy: 3.5, alongX: false, hex: 0x38bdf8, signA: 'NÚCLEO CENTRAL →', signB: '← CORREDOR OESTE' },
-      { cx: 11.72, cy: 3.5, alongX: false, hex: 0x22c55e, signA: 'CORREDOR ESTE →', signB: '← NÚCLEO CENTRAL' },
-      { cx: 13.68, cy: 3.5, alongX: false, hex: 0x22c55e, signA: 'LAB INGENIERÍA →', signB: '← CORREDOR ESTE' },
-      { cx: 10.0, cy: 5.92, alongX: true, hex: 0xff4f00, signA: '↑ CORREDOR NORTE', signB: '↓ NÚCLEO CENTRAL' },
-      { cx: 10.0, cy: 8.28, alongX: true, hex: 0xff4f00, signA: '↑ PUENTE MEDS', signB: '↓ CORREDOR NORTE' },
-      { cx: 10.0, cy: 1.08, alongX: true, hex: 0xf59e0b, signA: '↑ NÚCLEO CENTRAL', signB: '↓ CORREDOR SUR' },
-      { cx: 10.0, cy: -1.28, alongX: true, hex: 0xf59e0b, signA: '↑ CORREDOR SUR', signB: '↓ HANGAR ORION' },
-      { cx: 3.10, cy: -0.08, alongX: true, hex: 0x06b6d4, signA: '↑ DORM / GALLEY', signB: '↓ CORREDOR NBL' },
-      { cx: 3.10, cy: -2.32, alongX: true, hex: 0x06b6d4, signA: '↑ CORREDOR NBL', signB: '↓ PISCINA NBL' },
-      { cx: 19.30, cy: 7.08, alongX: true, hex: 0xa855f7, signA: '↑ CORREDOR 4.5G', signB: '↓ LAB ESTE' },
-      { cx: 19.30, cy: 9.32, alongX: true, hex: 0xa855f7, signA: '↑ CENTRÍFUGA 4.5G', signB: '↓ CORREDOR 4.5G' },
-      { cx: 19.30, cy: -0.08, alongX: true, hex: 0xf43f5e, signA: '↑ LAB ESTE', signB: '↓ CORREDOR FUEGO 0g' },
-      { cx: 19.30, cy: -2.32, alongX: true, hex: 0xf43f5e, signA: '↑ CORREDOR FUEGO 0g', signB: '↓ CÁMARA ISS RACK #2' },
+      { cx: 6.92, cy: 4.0, alongX: false, hex: 0x38bdf8, signA: 'CORREDOR OESTE →', signB: '← DORM / GALLEY' },
+      { cx: 10.08, cy: 4.0, alongX: false, hex: 0x38bdf8, signA: 'NÚCLEO CENTRAL →', signB: '← CORREDOR OESTE' },
+      { cx: 15.12, cy: 4.0, alongX: false, hex: 0x22c55e, signA: 'CORREDOR ESTE →', signB: '← NÚCLEO CENTRAL' },
+      { cx: 18.28, cy: 4.0, alongX: false, hex: 0x22c55e, signA: 'LAB INGENIERÍA →', signB: '← CORREDOR ESTE' },
+      { cx: 12.6, cy: 7.22, alongX: true, hex: 0xff4f00, signA: '↑ CORREDOR NORTE', signB: '↓ NÚCLEO CENTRAL' },
+      { cx: 12.6, cy: 10.38, alongX: true, hex: 0xff4f00, signA: '↑ PUENTE MEDS', signB: '↓ CORREDOR NORTE' },
+      { cx: 12.6, cy: 0.78, alongX: true, hex: 0xf59e0b, signA: '↑ NÚCLEO CENTRAL', signB: '↓ CORREDOR SUR' },
+      { cx: 12.6, cy: -2.38, alongX: true, hex: 0xf59e0b, signA: '↑ CORREDOR SUR', signB: '↓ HANGAR ORION' },
+      { cx: 2.80, cy: -0.72, alongX: true, hex: 0x06b6d4, signA: '↑ DORM / GALLEY', signB: '↓ CORREDOR NBL' },
+      { cx: 2.80, cy: -3.88, alongX: true, hex: 0x06b6d4, signA: '↑ CORREDOR NBL', signB: '↓ PISCINA NBL' },
+      { cx: 24.40, cy: 8.72, alongX: true, hex: 0xa855f7, signA: '↑ CORREDOR 4.5G', signB: '↓ LAB ESTE' },
+      { cx: 24.40, cy: 11.88, alongX: true, hex: 0xa855f7, signA: '↑ CENTRÍFUGA 4.5G', signB: '↓ CORREDOR 4.5G' },
+      { cx: 24.40, cy: -0.72, alongX: true, hex: 0xf43f5e, signA: '↑ LAB ESTE', signB: '↓ CORREDOR FUEGO 0g' },
+      { cx: 24.40, cy: -3.88, alongX: true, hex: 0xf43f5e, signA: '↑ CORREDOR FUEGO 0g', signB: '↓ SALA ECLSS / 0g' },
     ];
     for (const dw of doorways) {
       const trimMat = new THREE.MeshBasicMaterial({ color: dw.hex });
       if (dw.alongX) {
-        addBox(dw.cx, 2.92, dw.cy, 2.20, 0.96, 0.22, wallMetalMat, false);
-        addBox(dw.cx, 2.45, dw.cy, 2.20, 0.06, 0.26, trimMat, false);
-        addBox(dw.cx - 1.08, 1.22, dw.cy, 0.08, 2.44, 0.26, darkMetalMat, false);
-        addBox(dw.cx + 1.08, 1.22, dw.cy, 0.08, 2.44, 0.26, darkMetalMat, false);
-        addSignPlate(dw.signA, `#${dw.hex.toString(16).padStart(6, '0')}`, dw.cx, 2.75, dw.cy - 0.13, Math.PI);
-        addSignPlate(dw.signB, `#${dw.hex.toString(16).padStart(6, '0')}`, dw.cx, 2.75, dw.cy + 0.13, 0);
+        addBox(dw.cx, 2.92, dw.cy, 2.80, 0.96, 0.24, wallMetalMat, false);
+        addBox(dw.cx, 2.45, dw.cy, 2.80, 0.06, 0.28, trimMat, false);
+        addBox(dw.cx - 1.38, 1.22, dw.cy, 0.08, 2.44, 0.28, darkMetalMat, false);
+        addBox(dw.cx + 1.38, 1.22, dw.cy, 0.08, 2.44, 0.28, darkMetalMat, false);
+        addSignPlate(dw.signA, `#${dw.hex.toString(16).padStart(6, '0')}`, dw.cx, 2.75, dw.cy - 0.14, Math.PI);
+        addSignPlate(dw.signB, `#${dw.hex.toString(16).padStart(6, '0')}`, dw.cx, 2.75, dw.cy + 0.14, 0);
       } else {
-        addBox(dw.cx, 2.92, dw.cy, 0.22, 0.96, 2.20, wallMetalMat, false);
-        addBox(dw.cx, 2.45, dw.cy, 0.26, 0.06, 2.20, trimMat, false);
-        addBox(dw.cx, 1.22, dw.cy - 1.08, 0.26, 2.44, 0.08, darkMetalMat, false);
-        addBox(dw.cx, 1.22, dw.cy + 1.08, 0.26, 2.44, 0.08, darkMetalMat, false);
-        addSignPlate(dw.signA, `#${dw.hex.toString(16).padStart(6, '0')}`, dw.cx - 0.13, 2.75, dw.cy, -Math.PI / 2);
-        addSignPlate(dw.signB, `#${dw.hex.toString(16).padStart(6, '0')}`, dw.cx + 0.13, 2.75, dw.cy, Math.PI / 2);
+        addBox(dw.cx, 2.92, dw.cy, 0.24, 0.96, 2.80, wallMetalMat, false);
+        addBox(dw.cx, 2.45, dw.cy, 0.28, 0.06, 2.80, trimMat, false);
+        addBox(dw.cx, 1.22, dw.cy - 1.38, 0.28, 2.44, 0.08, darkMetalMat, false);
+        addBox(dw.cx, 1.22, dw.cy + 1.38, 0.28, 2.44, 0.08, darkMetalMat, false);
+        addSignPlate(dw.signA, `#${dw.hex.toString(16).padStart(6, '0')}`, dw.cx - 0.14, 2.75, dw.cy, -Math.PI / 2);
+        addSignPlate(dw.signB, `#${dw.hex.toString(16).padStart(6, '0')}`, dw.cx + 0.14, 2.75, dw.cy, Math.PI / 2);
       }
 
       // Circular CBM bulkhead flange bezel + manual latch wheel on portal archways
@@ -1416,20 +1449,20 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       archRing.position.set(dw.cx, 2.52, dw.cy);
       if (!dw.alongX) archRing.rotation.y = Math.PI / 2;
       const wheelBoss = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.016, 6, 12), crimsonMat);
-      wheelBoss.position.set(dw.cx + (dw.alongX ? 0.94 : 0), 1.38, dw.cy + (dw.alongX ? 0 : 0.94));
+      wheelBoss.position.set(dw.cx + (dw.alongX ? 1.22 : 0), 1.38, dw.cy + (dw.alongX ? 0 : 1.22));
       if (!dw.alongX) wheelBoss.rotation.y = Math.PI / 2;
       roomGroup.add(archRing, wheelBoss);
     }
 
-    // Crisp Pixel-Art 3D Architectural Rib Columns (every ~1.75 m), Kickplates, Perforated Grating & EVA/IVA Handrails
+    // Crisp Pixel-Art 3D Architectural Rib Columns (every ~2.0 m), Kickplates, Perforated Grating & EVA/IVA Handrails
     const ribSpots: Array<[number, number, boolean]> = [
-      [1.00, 0.05, true], [5.30, 0.05, true],
-      [0.05, 1.75, false], [0.05, 3.50, false], [0.05, 5.25, false],
-      [14.75, 0.05, true], [16.50, 0.05, true], [14.75, 6.95, true], [16.50, 6.95, true],
-      [20.55, 1.75, false], [20.55, 3.50, false], [20.55, 5.25, false],
-      [7.25, 9.60, false], [7.25, 11.40, false], [12.75, 9.60, false], [12.75, 11.40, false],
-      [6.85, -2.50, false], [6.85, -4.25, false], [13.15, -2.50, false], [13.15, -4.25, false],
-      [15.25, -3.50, false], [15.25, -5.25, false], [21.75, -3.50, false], [21.75, -5.25, false],
+      [0.40, -0.55, true], [5.40, -0.55, true],
+      [-1.35, 1.90, false], [-1.35, 4.00, false], [-1.35, 6.20, false],
+      [23.50, -0.55, true], [25.60, -0.55, true], [23.50, 8.55, true], [25.60, 8.55, true],
+      [27.35, 1.80, false], [27.35, 4.00, false], [27.35, 6.20, false],
+      [8.65, 12.60, false], [8.65, 15.00, false], [16.55, 12.60, false], [16.55, 15.00, false],
+      [7.65, -3.80, false], [7.65, -5.20, false], [17.55, -3.80, false], [17.55, -5.20, false],
+      [19.65, -5.50, false], [19.65, -8.20, false], [28.75, -5.50, false], [28.75, -8.20, false],
     ];
     for (const [rx, ry, alongX] of ribSpots) {
       addBox(rx, 1.70, ry, alongX ? 0.14 : 0.12, 3.35, alongX ? 0.12 : 0.14, darkMetalMat, false);
@@ -1437,20 +1470,20 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       addBox(rx, 3.30, ry, alongX ? 1.55 : 0.16, 0.16, alongX ? 0.16 : 1.55, darkMetalMat, false);
     }
 
-    // Continuous EVA/IVA Wall Handrails mounted flush along solid bulkhead walls (never crossing corridors or room centers)
+    // Continuous EVA/IVA Wall Handrails mounted flush along solid bulkhead walls
     const evaHandrailRuns: Array<[number, number, number, boolean, THREE.Material]> = [
-      [7.30, 4.52, 1.5, true, bluePipeMat],
-      [7.30, 2.48, 1.5, true, crimsonMat],
-      [12.70, 4.52, 1.5, true, bluePipeMat],
-      [12.70, 2.48, 1.5, true, crimsonMat],
-      [8.98, 7.10, 1.8, false, bluePipeMat],
-      [11.02, 7.10, 1.8, false, crimsonMat],
-      [8.98, -0.10, 1.8, false, crimsonMat],
-      [11.02, -0.10, 1.8, false, bluePipeMat],
-      [15.90, 6.92, 3.6, true, bluePipeMat],
-      [7.28, 10.90, 3.6, false, bluePipeMat],
-      [12.72, 10.90, 3.6, false, crimsonMat],
-      [13.12, -4.80, 4.2, false, crimsonMat],
+      [8.50, 5.34, 2.2, true, bluePipeMat],
+      [8.50, 2.66, 2.2, true, crimsonMat],
+      [16.70, 5.34, 2.2, true, bluePipeMat],
+      [16.70, 2.66, 2.2, true, crimsonMat],
+      [11.26, 8.80, 2.2, false, bluePipeMat],
+      [13.94, 8.80, 2.2, false, crimsonMat],
+      [11.26, -0.80, 2.2, false, crimsonMat],
+      [13.94, -0.80, 2.2, false, bluePipeMat],
+      [21.60, 8.54, 4.2, true, bluePipeMat],
+      [8.66, 13.70, 4.8, false, bluePipeMat],
+      [16.54, 13.70, 4.8, false, crimsonMat],
+      [17.54, -4.40, 3.4, false, crimsonMat],
     ];
     for (const [hx, hy, hLen, alongX, railMat] of evaHandrailRuns) {
       const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, hLen, 8), railMat);
@@ -1460,11 +1493,11 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       roomGroup.add(bar);
     }
     const floorConduitMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.65, metalness: 0.78 });
-    addBox(10.0, 0.004, 3.5, 1.15, 0.01, 4.0, floorConduitMat, false);
-    addBox(17.2, 0.004, 3.5, 1.10, 0.01, 5.2, floorConduitMat, false);
-    addBox(18.5, 0.004, -5.2, 1.10, 0.01, 4.4, floorConduitMat, false);
+    addBox(12.6, 0.004, 4.0, 1.35, 0.01, 4.8, floorConduitMat, false);
+    addBox(24.0, 0.004, 4.0, 1.25, 0.01, 5.8, floorConduitMat, false);
+    addBox(24.2, 0.004, -8.1, 1.40, 0.01, 5.6, floorConduitMat, false);
 
-    // 4 Animated Automatic Sliding Bulkhead Doors inside Corridors
+    // 7 Animated Automatic Sliding 2.8m Bulkhead Doors inside Corridors (Orion Side Hatch uses hinged orionHatchGroup!)
     const doorVisuals: Array<{
       id: string;
       axis: 'x' | 'y';
@@ -1475,54 +1508,55 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       ledMat: THREE.MeshBasicMaterial;
     }> = [];
     for (const d of simRef.current.doors) {
+      if (d.id === 'door_orion_hatch') continue;
       const leafA = new THREE.Group();
       const leafB = new THREE.Group();
       const ledMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
       const glassStripMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
       if (d.axis === 'x') {
-        addBox(d.x, 2.92, d.y, 0.20, 0.96, 2.20, wallMetalMat, false);
-        const pA = new THREE.Mesh(new THREE.BoxGeometry(0.11, 2.40, 1.08), wallMetalMat);
-        const gA = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.90, 0.18), glassStripMat);
-        gA.position.set(0, 0.15, 0.34);
+        addBox(d.x, 2.92, d.y, 0.24, 0.96, 2.80, wallMetalMat, false);
+        const pA = new THREE.Mesh(new THREE.BoxGeometry(0.11, 2.40, 1.40), wallMetalMat);
+        const gA = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.92, 0.22), glassStripMat);
+        gA.position.set(0, 0.15, 0.44);
         leafA.add(pA, gA);
-        const pB = new THREE.Mesh(new THREE.BoxGeometry(0.11, 2.40, 1.08), wallMetalMat);
-        const gB = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.90, 0.18), glassStripMat);
-        gB.position.set(0, 0.15, -0.34);
+        const pB = new THREE.Mesh(new THREE.BoxGeometry(0.11, 2.40, 1.40), wallMetalMat);
+        const gB = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.92, 0.22), glassStripMat);
+        gB.position.set(0, 0.15, -0.44);
         leafB.add(pB, gB);
-        leafA.position.set(d.x, 1.20, d.y - 0.54);
-        leafB.position.set(d.x, 1.20, d.y + 0.54);
-        const led = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.08, 0.36), ledMat);
+        leafA.position.set(d.x, 1.20, d.y - 0.70);
+        leafB.position.set(d.x, 1.20, d.y + 0.70);
+        const led = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.08, 0.42), ledMat);
         led.position.set(d.x, 2.50, d.y);
         roomGroup.add(leafA, leafB, led);
       } else {
-        addBox(d.x, 2.92, d.y, 2.20, 0.96, 0.20, wallMetalMat, false);
-        const pA = new THREE.Mesh(new THREE.BoxGeometry(1.08, 2.40, 0.11), wallMetalMat);
-        const gA = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.90, 0.13), glassStripMat);
-        gA.position.set(0.34, 0.15, 0);
+        addBox(d.x, 2.92, d.y, 2.80, 0.96, 0.24, wallMetalMat, false);
+        const pA = new THREE.Mesh(new THREE.BoxGeometry(1.40, 2.40, 0.11), wallMetalMat);
+        const gA = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.92, 0.13), glassStripMat);
+        gA.position.set(0.44, 0.15, 0);
         leafA.add(pA, gA);
-        const pB = new THREE.Mesh(new THREE.BoxGeometry(1.08, 2.40, 0.11), wallMetalMat);
-        const gB = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.90, 0.13), glassStripMat);
-        gB.position.set(-0.34, 0.15, 0);
+        const pB = new THREE.Mesh(new THREE.BoxGeometry(1.40, 2.40, 0.11), wallMetalMat);
+        const gB = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.92, 0.13), glassStripMat);
+        gB.position.set(-0.44, 0.15, 0);
         leafB.add(pB, gB);
-        leafA.position.set(d.x - 0.54, 1.20, d.y);
-        leafB.position.set(d.x + 0.54, 1.20, d.y);
-        const led = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.08, 0.24), ledMat);
+        leafA.position.set(d.x - 0.70, 1.20, d.y);
+        leafB.position.set(d.x + 0.70, 1.20, d.y);
+        const led = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 0.28), ledMat);
         led.position.set(d.x, 2.50, d.y);
         roomGroup.add(leafA, leafB, led);
       }
       doorVisuals.push({ id: d.id, axis: d.axis, cx: d.x, cy: d.y, leafA, leafB, ledMat });
     }
 
-    // 7 Rotating Ceiling Ventilation Fans (Environmental Life across all wings!)
+    // 7 Rotating Ceiling Ventilation Fans across the Enlarged Modules
     const ventFans: THREE.Group[] = [];
     for (const [fx, fy] of [
-      [3.1, 3.5],
-      [10.0, 3.5],
-      [17.2, 3.5],
-      [10.0, 10.9],
-      [2.8, -5.4],
-      [18.8, 12.3],
-      [18.5, -5.3],
+      [2.7, 4.0],
+      [12.6, 4.0],
+      [22.9, 4.0],
+      [12.6, 13.7],
+      [2.3, -7.9],
+      [24.3, 15.9],
+      [24.2, -8.1],
     ]) {
       const fanHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.08, 16), darkMetalMat);
       fanHousing.position.set(fx, ROOM_BOUNDS.heightM - 0.06, fy);
@@ -1536,13 +1570,13 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       ventFans.push(rotor);
     }
 
-    // 240 Subtle Drifting Cabin Airflow Motes across 8 Modules
-    const moteCount = 240;
+    // 280 Subtle Drifting Cabin Airflow Motes across Enlarged 8 Modules
+    const moteCount = 280;
     const motePositions = new Float32Array(moteCount * 3);
     for (let i = 0; i < moteCount; i++) {
-      motePositions[i * 3 + 0] = 0.2 + ((i * 73) % 212) * 0.1;
+      motePositions[i * 3 + 0] = -1.2 + ((i * 73) % 296) * 0.1;
       motePositions[i * 3 + 1] = 0.25 + ((i * 41) % 28) * 0.1;
-      motePositions[i * 3 + 2] = -7.8 + ((i * 59) % 224) * 0.1;
+      motePositions[i * 3 + 2] = -14.8 + ((i * 59) % 342) * 0.1;
     }
     const moteGeo = new THREE.BufferGeometry();
     moteGeo.setAttribute('position', new THREE.BufferAttribute(motePositions, 3));
@@ -1550,11 +1584,11 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     const airMotes = new THREE.Points(moteGeo, moteMat);
     roomGroup.add(airMotes);
 
-    // Exterior Viewport Scene centered at X=3.20: Earth Daylight Base (Phase 0) vs Deep Space / Moon / Mars (Phases 1-4)
+    // Exterior Viewport Scene centered at X=2.80: Earth Daylight Base (Phase 0) vs Deep Space / Moon / Mars (Phases 1-4)
     const launchRocketGroup = new THREE.Group();
     const srbL = new THREE.Mesh(
       new THREE.CylinderGeometry(0.055, 0.055, 0.72, 12),
-      new THREE.MeshBasicMaterial({ color: 0xd93025, wireframe: true })
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4, metalness: 0.35 })
     );
     const srbR = srbL.clone();
     if (activeMissionKey === 'tutorial_hab') {
@@ -1569,34 +1603,34 @@ export const SpaceSinglePlayerGame: React.FC = () => {
         grad.addColorStop(1, '#e0f2fe');
         sg.fillStyle = grad;
         sg.fillRect(0, 0, 256, 128);
-        sg.fillStyle = 'rgba(255,255,255,0.75)';
+        sg.fillStyle = 'rgba(255,255,255,0.85)';
         sg.fillRect(28, 34, 48, 14);
         sg.fillRect(156, 22, 62, 16);
       }
       const skyTex = new THREE.CanvasTexture(skyC);
       skyTex.colorSpace = THREE.SRGBColorSpace;
       dynamicTextures.push(skyTex);
-      const earthSky = new THREE.Mesh(new THREE.PlaneGeometry(8.5, 4.4), new THREE.MeshBasicMaterial({ map: skyTex }));
-      earthSky.position.set(3.2, 2.3, 11.4);
+      const earthSky = new THREE.Mesh(new THREE.PlaneGeometry(9.0, 4.6), new THREE.MeshBasicMaterial({ map: skyTex }));
+      earthSky.position.set(2.8, 2.3, 13.0);
       earthSky.rotation.y = Math.PI;
       const earthLawn = new THREE.Mesh(
         new THREE.PlaneGeometry(10.0, 6.0),
         new THREE.MeshBasicMaterial({ color: 0x15803d, side: THREE.DoubleSide })
       );
       earthLawn.rotation.x = Math.PI / 2;
-      earthLawn.position.set(3.2, 0.0, 9.6);
+      earthLawn.position.set(2.8, 0.0, 11.2);
       const padConcrete = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.15, 1.4), whiteFrameMat);
-      padConcrete.position.set(3.2, 0.05, 9.2);
+      padConcrete.position.set(2.8, 0.05, 10.8);
       const distantTower = new THREE.Mesh(new THREE.BoxGeometry(0.32, 2.2, 0.32), crimsonMat);
-      distantTower.position.set(4.4, 1.1, 10.1);
+      distantTower.position.set(4.1, 1.1, 11.6);
       roomGroup.add(earthSky, earthLawn, padConcrete, distantTower);
       launchRocketGroup.visible = false;
     } else {
       const vistaBackdrop = new THREE.Mesh(
-        new THREE.PlaneGeometry(6.8, 3.4),
+        new THREE.PlaneGeometry(7.2, 3.6),
         new THREE.MeshBasicMaterial({ map: tex.spaceBackdrop })
       );
-      vistaBackdrop.position.set(3.2, 1.9, 8.65);
+      vistaBackdrop.position.set(2.8, 1.9, 10.4);
       vistaBackdrop.rotation.y = Math.PI;
       roomGroup.add(vistaBackdrop);
 
@@ -1612,14 +1646,14 @@ export const SpaceSinglePlayerGame: React.FC = () => {
           roughness: 0.7,
         })
       );
-      exteriorPlanet.position.set(3.2, -0.5, 10.2);
+      exteriorPlanet.position.set(2.8, -0.5, 11.8);
       roomGroup.add(exteriorPlanet);
 
       launchRocketGroup.visible = activeMissionKey === 'manifest_launch';
-      launchRocketGroup.position.set(3.2, 1.45, 7.95);
+      launchRocketGroup.position.set(2.8, 1.45, 9.55);
       const coreTank = new THREE.Mesh(
         new THREE.CylinderGeometry(0.11, 0.11, 0.95, 16),
-        new THREE.MeshBasicMaterial({ color: 0xf4f6f8 })
+        new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.45 })
       );
       srbL.position.set(-0.22, -0.08, 0);
       srbR.position.set(0.22, -0.08, 0);
@@ -1628,7 +1662,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     }
 
     const windowGlass = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.66, 1.44),
+      new THREE.PlaneGeometry(3.16, 1.44),
       new THREE.MeshPhysicalMaterial({
         color: 0xbae6fd,
         transparent: true,
@@ -1638,115 +1672,114 @@ export const SpaceSinglePlayerGame: React.FC = () => {
         side: THREE.DoubleSide,
       })
     );
-    windowGlass.position.set(3.2, 1.80, 7.10);
+    windowGlass.position.set(2.8, 1.80, 8.70);
     roomGroup.add(windowGlass);
 
-    const shutterLeft = new THREE.Mesh(new THREE.BoxGeometry(1.36, 1.45, 0.06), wallMetalMat);
-    shutterLeft.position.set(1.55, 1.80, 7.02);
+    const shutterLeft = new THREE.Mesh(new THREE.BoxGeometry(1.62, 1.45, 0.06), wallMetalMat);
+    shutterLeft.position.set(0.35, 1.80, 8.62);
     const shutterRight = shutterLeft.clone();
-    shutterRight.position.set(4.85, 1.80, 7.02);
+    shutterRight.position.set(5.25, 1.80, 8.62);
     roomGroup.add(shutterLeft, shutterRight);
 
-    // Switches in West Hab
-    addBox(0.06, 1.32, 3.45, 0.08, 0.24, 0.18, darkMetalMat);
+    // Switches in West Hab (matched 1:1 with bunk_light_switch (-1.26, 4.10) & window_shutter_button (1.10, 8.46))
+    addBox(-1.35, 1.32, 4.10, 0.08, 0.24, 0.18, darkMetalMat);
     const lightBtnMesh = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.10, 0.10), cyanLedMat);
-    lightBtnMesh.position.set(0.11, 1.32, 3.45);
+    lightBtnMesh.position.set(-1.30, 1.32, 4.10);
     roomGroup.add(lightBtnMesh);
 
-    addBox(1.95, 1.32, 6.94, 0.20, 0.24, 0.08, darkMetalMat);
+    addBox(1.10, 1.32, 8.55, 0.20, 0.24, 0.08, darkMetalMat);
     const shutterBtnMesh = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.10, 0.05), greenLedMat);
-    shutterBtnMesh.position.set(1.95, 1.32, 6.89);
+    shutterBtnMesh.position.set(1.10, 1.32, 8.50);
     roomGroup.add(shutterBtnMesh);
 
     // =========================================================================
-    // WEST HAB FURNITURE & STATIONS (0..6.2, 0..7.0)
+    // WEST HAB FURNITURE & STATIONS (X=-1.4..6.8, Y=-0.6..8.6)
     // =========================================================================
-    // Bunk Bed (0.68, 4.85)
-    addBox(0.68, 0.28, 4.85, 1.24, 0.56, 2.06, wallMetalMat);
-    addBox(0.68, 0.65, 4.85, 1.18, 0.22, 1.98, bedFabricMat);
-    addBox(0.68, 0.80, 5.58, 0.92, 0.14, 0.38, whiteFrameMat);
-    addBox(0.14, 1.32, 4.85, 0.22, 1.48, 2.08, wallMetalMat);
-    addBox(0.68, 2.15, 4.85, 1.22, 0.12, 2.08, wallMetalMat);
+    // Bunk Bed (`Furn_CrewBunk` [-1.38..0.28, 4.40..7.00])
+    addBox(-0.55, 0.28, 5.70, 1.60, 0.56, 2.54, wallMetalMat);
+    addBox(-0.55, 0.65, 5.70, 1.48, 0.22, 2.42, bedFabricMat);
+    addBox(-0.55, 0.80, 6.55, 1.10, 0.14, 0.42, whiteFrameMat);
+    addBox(-1.24, 1.32, 5.70, 0.22, 1.48, 2.56, wallMetalMat);
+    addBox(-0.55, 2.15, 5.70, 1.60, 0.12, 2.56, wallMetalMat);
 
-    // Galley Counter (0.50, 1.95)
-    addBox(0.50, 0.46, 1.95, 0.95, 0.92, 1.75, wallMetalMat);
-    addBox(0.45, 1.12, 2.52, 0.42, 0.36, 0.36, whiteFrameMat);
-    addBox(0.45, 1.15, 1.95, 0.38, 0.42, 0.32, bluePipeMat);
+    // Galley Counter (`Furn_Galley` [-1.38..0.00, 0.80..3.20])
+    addBox(-0.69, 0.46, 2.00, 1.32, 0.92, 2.34, wallMetalMat);
+    addBox(-0.74, 1.12, 2.68, 0.48, 0.36, 0.38, whiteFrameMat);
+    addBox(-0.74, 1.15, 2.00, 0.42, 0.42, 0.36, bluePipeMat);
     const heaterPadMat = new THREE.MeshBasicMaterial({ color: 0x475569 });
-    const heaterPad = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.24, 0.38), heaterPadMat);
-    heaterPad.position.set(0.45, 1.06, 1.38);
+    const heaterPad = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.24, 0.42), heaterPadMat);
+    heaterPad.position.set(-0.74, 1.06, 1.28);
     roomGroup.add(heaterPad);
 
-    // West North Desk (3.20, 6.60)
-    addBox(3.20, 0.45, 6.60, 2.10, 0.90, 0.62, wallMetalMat);
-    addBox(3.20, 1.22, 6.64, 0.72, 0.44, 0.08, darkMetalMat);
-    const westScreen = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.36, 0.02), cyanLedMat);
-    westScreen.position.set(3.20, 1.22, 6.59);
+    // West North Desk (`Furn_WestNorthDesk` [1.45..4.15, 7.65..8.56])
+    addBox(2.80, 0.45, 8.105, 2.66, 0.90, 0.88, wallMetalMat);
+    addBox(2.80, 1.22, 8.22, 0.78, 0.46, 0.08, darkMetalMat);
+    const westScreen = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.38, 0.02), cyanLedMat);
+    westScreen.position.set(2.80, 1.22, 8.17);
     roomGroup.add(westScreen);
 
-    // Treadmill (`2.25, 5.05`) & WHC Booth (`5.35, 6.58`) in West Hab
-    addBox(2.25, 0.08, 5.05, 0.72, 0.14, 1.38, darkMetalMat);
+    // Treadmill (`Furn_Treadmill` [1.80..2.85, 5.10..6.75])
+    addBox(2.325, 0.08, 5.925, 0.96, 0.16, 1.56, darkMetalMat);
     const treadmillBeltMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
-    const belt = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.03, 1.18), treadmillBeltMat);
-    belt.position.set(2.25, 0.16, 5.05);
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.03, 1.32), treadmillBeltMat);
+    belt.position.set(2.325, 0.17, 5.925);
     roomGroup.add(belt);
-    addBox(1.94, 0.56, 5.58, 0.06, 0.96, 0.06, whiteFrameMat);
-    addBox(2.56, 0.56, 5.58, 0.06, 0.96, 0.06, whiteFrameMat);
-    addBox(2.25, 1.05, 5.58, 0.68, 0.18, 0.18, darkMetalMat);
+    addBox(1.94, 0.56, 6.56, 0.07, 0.96, 0.07, whiteFrameMat);
+    addBox(2.71, 0.56, 6.56, 0.07, 0.96, 0.07, whiteFrameMat);
+    addBox(2.325, 1.05, 6.56, 0.86, 0.18, 0.20, darkMetalMat);
 
-    // WHC Booth (`5.35, 6.58`)
-    addBox(5.35, 1.12, 6.58, 0.96, 2.22, 0.54, wallMetalMat);
-    const funnel = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.26, 16, 1, true), whiteFrameMat);
+    // WHC Booth (`Furn_WHC_Booth` [5.20..6.76, 7.35..8.56])
+    addBox(5.98, 1.12, 7.955, 1.52, 2.22, 1.16, wallMetalMat);
+    const funnel = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.28, 16, 1, true), whiteFrameMat);
     funnel.rotation.x = Math.PI;
-    funnel.position.set(5.35, 1.05, 6.22);
+    funnel.position.set(5.85, 1.05, 7.28);
     const whcHose = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.65, 10), bluePipeMat);
     whcHose.rotation.z = 0.45;
-    whcHose.position.set(5.12, 1.25, 6.24);
+    whcHose.position.set(5.58, 1.25, 7.30);
     roomGroup.add(funnel, whcHose);
 
-    // EVA Suit Mirror & Locker along East wall of West Hab (`5.75, 0.78..1.45`)
-    addBox(5.72, 0.14, 1.25, 0.75, 0.28, 1.55, wallMetalMat);
-    addBox(6.14, 1.35, 1.45, 0.08, 2.05, 1.05, darkMetalMat);
+    // EVA Suit Mirror & Locker (`Furn_SuitMirrorPad` [5.65..6.78, 0.25..2.25])
+    addBox(6.215, 0.14, 1.25, 1.08, 0.28, 1.94, wallMetalMat);
+    addBox(6.70, 1.35, 1.45, 0.08, 2.05, 1.10, darkMetalMat);
     const mirrorGlass = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.95, 1.90),
+      new THREE.PlaneGeometry(0.98, 1.90),
       new THREE.MeshStandardMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.24, roughness: 0.05, metalness: 0.9 })
     );
     mirrorGlass.rotation.y = -Math.PI / 2;
-    mirrorGlass.position.set(6.08, 1.35, 1.45);
+    mirrorGlass.position.set(6.64, 1.35, 1.45);
     roomGroup.add(mirrorGlass);
-    addBox(5.75, 1.35, 0.68, 0.60, 1.85, 0.46, whiteFrameMat);
+    addBox(6.22, 1.35, 0.56, 0.80, 1.85, 0.52, whiteFrameMat);
     const evaStrip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.65, 0.09), crimsonMat);
-    evaStrip.position.set(5.44, 1.35, 0.68);
+    evaStrip.position.set(5.81, 1.35, 0.56);
     roomGroup.add(evaStrip);
 
     const mirrorAstronaut: ChibiAstronautRig = createChibiAstronautRig(suitIdx, faceIdx);
-    mirrorAstronaut.root.position.set(5.48, 0.28, 1.45);
-    mirrorAstronaut.root.rotation.y = Math.PI;
+    mirrorAstronaut.root.position.set(6.05, 0.28, 1.45);
+    mirrorAstronaut.root.rotation.y = -Math.PI / 2;
     scene.add(mirrorAstronaut.root);
 
     // =========================================================================
-    // CENTRAL HUB BENCH & CRISIS TERMINAL (`8.65, 5.24`)
+    // CENTRAL HUB SIDE BENCH & CRISIS TERMINAL (`Furn_CorridorToolBench` [10.22..10.85, 5.15..6.75])
     // =========================================================================
-    addBox(8.65, 0.46, 5.24, 0.46, 0.92, 1.04, wallMetalMat);
-    addBox(8.46, 1.15, 5.15, 0.10, 0.46, 0.56, darkMetalMat);
+    addBox(10.535, 0.46, 5.95, 0.62, 0.92, 1.56, wallMetalMat);
+    addBox(10.30, 1.15, 5.95, 0.10, 0.46, 0.56, darkMetalMat);
     const crisisScr = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.36, 0.46), amberLedMat);
-    crisisScr.position.set(8.52, 1.15, 5.15);
+    crisisScr.position.set(10.36, 1.15, 5.95);
     roomGroup.add(crisisScr);
 
     // =========================================================================
-    // EAST ENGINEERING & BOTANY LAB (`13.8..20.6, 0..7`)
+    // EAST ENGINEERING & BOTANY LAB (`X=18.4..27.4, Y=-0.6..8.6`)
     // =========================================================================
-    // Center Lab Workbench (`17.35, 3.55`)
-    addBox(17.35, 0.46, 3.55, 1.60, 0.92, 1.00, wallMetalMat);
-    addBox(17.35, 0.925, 3.55, 1.42, 0.015, 0.82, new THREE.MeshStandardMaterial({ color: 0x0f2547, roughness: 0.8 }), false);
+    // Center Lab Workbench (`Furn_EastWorkbench` [21.10..23.30, 3.30..4.70])
+    addBox(22.20, 0.46, 4.00, 2.18, 0.92, 1.38, wallMetalMat);
+    addBox(22.20, 0.925, 4.00, 1.98, 0.015, 1.18, new THREE.MeshStandardMaterial({ color: 0x0f2547, roughness: 0.8 }), false);
 
-    // East Wall Power Rack (`20.14, 4.92`) & Thermal Rack (`20.14, 2.25`)
-    addBox(20.14, 1.05, 4.92, 0.86, 2.1, 2.0, wallMetalMat);
-    addBox(20.14, 1.05, 2.25, 0.86, 2.1, 2.4, wallMetalMat);
-    // South Wall ECLSS Rack (`16.10, 0.48`) — clear of X=18.2..20.4 SE doorway
-    addBox(16.10, 1.05, 0.48, 3.60, 2.1, 0.72, wallMetalMat);
-    // North Wall Botany / KRUSTY Rack (`16.05, 6.52`) — clear of X=18.2..20.4 NE doorway
-    addBox(16.05, 1.05, 6.52, 3.60, 2.1, 0.68, wallMetalMat);
+    // East Wall Power Rack (`26.865, 5.95`) & Thermal Rack (`26.865, 2.25`)
+    addBox(26.865, 1.05, 5.95, 1.00, 2.10, 2.74, wallMetalMat);
+    addBox(26.865, 1.05, 2.25, 1.00, 2.10, 3.14, wallMetalMat);
+    // South Wall ECLSS Rack (`20.45, -0.065`) & North Wall Botany/KRUSTY Rack (`20.45, 8.065`)
+    addBox(20.45, 1.05, -0.065, 3.66, 2.10, 1.00, wallMetalMat);
+    addBox(20.45, 1.05, 8.065, 3.66, 2.10, 1.00, wallMetalMat);
 
     // Dynamic Hardware Indicators inside East Lab
     const chargerBayMat = new THREE.MeshBasicMaterial({ color: 0x475569 });
@@ -1756,27 +1789,26 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     let skylabPatchMesh: THREE.Mesh | null = null;
     let regolithDoorMesh: THREE.Mesh | null = null;
     let compostWheelMesh: THREE.Mesh | null = null;
-    const holoOrbiters: THREE.Mesh[] = [];
 
     if (activeMissionKey === 'tutorial_hab' || activeMissionKey === 'act1_2_surface') {
-      const chargerBay = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.26, 0.22), chargerBayMat);
-      chargerBay.position.set(19.70, 1.08, 5.45);
+      const chargerBay = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.28, 0.24), chargerBayMat);
+      chargerBay.position.set(26.32, 1.08, 6.65);
       roomGroup.add(chargerBay);
     }
     if (activeMissionKey === 'tutorial_hab') {
-      const powerBoxLed = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.26), powerBoxLedMat);
-      powerBoxLed.position.set(19.70, 1.48, 4.85);
+      const powerBoxLed = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.30), powerBoxLedMat);
+      powerBoxLed.position.set(26.34, 1.48, 5.95);
       roomGroup.add(powerBoxLed);
 
-      leverPivot.position.set(19.70, 1.30, 4.22);
-      const leverRod = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.05, 0.05), amberLedMat);
-      leverRod.position.x = -0.10;
+      leverPivot.position.set(26.34, 1.30, 5.05);
+      const leverRod = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.05, 0.05), amberLedMat);
+      leverRod.position.x = -0.12;
       leverPivot.add(leverRod);
       leverPivot.rotation.z = -0.55;
       roomGroup.add(leverPivot);
 
-      const ventGrille = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.54, 0.05), darkMetalMat);
-      ventGrille.position.set(16.20, 1.35, 0.86);
+      const ventGrille = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.58, 0.05), darkMetalMat);
+      ventGrille.position.set(19.65, 1.35, 0.45);
       roomGroup.add(ventGrille);
       for (const [sx, sy] of [
         [-0.22, -0.22],
@@ -1786,22 +1818,22 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       ]) {
         const sc = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.04, 10), amberLedMat);
         sc.rotation.x = Math.PI / 2;
-        sc.position.set(16.20 + sx, 1.35 + sy, 0.89);
+        sc.position.set(19.65 + sx, 1.35 + sy, 0.48);
         roomGroup.add(sc);
         screwMeshes.push(sc);
       }
-      const regenDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.56, 18), bluePipeMat);
-      regenDrum.position.set(17.55, 1.15, 0.84);
+      const regenDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.58, 18), bluePipeMat);
+      regenDrum.position.set(21.35, 1.15, 0.46);
       roomGroup.add(regenDrum);
     } else if (activeMissionKey === 'act1_2_surface') {
-      const breachGlow = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 0.68), crimsonMat);
-      breachGlow.position.set(19.70, 1.35, 2.05);
+      const breachGlow = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 0.72), crimsonMat);
+      breachGlow.position.set(26.34, 1.35, 2.25);
       roomGroup.add(breachGlow);
       skylabPatchMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.08, 0.78, 0.74),
+        new THREE.BoxGeometry(0.08, 0.78, 0.78),
         new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.85, roughness: 0.25 })
       );
-      skylabPatchMesh.position.set(19.68, 1.35, 2.05);
+      skylabPatchMesh.position.set(26.30, 1.35, 2.25);
       skylabPatchMesh.visible = false;
       roomGroup.add(skylabPatchMesh);
 
@@ -1809,20 +1841,20 @@ export const SpaceSinglePlayerGame: React.FC = () => {
         new THREE.CylinderGeometry(0.14, 0.16, 0.42, 16),
         new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0x78350f, roughness: 0.3, metalness: 0.7 })
       );
-      krustyCore.position.set(17.15, 1.15, 6.16);
+      krustyCore.position.set(20.65, 1.15, 7.54);
       const radUmbrella = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.14, 14), darkMetalMat);
       radUmbrella.rotation.x = Math.PI;
-      radUmbrella.position.set(17.15, 1.42, 6.16);
+      radUmbrella.position.set(20.65, 1.42, 7.54);
       roomGroup.add(krustyCore, radUmbrella);
 
-      for (const sx of [15.26, 15.54]) {
+      for (const sx of [19.45, 19.78]) {
         const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 12), cyanLedMat);
-        bulb.position.set(sx, 1.32, 0.88);
+        bulb.position.set(sx, 1.32, 0.46);
         roomGroup.add(bulb);
       }
     } else if (activeMissionKey === 'act3_greenhouse') {
       const aphFace = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.18, 1.72),
+        new THREE.PlaneGeometry(1.30, 1.72),
         new THREE.MeshStandardMaterial({
           map: tex.aphBotanicalRack,
           emissiveMap: tex.aphBotanicalRack,
@@ -1832,36 +1864,36 @@ export const SpaceSinglePlayerGame: React.FC = () => {
         })
       );
       aphFace.rotation.y = Math.PI;
-      aphFace.position.set(17.05, 1.22, 6.15);
+      aphFace.position.set(21.45, 1.22, 7.53);
       roomGroup.add(aphFace);
 
       compostWheelMesh = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.032, 10, 18), crimsonMat);
-      compostWheelMesh.position.set(15.60, 1.35, 6.15);
+      compostWheelMesh.position.set(19.45, 1.35, 7.53);
       roomGroup.add(compostWheelMesh);
 
       const bioTank = new THREE.Mesh(
         new THREE.CylinderGeometry(0.28, 0.28, 0.85, 20),
         new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.55, roughness: 0.1 })
       );
-      bioTank.position.set(19.70, 1.36, 1.35);
+      bioTank.position.set(26.32, 1.36, 1.35);
       roomGroup.add(bioTank);
     } else if (activeMissionKey === 'act4_storm_rover') {
       regolithDoorMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.14, 1.95, 1.78),
+        new THREE.BoxGeometry(0.14, 1.95, 1.95),
         new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9, metalness: 0.2 })
       );
-      regolithDoorMesh.position.set(19.68, 2.55, 2.65);
+      regolithDoorMesh.position.set(26.30, 2.55, 2.95);
       roomGroup.add(regolithDoorMesh);
     }
 
     // =========================================================================
-    // NORTH MEDS FLIGHT DECK (`7.2..12.8, 8.4..13.4`)
+    // NORTH MEDS FLIGHT DECK (`X=8.6..16.6, Y=10.5..16.9`)
     // =========================================================================
-    addBox(10.00, 0.46, 12.95, 3.45, 0.92, 0.72, wallMetalMat);
-    addBox(10.00, 0.46, 10.80, 2.25, 0.92, 0.86, wallMetalMat);
-    addBox(10.00, 1.26, 13.02, 2.05, 0.62, 0.12, darkMetalMat);
+    addBox(12.60, 0.46, 16.265, 4.96, 0.92, 1.20, wallMetalMat);
+    addBox(12.60, 0.46, 13.15, 3.56, 0.92, 1.06, wallMetalMat);
+    addBox(12.60, 1.26, 16.32, 2.40, 0.64, 0.12, darkMetalMat);
     const medsFace = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.94, 0.54),
+      new THREE.PlaneGeometry(2.26, 0.56),
       new THREE.MeshStandardMaterial({
         map: tex.medsGlassCockpit,
         emissiveMap: tex.medsGlassCockpit,
@@ -1871,26 +1903,21 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       })
     );
     medsFace.rotation.y = Math.PI;
-    medsFace.position.set(10.00, 1.26, 12.94);
+    medsFace.position.set(12.60, 1.26, 16.24);
     roomGroup.add(medsFace);
 
     if (activeMissionKey === 'manifest_launch') {
-      const launchPad = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.07, 16), crimsonMat);
-      launchPad.position.set(10.00, 0.96, 12.60);
+      const launchPad = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.10, 0.08, 16), crimsonMat);
+      launchPad.position.set(12.60, 0.96, 15.80);
       roomGroup.add(launchPad);
-      for (const [hx, col] of [
-        [9.25, 0x38bdf8],
-        [10.00, 0xf59e0b],
-        [10.75, 0x22c55e],
-      ] as [number, number][]) {
-        const orb = new THREE.Mesh(
-          new THREE.OctahedronGeometry(0.14, 0),
-          new THREE.MeshBasicMaterial({ color: col, wireframe: true })
-        );
-        orb.position.set(hx, 1.15, 10.80);
-        roomGroup.add(orb);
-        holoOrbiters.push(orb);
-      }
+      // Clean static miniature scale hardware models on the Manifest Table (no floating wireframe octahedrons)
+      const miniOrion = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.22, 12), whiteFrameMat);
+      miniOrion.position.set(11.65, 1.04, 13.15);
+      const miniCargo = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.18, 0.24), bluePipeMat);
+      miniCargo.position.set(12.60, 1.02, 13.15);
+      const miniTank = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.26, 12), new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5, metalness: 0.25 }));
+      miniTank.position.set(13.55, 1.06, 13.15);
+      roomGroup.add(miniOrion, miniCargo, miniTank);
     }
 
     // =========================================================================
@@ -1905,84 +1932,118 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     const gantryStripeMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5, metalness: 0.25 });
     const gantryRailMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4, metalness: 0.55 });
 
-    // Launch Bay Boarding Gantry Catwalk leading from South Corridor (Z=-1.4) to Orion Hatch (Z=-4.46)
-    addBox(10.00, 0.03, -2.95, 2.35, 0.06, 2.95, gantryDeckMat, false);
-    addBox(8.88, 0.065, -2.95, 0.10, 0.02, 2.92, gantryStripeMat, false);
-    addBox(11.12, 0.065, -2.95, 0.10, 0.02, 2.92, gantryStripeMat, false);
-    // Yellow gantry handrails & cryo umbilical pipes on outer sides (outside X=8.9..11.1 walkable path)
-    for (const rx of [8.64, 11.36]) {
-      addBox(rx, 0.92, -2.95, 0.06, 0.06, 2.88, gantryRailMat, false);
-      addBox(rx, 0.52, -2.95, 0.05, 0.05, 2.88, gantryRailMat, false);
-      for (const pz of [-1.75, -2.95, -4.15]) {
+    // Pit Guardrails across West/East Hangar Bays (`Furn_HangarRail_W/E` [7.62..11.15] & [14.05..17.58] at Z=-5.775)
+    for (const gx of [9.385, 15.815]) {
+      addBox(gx, 0.96, -5.775, 3.45, 0.06, 0.08, gantryRailMat, false);
+      addBox(gx, 0.54, -5.775, 3.45, 0.05, 0.06, gantryRailMat, false);
+      for (const px of [-1.5, 0, 1.5]) {
+        addBox(gx + px, 0.49, -5.775, 0.08, 0.98, 0.08, darkMetalMat, false);
+      }
+    }
+
+    // Launch Bay Boarding Gantry Catwalk leading from North Hangar Deck (Z=-5.40) to Orion Hatch (Z=-9.60)
+    addBox(12.60, 0.03, -7.50, 2.85, 0.06, 4.20, gantryDeckMat, false);
+    addBox(11.22, 0.065, -7.50, 0.12, 0.02, 4.18, gantryStripeMat, false);
+    addBox(13.98, 0.065, -7.50, 0.12, 0.02, 4.18, gantryStripeMat, false);
+    for (const rx of [11.08, 14.12]) {
+      addBox(rx, 0.92, -7.50, 0.06, 0.06, 4.10, gantryRailMat, false);
+      addBox(rx, 0.52, -7.50, 0.05, 0.05, 4.10, gantryRailMat, false);
+      for (const pz of [-5.85, -7.50, -9.15]) {
         addBox(rx, 0.48, pz, 0.08, 0.96, 0.08, darkMetalMat, false);
       }
-      // Cryo & power umbilical hose arcing overhead toward Orion fairing
-      const umbilical = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 2.85, 8), cyanLedMat);
+      const umbilical = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 4.0, 8), cyanLedMat);
       umbilical.rotation.x = Math.PI / 2;
-      umbilical.position.set(rx + (rx < 10 ? -0.35 : 0.35), 2.15, -2.95);
+      umbilical.position.set(rx + (rx < 12.6 ? -0.35 : 0.35), 2.15, -7.50);
       roomGroup.add(umbilical);
     }
-    addSignPlate('BAHÍA DE LANZAMIENTO LC-39B · PASARELA ORION', '#0ea5e9', 10.00, 2.45, -1.62, Math.PI);
+    addSignPlate('BAHÍA DE LANZAMIENTO LC-39B · PASARELA ORION', '#0ea5e9', 12.60, 2.52, -5.55, Math.PI);
 
-    // Port & Starboard pressure fuselage walls matching Furn_OrionHull_W/E
-    addBox(7.535, 1.32, -6.365, 1.43, 2.64, 3.63, orionShellMat);
-    addBox(12.465, 1.32, -6.365, 1.43, 2.64, 3.63, orionShellMat);
-    // Thermal TPS base ring + aft bulkhead + walkable capsule ceiling canopy
-    addBox(10.00, 2.68, -6.365, 5.20, 0.24, 3.65, orionTileMat, false);
-    addBox(10.00, 1.32, -8.04, 3.50, 2.64, 0.28, darkMetalMat, false);
-    // Overhead docking ring archway over capsule entry (Z=-4.55, clearance Y=2.22m so astronaut walks inside!)
-    addBox(10.00, 2.50, -4.55, 3.55, 0.56, 0.28, orionTileMat, false);
-    const orionRing = new THREE.Mesh(new THREE.TorusGeometry(1.18, 0.09, 12, 32), amberLedMat);
-    orionRing.position.set(10.00, 1.68, -4.46);
+    // Port & Starboard pressure fuselage walls matching Furn_OrionHull_W/E (`[7.62..9.75]` & `[15.45..17.58]`, `Z=-15.38..-9.60`)
+    addBox(8.685, 1.32, -12.49, 2.13, 2.64, 5.78, orionShellMat);
+    addBox(16.515, 1.32, -12.49, 2.13, 2.64, 5.78, orionShellMat);
+    addBox(12.60, 2.74, -12.49, 9.96, 0.24, 5.78, orionTileMat, false);
+    addBox(12.60, 1.32, -15.20, 5.70, 2.64, 0.32, darkMetalMat, false);
+    // Overhead docking ring archway over capsule entry (Z=-9.60, clearance Y=2.22m so astronaut walks inside!)
+    addBox(12.60, 2.60, -9.60, 5.70, 0.72, 0.30, orionTileMat, false);
+    const orionRing = new THREE.Mesh(new THREE.TorusGeometry(1.38, 0.09, 12, 32), amberLedMat);
+    orionRing.position.set(12.60, 1.72, -9.48);
     roomGroup.add(orionRing);
 
-    // Animated 3D Orion Pressure Hatch Door (`orionHatchGroup` at Z=-4.55) with viewport window & lock wheel
+    // Hinged Animated 3D Orion Pressure Hatch Door (`orionHatchGroup` pivoted on West jamb X=11.20, Z=-9.60)
     const orionHatchGroup = new THREE.Group();
-    orionHatchGroup.position.set(10.00, 1.12, -4.55);
+    orionHatchGroup.position.set(11.20, 1.12, -9.60);
     const hatchLeaf = new THREE.Mesh(
-      new THREE.BoxGeometry(2.18, 2.24, 0.14),
+      new THREE.BoxGeometry(2.76, 2.24, 0.14),
       new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.35, metalness: 0.65 })
     );
+    hatchLeaf.position.x = 1.40;
     const hatchRim = new THREE.Mesh(
-      new THREE.BoxGeometry(2.26, 2.30, 0.08),
+      new THREE.BoxGeometry(2.82, 2.30, 0.08),
       new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.45, metalness: 0.7 })
     );
+    hatchRim.position.x = 1.40;
     const hatchWindow = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.28, 0.28, 0.18, 16),
+      new THREE.CylinderGeometry(0.30, 0.30, 0.18, 16),
       new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.35, transparent: true, opacity: 0.58 })
     );
     hatchWindow.rotation.x = Math.PI / 2;
-    hatchWindow.position.set(0, 0.36, 0);
-    const hatchWheelOuter = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.025, 8, 18), gantryRailMat);
-    hatchWheelOuter.position.set(0.55, -0.10, 0.11);
-    const hatchWheelInner = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.025, 8, 18), gantryRailMat);
-    hatchWheelInner.position.set(0.55, -0.10, -0.11);
+    hatchWindow.position.set(1.40, 0.36, 0);
+    const hatchWheelOuter = new THREE.Group();
+    hatchWheelOuter.position.set(2.25, -0.10, 0.12);
+    const wheelRingOut = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.026, 8, 18), gantryRailMat);
+    const wheelSpokeOutA = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.032, 0.032), gantryRailMat);
+    const wheelSpokeOutB = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.42, 0.032), gantryRailMat);
+    hatchWheelOuter.add(wheelRingOut, wheelSpokeOutA, wheelSpokeOutB);
+    const hatchWheelInner = new THREE.Group();
+    hatchWheelInner.position.set(2.25, -0.10, -0.12);
+    const wheelRingIn = wheelRingOut.clone();
+    const wheelSpokeInA = wheelSpokeOutA.clone();
+    const wheelSpokeInB = wheelSpokeOutB.clone();
+    hatchWheelInner.add(wheelRingIn, wheelSpokeInA, wheelSpokeInB);
     orionHatchGroup.add(hatchRim, hatchLeaf, hatchWindow, hatchWheelOuter, hatchWheelInner);
     roomGroup.add(orionHatchGroup);
 
-    // Port Console (`orion_fault_panel` at 8.82, -6.10): Cryo Manifold + RS-25 Fuse Box
-    addBox(8.515, 0.60, -6.15, 0.53, 1.20, 1.80, wallMetalMat);
-    const cryoManifold = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.62, 12), cyanLedMat);
-    cryoManifold.position.set(8.68, 1.26, -6.30);
-    const orionFaultLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.26), orionFaultLedMat);
-    orionFaultLed.position.set(8.78, 1.36, -6.10);
-    roomGroup.add(cryoManifold, orionFaultLed);
+    // Port Console (`Furn_OrionConsole_L` [9.75..10.55, -13.20..-10.80]): Physical 3D Cryo Purge Lever + LOX/LH2 Manifold
+    addBox(10.15, 0.62, -12.00, 0.76, 1.24, 2.36, wallMetalMat);
+    const cryoManifold = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.74, 12), cyanLedMat);
+    cryoManifold.position.set(10.50, 1.38, -12.45);
+    const orionFaultLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.32), orionFaultLedMat);
+    orionFaultLed.position.set(10.56, 1.56, -12.00);
+    const orionCryoLeverPivot = new THREE.Group();
+    orionCryoLeverPivot.position.set(10.56, 1.26, -11.65);
+    const cryoLeverArm = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.055, 0.055), amberLedMat);
+    cryoLeverArm.position.x = 0.14;
+    const cryoLeverGrip = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.18, 10), crimsonMat);
+    cryoLeverGrip.rotation.x = Math.PI / 2;
+    cryoLeverGrip.position.set(0.28, 0, 0);
+    orionCryoLeverPivot.add(cryoLeverArm, cryoLeverGrip);
+    orionCryoLeverPivot.rotation.z = 0.55;
+    roomGroup.add(cryoManifold, orionFaultLed, orionCryoLeverPivot);
 
-    // Starboard Console (`orion_power_panel` at 11.18, -6.10): Overhead Switch Bus + Supply Gauges
-    addBox(11.485, 0.60, -6.15, 0.53, 1.20, 1.80, wallMetalMat);
-    const orionPowerLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.26), orionPowerLedMat);
-    orionPowerLed.position.set(11.22, 1.36, -6.10);
-    const hatchLed = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 8), hatchStatusLedMat);
-    hatchLed.position.set(10.00, 2.25, -4.40);
-    roomGroup.add(orionPowerLed, hatchLed);
+    // Starboard Console (`Furn_OrionConsole_R` [14.65..15.45, -13.20..-10.80]): Physical 3D GNC 28V Breaker Switch + Bus Gauges
+    addBox(15.05, 0.62, -12.00, 0.76, 1.24, 2.36, wallMetalMat);
+    const orionPowerLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.32), orionPowerLedMat);
+    orionPowerLed.position.set(14.64, 1.56, -12.00);
+    const orionGncSwitchPivot = new THREE.Group();
+    orionGncSwitchPivot.position.set(14.64, 1.26, -11.65);
+    const gncSwitchArm = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.055, 0.055), cyanLedMat);
+    gncSwitchArm.position.x = -0.14;
+    const gncSwitchKnob = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.18, 10), gantryRailMat);
+    gncSwitchKnob.rotation.x = Math.PI / 2;
+    gncSwitchKnob.position.set(-0.27, 0, 0);
+    orionGncSwitchPivot.add(gncSwitchArm, gncSwitchKnob);
+    orionGncSwitchPivot.rotation.z = -0.55;
+    const hatchLed = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), hatchStatusLedMat);
+    hatchLed.position.set(12.60, 2.30, -9.42);
+    roomGroup.add(orionPowerLed, orionGncSwitchPivot, hatchLed);
 
-    // Forward Reclined Commander Seat (`orion_pilot_seat` at 10.00, -7.12) + 3-Panel MEDS Glass Cockpit
-    addBox(10.00, 0.36, -7.56, 0.92, 0.72, 0.64, darkMetalMat);
-    const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.88, 0.14), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7 }));
+    // Forward Reclined Commander Seat (`Furn_OrionPilotSeat` [11.85..13.35, -14.95..-13.85]) + 3-Panel MEDS Glass Cockpit
+    addBox(12.60, 0.36, -14.40, 1.44, 0.72, 1.04, darkMetalMat);
+    const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.92, 0.16), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7 }));
     seatBack.rotation.x = 0.24;
-    seatBack.position.set(10.00, 0.96, -7.72);
+    seatBack.position.set(12.60, 0.96, -14.62);
     const orionMedsPanel = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.90, 0.60),
+      new THREE.PlaneGeometry(2.35, 0.68),
       new THREE.MeshStandardMaterial({
         map: tex.medsGlassCockpit,
         emissiveMap: tex.medsGlassCockpit,
@@ -1991,54 +2052,52 @@ export const SpaceSinglePlayerGame: React.FC = () => {
         roughness: 0.2,
       })
     );
-    orionMedsPanel.position.set(10.00, 1.48, -7.86);
+    orionMedsPanel.position.set(12.60, 1.48, -14.96);
     roomGroup.add(seatBack, orionMedsPanel);
-    addSignPlate('CABINA ORION · PRE-VUELO Y DESPEGUE', '#ff4f00', 10.00, 2.52, -4.38, 0);
+    addSignPlate('CABINA ORION · PRE-VUELO Y DESPEGUE', '#ff4f00', 12.60, 2.58, -9.40, 0);
 
     // =========================================================================
-    // SOUTHWEST WING: NBL IMMERSION POOL & EVA PREP (`-0.4..5.8, -8.4..-2.4`)
+    // SOUTHWEST WING: NBL IMMERSION POOL & EVA PREP (`X=-1.8..6.4, Y=-11.8..-4.0`)
     // =========================================================================
     const nblLedMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-    // Pool outer concrete/steel basin (`Furn_NBL_PoolBasin` [0.15..-7.85 .. 3.65..-4.35])
-    addBox(1.90, 0.42, -6.10, 3.50, 0.84, 3.50, wallMetalMat);
+    // Pool outer basin (`Furn_NBL_PoolBasin` [-0.85..3.25, -10.60..-6.50])
+    addBox(1.20, 0.42, -8.55, 4.06, 0.84, 4.06, wallMetalMat);
     const nblWater = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.15, 3.15),
+      new THREE.PlaneGeometry(3.65, 3.65),
       new THREE.MeshPhysicalMaterial({ color: 0x0ea5e9, emissive: 0x0369a1, emissiveIntensity: 0.35, transparent: true, opacity: 0.68, roughness: 0.12 })
     );
     nblWater.rotation.x = -Math.PI / 2;
-    nblWater.position.set(1.90, 0.85, -6.10);
-    // Submerged yellow ISS truss structure visible inside NBL pool
+    nblWater.position.set(1.20, 0.85, -8.55);
     const nblTruss = new THREE.Mesh(
-      new THREE.BoxGeometry(1.80, 0.26, 0.36),
+      new THREE.BoxGeometry(2.05, 0.28, 0.40),
       new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.45, metalness: 0.4 })
     );
-    nblTruss.position.set(1.90, 0.48, -6.10);
+    nblTruss.position.set(1.20, 0.48, -8.55);
     nblTruss.rotation.y = 0.42;
     roomGroup.add(nblWater, nblTruss);
     const nblBubbles: THREE.Mesh[] = [];
     const bubbleMat = new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.72 });
     for (let bi = 0; bi < 10; bi++) {
       const b = new THREE.Mesh(new THREE.SphereGeometry(0.035 + (bi % 3) * 0.012, 8, 8), bubbleMat);
-      b.position.set(1.1 + ((bi * 37) % 16) * 0.1, 0.35 + (bi % 5) * 0.11, -6.9 + ((bi * 53) % 16) * 0.1);
+      b.position.set(0.2 + ((bi * 37) % 18) * 0.1, 0.35 + (bi % 5) * 0.11, -9.4 + ((bi * 53) % 18) * 0.1);
       roomGroup.add(b);
       nblBubbles.push(b);
     }
-    // NBL Diver Telemetry Podium (`3.85, -4.25`) + EVA Tool Prep Bench (`5.35, -6.32`)
-    addBox(5.35, 0.46, -6.32, 0.80, 0.92, 2.25, wallMetalMat);
-    addBox(3.85, 0.56, -4.25, 0.65, 1.12, 0.55, darkMetalMat);
-    const nblBeaconLed = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.14, 0.06), nblLedMat);
-    nblBeaconLed.position.set(3.85, 1.24, -4.25);
+    // NBL Diver Telemetry Podium (`3.975, -6.425`) + EVA Tool Prep Bench (`5.865, -8.85`)
+    addBox(5.865, 0.46, -8.85, 1.00, 0.92, 2.86, wallMetalMat);
+    addBox(3.975, 0.56, -6.425, 0.90, 1.12, 1.00, darkMetalMat);
+    const nblBeaconLed = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.14, 0.06), nblLedMat);
+    nblBeaconLed.position.set(3.975, 1.24, -6.425);
     roomGroup.add(nblBeaconLed);
-    addSignPlate('PISCINA NBL HOUSTON · 61.5×31.1×12.2 m', '#06b6d4', 3.10, 2.55, -2.55, 0);
+    addSignPlate('PISCINA NBL HOUSTON · 61.5×31.1×12.2 m', '#06b6d4', 2.80, 2.55, -4.15, 0);
 
     // =========================================================================
-    // NORTHEAST WING: NASA FORMULA DESK & 4.5G CENTRIFUGE (`15.6..22.0, 9.4..15.2`)
+    // NORTHEAST WING: NASA FORMULA DESK & 4.5G CENTRIFUGE (`X=20.0..28.6, Y=12.0..19.8`)
     // =========================================================================
     const cenLedMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
-    // Compute Desk & Supply Rack
-    addBox(16.05, 0.475, 12.85, 0.80, 0.95, 2.90, wallMetalMat);
-    addBox(21.55, 0.46, 10.55, 0.80, 0.92, 1.80, wallMetalMat);
-    // NASA Wall Chalkboard at X=15.66 showing official orbital/solar/hydrostatic formulas + Wall Manual
+    addBox(20.52, 0.475, 15.70, 0.96, 0.95, 3.74, wallMetalMat);
+    addBox(27.99, 0.46, 13.30, 1.14, 0.92, 2.14, wallMetalMat);
+    // NASA Wall Chalkboard at X=20.06 showing official orbital/solar/hydrostatic formulas
     const boardC = document.createElement('canvas');
     boardC.width = 512;
     boardC.height = 256;
@@ -2065,52 +2124,53 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     boardTex.colorSpace = THREE.SRGBColorSpace;
     dynamicTextures.push(boardTex);
     const formulaBoardMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.55, 1.25),
+      new THREE.PlaneGeometry(2.90, 1.35),
       new THREE.MeshBasicMaterial({ map: boardTex })
     );
     formulaBoardMesh.rotation.y = Math.PI / 2;
-    formulaBoardMesh.position.set(15.72, 1.82, 12.60);
+    formulaBoardMesh.position.set(20.08, 1.82, 15.70);
     roomGroup.add(formulaBoardMesh);
 
-    // 4.5 G Centrifuge Pedestal (`19.75, 12.95`) + Rotating Boom & Gondola
-    addBox(19.75, 0.24, 12.95, 2.25, 0.48, 2.25, darkMetalMat);
-    const cenCoreLed = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 0.42, 16), cenLedMat);
-    cenCoreLed.position.set(19.75, 0.68, 12.95);
+    // 4.5 G Centrifuge Pedestal (`Furn_NE_CentrifugePedestal` [23.40..26.20, 14.30..17.10])
+    addBox(24.80, 0.24, 15.70, 2.74, 0.48, 2.74, darkMetalMat);
+    const cenCoreLed = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 0.44, 16), cenLedMat);
+    cenCoreLed.position.set(24.80, 0.68, 15.70);
     roomGroup.add(cenCoreLed);
     const centrifugeBoom = new THREE.Group();
-    centrifugeBoom.position.set(19.75, 1.02, 12.95);
-    const boomArm = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.14, 0.18), whiteFrameMat);
+    centrifugeBoom.position.set(24.80, 1.04, 15.70);
+    const boomArm = new THREE.Mesh(new THREE.BoxGeometry(2.65, 0.14, 0.18), whiteFrameMat);
     const gondola = new THREE.Mesh(
-      new THREE.SphereGeometry(0.32, 14, 12),
+      new THREE.SphereGeometry(0.34, 14, 12),
       new THREE.MeshStandardMaterial({ color: 0xff4f00, roughness: 0.3, metalness: 0.45 })
     );
-    gondola.position.x = 1.15;
+    gondola.position.x = 1.25;
     centrifugeBoom.add(boomArm, gondola);
     roomGroup.add(centrifugeBoom);
-    addSignPlate('LAB CÓMPUTO & CENTRÍFUGA 4.5 G', '#a855f7', 19.30, 2.55, 9.55, Math.PI);
+    addSignPlate('LAB CÓMPUTO & CENTRÍFUGA 4.5 G', '#a855f7', 24.40, 2.55, 12.15, Math.PI);
 
     // =========================================================================
-    // SOUTHEAST WING: ISS 0g FIRE RACK #2 & STORAGE (`15.2..21.8, -8.2..-2.4`)
+    // SOUTHEAST WING: ISS 0g FIRE RACK #2, NODE 3 ECLSS RACKS & STORAGE (`X=19.6..28.8, Y=-12.2..-4.0`)
     // =========================================================================
     const fireLedMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
-    addBox(18.90, 1.075, -7.45, 2.50, 2.15, 1.00, wallMetalMat); // Furn_SE_FireRack2
-    addBox(15.65, 0.46, -5.75, 0.80, 0.92, 2.90, wallMetalMat); // Furn_SE_StorageRackW
-    addBox(21.35, 0.46, -4.50, 0.80, 0.92, 2.20, wallMetalMat); // Furn_SE_StorageRackE
-    const fireLedMesh = new THREE.Mesh(new THREE.BoxGeometry(1.10, 0.12, 0.08), fireLedMat);
-    fireLedMesh.position.set(18.90, 1.92, -6.92);
+    addBox(25.60, 1.075, -11.565, 2.96, 2.15, 1.18, isprRackMat); // Furn_SE_FireRack2
+    addBox(21.275, 0.46, -4.47, 2.12, 0.92, 0.88, wallMetalMat); // Furn_SE_StorageBenchW
+    addBox(27.45, 0.46, -4.47, 2.16, 0.92, 0.88, wallMetalMat); // Furn_SE_StorageBenchE
+    const fireLedMesh = new THREE.Mesh(new THREE.BoxGeometry(1.30, 0.12, 0.08), fireLedMat);
+    fireLedMesh.position.set(25.60, 1.94, -10.94);
     roomGroup.add(fireLedMesh);
-    const fireGlowGroup = new THREE.Group();
-    fireGlowGroup.position.set(18.90, 1.18, -6.90);
-    for (let fi = 0; fi < 4; fi++) {
-      const fOrb = new THREE.Mesh(
-        new THREE.OctahedronGeometry(0.11 + (fi % 2) * 0.05, 0),
-        new THREE.MeshBasicMaterial({ color: fi % 2 === 0 ? 0xf97316 : 0xef4444, wireframe: true })
-      );
-      fOrb.position.set((fi - 1.5) * 0.22, (fi % 2) * 0.16, 0.04);
-      fireGlowGroup.add(fOrb);
-    }
-    roomGroup.add(fireGlowGroup);
-    addSignPlate('CÁMARA INCENDIO 0g ISS RACK #2', '#f43f5e', 19.30, 2.55, -2.55, 0);
+    // Framed physical borosilicate 0g combustion test bay (replaces floating diamond octahedrons!)
+    const fireBayFrame = new THREE.Mesh(new THREE.BoxGeometry(1.56, 0.82, 0.08), darkMetalMat);
+    fireBayFrame.position.set(25.60, 1.22, -10.95);
+    const fireBayGlass = new THREE.Mesh(
+      new THREE.BoxGeometry(1.40, 0.66, 0.04),
+      new THREE.MeshPhysicalMaterial({ color: 0x0f172a, emissive: 0x7c2d12, emissiveIntensity: 0.55, transparent: true, opacity: 0.78 })
+    );
+    fireBayGlass.position.set(25.60, 1.22, -10.91);
+    const fireBurnerMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+    const fireBurnerBar = new THREE.Mesh(new THREE.BoxGeometry(1.06, 0.14, 0.03), fireBurnerMat);
+    fireBurnerBar.position.set(25.60, 1.18, -10.89);
+    roomGroup.add(fireBayFrame, fireBayGlass, fireBurnerBar);
+    addSignPlate('CÁMARA INCENDIO 0g ISS RACK #2', '#f43f5e', 24.40, 2.55, -4.15, 0);
 
     // =========================================================================
     // NODE 3 ECLSS MACHINE RACKS, MBSU/RPCM 120V DC PANEL, QUEST AIRLOCK & HISTORICAL 3D PROPS
@@ -2130,88 +2190,87 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       new THREE.MeshBasicMaterial({ color: 0x22c55e }),
     ];
 
-    // OGA O2 Rack (15.65, -4.20) + Suit Umbilical Hose
-    addBox(15.65, 1.38, -4.20, 0.44, 0.96, 0.64, isprRackMat);
-    const ogaLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.24), ogaLedMat);
-    ogaLed.position.set(15.90, 1.56, -4.20);
+    // OGA O2 Rack (`Furn_SE_OGA_Rack` [19.62..20.58, -7.20..-5.50]) + Suit Umbilical Hose
+    addBox(20.10, 1.05, -6.35, 0.94, 2.10, 1.66, isprRackMat);
+    const ogaLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.28), ogaLedMat);
+    ogaLed.position.set(20.60, 1.56, -6.35);
     const ogaHose = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.65, 8), cyanLedMat);
-    ogaHose.position.set(15.95, 1.08, -4.20);
+    ogaHose.position.set(20.62, 1.08, -6.35);
     roomGroup.add(ogaLed, ogaHose);
 
-    // WRS Potable Water Rack (15.65, -7.10)
-    addBox(15.65, 1.38, -7.10, 0.44, 0.96, 0.64, isprRackMat);
-    const wrsLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.24), wrsLedMat);
-    wrsLed.position.set(15.90, 1.52, -7.10);
+    // WRS Potable Water Rack (`Furn_SE_WRS_Rack` [19.62..20.58, -10.80..-9.10])
+    addBox(20.10, 1.05, -9.95, 0.94, 2.10, 1.66, isprRackMat);
+    const wrsLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.28), wrsLedMat);
+    wrsLed.position.set(20.60, 1.52, -9.95);
     roomGroup.add(wrsLed);
 
-    // CDRA + Sabatier 400C Reactor (17.35, -7.25)
-    addBox(17.35, 1.15, -7.45, 0.72, 1.80, 0.46, isprRackMat);
+    // CDRA + Sabatier 400C Reactor (`Furn_SE_CDRA_Rack` [21.20..23.10, -12.18..-11.15])
+    addBox(22.15, 1.05, -11.665, 1.86, 2.10, 1.00, isprRackMat);
     const sabatierCore = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.16, 0.16, 0.54, 12),
+      new THREE.CylinderGeometry(0.18, 0.18, 0.62, 12),
       new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.75 })
     );
-    sabatierCore.position.set(17.35, 1.28, -7.14);
-    const cdraLed = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.10, 0.06), cdraLedMat);
-    cdraLed.position.set(17.35, 1.72, -7.18);
+    sabatierCore.position.set(22.15, 1.28, -11.06);
+    const cdraLed = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.12, 0.06), cdraLedMat);
+    cdraLed.position.set(22.15, 1.76, -11.12);
     roomGroup.add(sabatierCore, cdraLed);
 
-    // MBSU / RPCM 120V DC Breaker Panel (21.25, -6.20) with 5 individual bus indicators
-    addBox(21.25, 1.35, -6.20, 0.42, 1.05, 0.76, isprRackMat);
+    // MBSU / RPCM 120V DC Breaker Panel (`Furn_SE_MBSU_Rack` [27.80..28.78, -10.30..-8.30])
+    addBox(28.29, 1.05, -9.30, 0.96, 2.10, 1.96, isprRackMat);
     for (let bi = 0; bi < 5; bi++) {
-      const bLed = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.10, 0.09), rpcmLedMats[bi]);
-      bLed.position.set(21.02, 1.48, -6.44 + bi * 0.12);
+      const bLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.12), rpcmLedMats[bi]);
+      bLed.position.set(27.78, 1.48, -9.70 + bi * 0.20);
       roomGroup.add(bLed);
     }
 
-    // ATCS Ammonia Thermal Loop Valve + Handwheel (21.25, -3.50)
-    addBox(21.25, 1.35, -3.50, 0.42, 0.96, 0.64, isprRackMat);
-    const atcsLed = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 0.24), atcsLedMat);
-    atcsLed.position.set(21.02, 1.60, -3.50);
-    const atcsWheelMesh = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.024, 8, 16), bluePipeMat);
+    // ATCS Ammonia Thermal Loop Valve + Handwheel (`Furn_SE_ATCS_Rack` [27.80..28.78, -7.00..-5.00])
+    addBox(28.29, 1.05, -6.00, 0.96, 2.10, 1.96, isprRackMat);
+    const atcsLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.28), atcsLedMat);
+    atcsLed.position.set(27.78, 1.60, -6.00);
+    const atcsWheelMesh = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.026, 8, 16), bluePipeMat);
     atcsWheelMesh.rotation.y = Math.PI / 2;
-    atcsWheelMesh.position.set(20.96, 1.24, -3.50);
+    atcsWheelMesh.position.set(27.70, 1.22, -6.00);
     roomGroup.add(atcsLed, atcsWheelMesh);
 
-    // Quest Airlock CBM Bezel + MPEV Handwheel + Pressure LED (12.95, -2.55)
-    addBox(13.02, 1.28, -2.55, 0.34, 1.45, 0.95, cbmHatchMat);
+    // Quest Airlock CBM Bezel + MPEV Handwheel (`Furn_QuestAirlockRack` [16.65..17.58, -4.85..-3.15])
+    addBox(17.115, 1.05, -4.00, 0.90, 2.10, 1.66, cbmHatchMat);
     const mpevWheelMesh = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.028, 8, 16), crimsonMat);
     mpevWheelMesh.rotation.y = Math.PI / 2;
-    mpevWheelMesh.position.set(12.82, 1.18, -2.55);
+    mpevWheelMesh.position.set(16.62, 1.18, -3.95);
     const airlockLed = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.32), airlockLedMat);
-    airlockLed.position.set(12.82, 1.66, -2.55);
+    airlockLed.position.set(16.64, 1.66, -3.95);
     roomGroup.add(mpevWheelMesh, airlockLed);
-    addSignPlate('ESCLUSA QUEST · MPEV (kPa)', '#f59e0b', 12.82, 2.25, -2.55, -Math.PI / 2);
+    addSignPlate('ESCLUSA QUEST · MPEV (kPa)', '#f59e0b', 16.62, 2.25, -4.00, -Math.PI / 2);
 
-    // Apollo 13 SM Cryo Panel + East Lab "Mailbox" Co2 Bench LEDs (active during Apollo 13)
+    // Apollo 13 SM Cryo Panel (mounted on Quest/Cryo Bay Rack) + East Lab "Mailbox" Co2 Bench LEDs
     const a13MailboxLedMats = [
       new THREE.MeshBasicMaterial({ color: 0xf59e0b }),
       new THREE.MeshBasicMaterial({ color: 0xf59e0b }),
       new THREE.MeshBasicMaterial({ color: 0xf59e0b }),
     ];
     if (activeMissionKey === 'apollo13_aquarius') {
-      addBox(11.45, 1.22, -5.80, 0.42, 0.84, 0.62, isprRackMat);
-      const a13Led = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.24), a13CryoLedMat);
-      a13Led.position.set(11.22, 1.42, -5.80);
+      const a13Led = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.28), a13CryoLedMat);
+      a13Led.position.set(16.62, 1.42, -4.55);
       roomGroup.add(a13Led);
       for (let mi = 0; mi < 3; mi++) {
-        const ml = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.07, 0.09), a13MailboxLedMats[mi]);
-        ml.position.set(17.10 + mi * 0.25, 0.96, 3.85);
+        const ml = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.08, 0.11), a13MailboxLedMats[mi]);
+        ml.position.set(21.85 + mi * 0.30, 0.96, 4.10);
         roomGroup.add(ml);
       }
     }
 
-    // STS-120 Canadarm2 + 90 ft OBSS Worksite + P6-4B Torn Wing Blanket
+    // STS-120 Canadarm2 + 90 ft OBSS Worksite (`Furn_STS120_OBSS_Rack` [7.62..8.65, -5.10..-3.50])
     const p6WingGroup = new THREE.Group();
     if (activeMissionKey === 'sts120_p6_solar') {
-      addBox(12.65, 1.15, -3.70, 0.56, 1.30, 0.72, isprRackMat);
+      addBox(8.135, 1.05, -4.30, 1.00, 2.10, 1.56, isprRackMat);
       const obssArm = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.12, 0.12), whiteFrameMat);
-      obssArm.position.set(12.15, 1.62, -3.70);
-      obssArm.rotation.z = 0.22;
-      const stsLed = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.24), stsConsoleLedMat);
-      stsLed.position.set(12.34, 1.46, -3.70);
+      obssArm.position.set(8.60, 1.66, -4.30);
+      obssArm.rotation.z = -0.22;
+      const stsLed = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.26), stsConsoleLedMat);
+      stsLed.position.set(8.66, 1.46, -4.30);
       roomGroup.add(obssArm, stsLed);
 
-      p6WingGroup.position.set(11.70, 1.75, -3.70);
+      p6WingGroup.position.set(8.95, 1.75, -4.30);
       const pvMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.3, metalness: 0.65 });
       const tearMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
       const bayA = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.72, 0.65), pvMat);
@@ -2222,7 +2281,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     }
 
     // =========================================================================
-    // LIVE 3D CREW COMPANION NPCs + OBJECTIVE BEACON
+    // LIVE 3D CREW COMPANION NPCs + FLOOR OBJECTIVE RING (no floating diamonds!)
     // =========================================================================
     const npcEntries: Array<{ stId: string; rig: ChibiAstronautRig; homeX: number; homeY: number; homeYawRad: number }> = [];
     const npcSuitMap: Record<string, number> = { WHITSON: 0, CONRAD: 3, LOVELL: 2 };
@@ -2238,28 +2297,12 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       npcEntries.push({ stId: st.id, rig, homeX: st.x, homeY: st.y, homeYawRad });
     }
 
-    // Floating Station Diamonds + Active Step Guide Ring
-    const beaconMap = new Map<string, { mesh: THREE.Mesh; baseZ: number }>();
-    for (const st of simRef.current.stations) {
-      if (['bunk_light_switch', 'window_shutter_button', 'suit_mirror_station'].includes(st.kind)) continue;
-      const bMesh = new THREE.Mesh(
-        new THREE.OctahedronGeometry(0.065, 0),
-        new THREE.MeshBasicMaterial({ color: st.kind === 'npc_crew' ? 0xc084fc : st.done ? 0x22c55e : 0x38bdf8 })
-      );
-      const baseZ = Math.min(2.6, st.z + 0.56);
-      bMesh.position.set(st.x, baseZ, st.y);
-      roomGroup.add(bMesh);
-      beaconMap.set(st.id, { mesh: bMesh, baseZ });
-    }
-
     const guideRingMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide });
     const guideFloorRing = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.44, 24), guideRingMat);
     guideFloorRing.rotation.x = -Math.PI / 2;
-    const guideDiamondMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true });
-    const guideDiamond = new THREE.Mesh(new THREE.OctahedronGeometry(0.12, 0), guideDiamondMat);
     const guideDottedGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(3.15, 0.035, 3.2),
-      new THREE.Vector3(6.2, 0.035, 3.5),
+      new THREE.Vector3(3.4, 0.035, 4.0),
+      new THREE.Vector3(8.5, 0.035, 4.0),
     ]);
     const guideDottedMat = new THREE.LineDashedMaterial({
       color: 0xfacc15,
@@ -2271,7 +2314,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     const guideDottedLine = new THREE.Line(guideDottedGeo, guideDottedMat);
     guideDottedLine.computeLineDistances();
     guideDottedLine.visible = false;
-    roomGroup.add(guideFloorRing, guideDiamond, guideDottedLine);
+    roomGroup.add(guideFloorRing, guideDottedLine);
 
     // Player 3rd-Person Chibi & Dual 1st-Person Hands
     const playerAstronaut: ChibiAstronautRig = createChibiAstronautRig(suitIdx, faceIdx);
@@ -2377,13 +2420,13 @@ export const SpaceSinglePlayerGame: React.FC = () => {
           soundEngine.playDoorSlide();
         }
         doorWasOpenRef.current[ds.id] = isOpenNow;
-        const shift = ds.openProgress * 1.04;
+        const shift = ds.openProgress * 1.32;
         if (dv.axis === 'x') {
-          dv.leafA.position.z = dv.cy - 0.54 - shift;
-          dv.leafB.position.z = dv.cy + 0.54 + shift;
+          dv.leafA.position.z = dv.cy - 0.70 - shift;
+          dv.leafB.position.z = dv.cy + 0.70 + shift;
         } else {
-          dv.leafA.position.x = dv.cx - 0.54 - shift;
-          dv.leafB.position.x = dv.cx + 0.54 + shift;
+          dv.leafA.position.x = dv.cx - 0.70 - shift;
+          dv.leafB.position.x = dv.cx + 0.70 + shift;
         }
         dv.ledMat.color.setHex(ds.openProgress > 0.5 ? 0x10b981 : 0xf59e0b);
       }
@@ -2495,9 +2538,9 @@ export const SpaceSinglePlayerGame: React.FC = () => {
         lightBtnMesh.material = amberLedMat;
       }
 
-      // Animate Shutters centered around X=3.20 & Mission-Specific Hardware
-      const targetLeftX = sim.shutterOpen ? 1.55 : 2.52;
-      const targetRightX = sim.shutterOpen ? 4.85 : 3.88;
+      // Animate Shutters centered around X=2.80 & Mission-Specific Hardware
+      const targetLeftX = sim.shutterOpen ? 0.35 : 1.99;
+      const targetRightX = sim.shutterOpen ? 5.25 : 3.61;
       shutterLeft.position.x += (targetLeftX - shutterLeft.position.x) * Math.min(1, dt * 6);
       shutterRight.position.x += (targetRightX - shutterRight.position.x) * Math.min(1, dt * 6);
       shutterBtnMesh.material = sim.shutterOpen ? greenLedMat : amberLedMat;
@@ -2538,12 +2581,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
         regolithDoorMesh.position.y += (targetY - regolithDoorMesh.position.y) * Math.min(1, dt * 3.5);
       }
 
-      for (const orb of holoOrbiters) {
-        orb.rotation.y += dt * 1.4;
-        orb.rotation.x += dt * 0.7;
-      }
-
-      // Animate 3 New Wing Modules (NBL Bubbles, 4.5G Centrifuge Rotor, 0g Fire Arc, Orion Consoles)
+      // Animate 3 New Wing Modules (NBL Bubbles, 4.5G Centrifuge Rotor, 0g Fire Glass Chamber, Walkable Orion)
       nblLedMat.color.setHex(sim.objectives.nblCertified ? 0x22c55e : 0x38bdf8);
       for (let bi = 0; bi < nblBubbles.length; bi++) {
         const b = nblBubbles[bi];
@@ -2553,17 +2591,21 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       cenLedMat.color.setHex(sim.objectives.centrifugeCertified ? 0x22c55e : 0xa855f7);
       centrifugeBoom.rotation.y += dt * (sim.objectives.centrifugeCertified ? 0.6 : 2.6);
       fireLedMat.color.setHex(sim.objectives.fireDrillCertified ? 0x22c55e : 0xf43f5e);
-      fireGlowGroup.visible = !sim.objectives.fireDrillCertified;
-      if (fireGlowGroup.visible) {
-        fireGlowGroup.rotation.z = Math.sin(timeSec * 9.0) * 0.12;
-        fireGlowGroup.scale.setScalar(0.9 + 0.22 * Math.sin(timeSec * 14));
+      fireBurnerBar.visible = !sim.objectives.fireDrillCertified;
+      if (fireBurnerBar.visible) {
+        fireBurnerMat.color.setHex(Math.sin(timeSec * 12) > 0 ? 0xf97316 : 0x38bdf8);
       }
       orionFaultLedMat.color.setHex(sim.objectives.preflightRepaired ? 0x22c55e : 0xef4444);
       orionPowerLedMat.color.setHex(sim.objectives.preflightSystemsOn ? 0x22c55e : 0xf59e0b);
+      orionCryoLeverPivot.rotation.z += ((sim.orionCryoPurged ? -0.65 : 0.55) - orionCryoLeverPivot.rotation.z) * Math.min(1, dt * 8);
+      orionGncSwitchPivot.rotation.z += ((sim.orionGncArmed ? 0.55 : -0.55) - orionGncSwitchPivot.rotation.z) * Math.min(1, dt * 8);
+
       const orionHatchDoorState = sim.doors.find((d) => d.id === 'door_orion_hatch');
       const hatchProg = orionHatchDoorState?.openProgress ?? (sim.orionHatchOpen ? 1 : 0);
-      orionHatchGroup.position.x = 10.00 + hatchProg * 2.15;
-      orionHatchGroup.visible = hatchProg < 0.98;
+      orionHatchGroup.rotation.y = -hatchProg * 1.48;
+      const wheelRot = hatchProg * Math.PI * 4 + (sim.orionHatchSealed ? Math.PI * 2 : 0);
+      hatchWheelOuter.rotation.z += (wheelRot - hatchWheelOuter.rotation.z) * Math.min(1, dt * 7);
+      hatchWheelInner.rotation.z = hatchWheelOuter.rotation.z;
       hatchStatusLedMat.color.setHex(
         sim.orionHatchSealed ? 0x22c55e : sim.orionHatchOpen ? 0x38bdf8 : 0xf59e0b
       );
@@ -2594,28 +2636,15 @@ export const SpaceSinglePlayerGame: React.FC = () => {
         p6WingGroup.scale.set(1, spanScale, 1);
       }
 
-      for (const st of sim.stations) {
-        const b = beaconMap.get(st.id);
-        if (!b) continue;
-        b.mesh.position.y = b.baseZ + Math.sin(timeSec * 3.2 + st.x) * 0.05;
-        b.mesh.rotation.y += dt * 1.6;
-        (b.mesh.material as THREE.MeshBasicMaterial).color.setHex(
-          st.kind === 'npc_crew' ? 0xc084fc : st.done ? 0x22c55e : 0x38bdf8
-        );
-      }
-
-      // Update Live Guided Step Beacon & 3D Dotted Path Line
+      // Update Live Guided Step Floor Ring & 3D Dotted Path Line (no floating diamonds)
       const carriedList = [...hotbarRef.current, ...backpackRef.current];
       const stepGuide = getCurrentGuidedStep(sim, handItemRef.current, carriedList);
       const isRouteAssigned = sim.missionAssigned || carriedList.some(Boolean);
       const beaconColorHex = isRouteAssigned ? 0xfacc15 : 0x38bdf8;
       guideRingMat.color.setHex(beaconColorHex);
-      guideDiamondMat.color.setHex(beaconColorHex);
       guideFloorRing.position.set(stepGuide.targetX, 0.025, stepGuide.targetY);
       const pulseScale = 0.85 + 0.25 * Math.sin(timeSec * 4.5);
       guideFloorRing.scale.set(pulseScale, pulseScale, 1);
-      guideDiamond.position.set(stepGuide.targetX, 1.95 + Math.sin(timeSec * 3.5) * 0.09, stepGuide.targetY);
-      guideDiamond.rotation.y += dt * 2.4;
 
       guideDottedLine.visible = isRouteAssigned;
       if (isRouteAssigned) {
@@ -2624,9 +2653,6 @@ export const SpaceSinglePlayerGame: React.FC = () => {
         guideDottedGeo.setFromPoints(pts);
         guideDottedLine.computeLineDistances();
       }
-
-      const objSum = getMissionObjectiveSummary(sim.currentMissionId, sim.objectives);
-      hatchStatusLedMat.color.setHex(objSum.done >= Math.min(2, objSum.total) ? 0x22c55e : 0xf59e0b);
 
       // Animate Crew NPCs turning smoothly & greeting when nearby
       for (const npc of npcEntries) {
@@ -3190,9 +3216,24 @@ export const SpaceSinglePlayerGame: React.FC = () => {
                 {/* KATHERINE AI Voice Selection */}
                 <div className="bg-white/75 border border-slate-900/12 rounded-xl p-3 space-y-2.5 text-xs">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-sky-900">
-                      {lang === 'es' ? 'Voz de IA (KATHERINE)' : 'KATHERINE AI Voice'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sky-900">
+                        {lang === 'es' ? 'Voz de IA (KATHERINE)' : 'KATHERINE AI Voice'}
+                      </span>
+                      <span
+                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                          mentorVoice.getNeuralStatus().ready
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-500/35'
+                            : 'bg-sky-50 text-sky-800 border-sky-400/35'
+                        }`}
+                      >
+                        {mentorVoice.getNeuralStatus().ready
+                          ? `HD Neural (${mentorVoice.getNeuralStatus().count})`
+                          : lang === 'es'
+                            ? `Navegador · ${VOICE_PRESETS.length} estilos`
+                            : `Browser · ${VOICE_PRESETS.length} styles`}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
@@ -3205,6 +3246,13 @@ export const SpaceSinglePlayerGame: React.FC = () => {
                       {lang === 'es' ? 'Probar Voz' : 'Test Voice'}
                     </button>
                   </div>
+                  {!mentorVoice.getNeuralStatus().ready && (
+                    <div className="text-[10px] text-slate-500 leading-snug">
+                      {lang === 'es'
+                        ? 'Para desbloquear las 10 voces neuronales HD (F1–F5, M1–M5), inicia ai_bridge con supertonic en :8765.'
+                        : 'To unlock the 10 HD neural voices (F1–F5, M1–M5), start ai_bridge with supertonic on :8765.'}
+                    </div>
+                  )}
 
                   <label className="block space-y-1">
                     <span className="text-[10px] font-mono text-slate-600 uppercase">
@@ -3276,7 +3324,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
             )}
 
             <div className="text-[10px] font-mono text-slate-600 pt-2 border-t border-slate-900/10 flex flex-wrap gap-2">
-              <span>[WASD] MOVER</span>·<span>[1-5] CASILLAS</span>·<span>[B] MOCHILA</span>·<span>[ESC] MENÚ</span>
+              <span>[WASD] MOVER</span>·<span>[1-5] CASILLAS</span>·<span>[B] MOCHILA</span>·<span>[M] MAPA</span>·<span>[F1-F4] IA</span>·<span>[ESC] MENÚ</span>
             </div>
           </div>
 
@@ -3362,246 +3410,246 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       )}
 
       {/* COMPACT LOCKDOWN TRANSLUCENT-WHITE TOP HUD */}
-      <div className="pointer-events-none fixed top-2.5 left-2.5 right-2.5 flex items-start justify-between gap-2 z-20">
-        {/* Top-Left Compact Translucent Guided Step & Core Telemetry Card */}
-        <div className="pointer-events-auto max-w-[325px] lp-panel rounded-lg px-2.5 py-1.5 shadow-lg space-y-1">
-          <div className="flex flex-wrap items-center gap-1.5 text-[9.5px] font-mono">
-            <span
-              className="font-semibold px-1.5 py-0.5 rounded text-white leading-none"
-              style={{ backgroundColor: activeMissionConfig.accentHex }}
-            >
-              {lang === 'es' ? activeMissionConfig.badgeEs : activeMissionConfig.badgeEn}
-            </span>
-            <span className="flex items-center gap-1 font-semibold truncate" style={{ color: currentZone.accentHex }}>
-              <MapPin className="w-2.5 h-2.5 shrink-0" />
-              {lang === 'es' ? currentZone.nameEs : currentZone.nameEn}
-            </span>
-          </div>
-
-          <div className="text-[11px] leading-tight text-slate-900">
-            <span className={`font-semibold mr-1 ${miniRouteAssigned ? 'text-amber-800' : 'text-sky-900'}`}>
-              {miniRouteAssigned ? '◆ ' : '● '}
-              {lang === 'es' ? guidedStep.stepTitleEs : guidedStep.stepTitleEn} ({distToGuideM} m):
-            </span>
-            <span className="text-slate-800">{lang === 'es' ? guidedStep.instructionEs : guidedStep.instructionEn}</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-mono pt-1 border-t border-slate-900/15">
-            <span className={hud.o2Percent < 19.5 ? 'text-rose-700 font-bold' : 'text-sky-900 font-semibold'}>
-              O₂ {hud.o2Percent.toFixed(1)}%
-            </span>
-            <span className={hud.co2Ppm > 1200 ? 'text-amber-800 font-bold' : 'text-slate-800'}>
-              CO₂ {Math.round(hud.co2Ppm)}ppm
-            </span>
-            <span className={hud.powerKwe < 5 ? 'text-rose-700 font-bold' : 'text-amber-800 font-semibold'}>
-              {hud.powerKwe.toFixed(1)}kWe
-            </span>
-            <span className={hud.hp < 50 ? 'text-rose-700 font-bold' : 'text-emerald-800 font-semibold'}>
-              HP {Math.round(hud.hp)}
-            </span>
-            <span className={hud.suitO2Percent < 55 ? 'text-rose-700 font-bold' : 'text-cyan-900 font-semibold'}>
-              {lang === 'es' ? 'Traje' : 'Suit'} {Math.round(hud.suitO2Percent)}%
-            </span>
-            <span className={hud.hydrationPercent < 55 ? 'text-rose-700 font-bold' : 'text-emerald-900 font-semibold'}>
-              H₂O {Math.round(hud.hydrationPercent)}%
-            </span>
-            <span className={hud.airlockStep === 5 ? 'text-emerald-800 font-bold' : 'text-slate-800'}>
-              {hud.airlockPressureKpa.toFixed(1)}kPa
-            </span>
-            <span className={hud.rpcmTripped ? 'text-rose-700 font-bold' : 'text-slate-800'}>
-              120V:{hud.rpcmLoadKwe.toFixed(1)}kW{hud.rpcmTripped ? '!' : ''}
-            </span>
-          </div>
-        </div>
-
-        {/* Top-Right Compact [ESC] Button + Detailed Architectural Mini-Map */}
-        <div className="pointer-events-auto flex flex-col items-end gap-1">
-          <button
-            type="button"
-            onClick={() => {
-              soundEngine.unlock();
-              soundEngine.playClick();
-              ignoreNextUnlockRef.current = true;
-              document.exitPointerLock?.();
-              lastEscOpenMsRef.current = performance.now();
-              setActiveModal((m) => (m === 'esc_menu' ? null : 'esc_menu'));
-            }}
-            className="lp-btn px-2 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 shadow-md"
-          >
-            <Sliders className="w-3 h-3 text-sky-700" />
-            <span>
-              [ESC] {lang === 'es' ? 'Menú' : 'Menu'} ({objectiveProgress.done}/{objectiveProgress.total})
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              soundEngine.unlock();
-              ignoreNextUnlockRef.current = true;
-              document.exitPointerLock?.();
-              lastEscOpenMsRef.current = performance.now();
-              setActiveModal('esc_menu');
-            }}
-            title={lang === 'es' ? 'Ampliar Mapa Táctico [ESC]' : 'Expand Tactical Map [ESC]'}
-            className="lp-panel hover:bg-white/75 rounded-lg p-1 shadow-lg text-left transition"
-          >
-            <svg viewBox="0 0 440 462" className="w-[154px] h-[160px] bg-slate-950/88 rounded border border-slate-400/35">
-              {/* Subtle 2m radar grid */}
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((gi) => (
-                <g key={gi} opacity="0.16">
-                  <line x1={gi * 36} y1={0} x2={gi * 36} y2={462} stroke="#94a3b8" strokeWidth="1" />
-                  <line x1={0} y1={gi * 36} x2={440} y2={gi * 36} stroke="#94a3b8" strokeWidth="1" />
-                </g>
-              ))}
-              {/* Zone floor rectangles with active room tint */}
-              {STATION_FLOOR_RECTS.map((r) => {
-                const z = STATION_ZONES.find((sz) => sz.id === r.zoneId);
-                const active = r.zoneId === currentZone.id;
-                return (
-                  <rect
-                    key={r.id}
-                    x={(r.minX + 1.4) * 18}
-                    y={(16.2 - r.maxY) * 18}
-                    width={(r.maxX - r.minX) * 18}
-                    height={(r.maxY - r.minY) * 18}
-                    fill={active ? `${z?.accentHex ?? '#38bdf8'}30` : `${z?.accentHex ?? '#475569'}10`}
-                    stroke={z?.accentHex ?? '#64748b'}
-                    strokeOpacity={r.id.startsWith('corr_') ? 0.55 : 0.85}
-                    strokeWidth={active ? '2.2' : '1.4'}
-                  />
-                );
-              })}
-              {/* Architectural landmarks inside modules */}
-              {/* SW NBL Pool water basin + submerged ISS truss */}
-              <rect x={(0.15 + 1.4) * 18} y={(16.2 - -3.9) * 18} width={3.3 * 18} height={3.8 * 18} fill="#0284c755" stroke="#38bdf8" strokeWidth="1.2" rx="3" />
-              <line x1={(0.5 + 1.4) * 18} y1={(16.2 - -4.5) * 18} x2={(3.1 + 1.4) * 18} y2={(16.2 - -7.1) * 18} stroke="#facc15" strokeWidth="1.5" opacity="0.7" />
-              {/* South Orion Capsule & docking collar */}
-              <circle cx={(10.0 + 1.4) * 18} cy={(16.2 - -6.1) * 18} r={22} fill="#f8fafc22" stroke="#f59e0b" strokeWidth="1.6" />
-              <circle cx={(10.0 + 1.4) * 18} cy={(16.2 - -6.1) * 18} r={9} fill="#38bdf844" stroke="#f8fafc" strokeWidth="1" />
-              {/* NE 4.5G Centrifuge track & compute racks */}
-              <circle cx={(18.8 + 1.4) * 18} cy={(16.2 - 12.8) * 18} r={25} fill="none" stroke="#a855f7" strokeWidth="1.8" strokeDasharray="5 3" />
-              <circle cx={(18.8 + 1.4) * 18} cy={(16.2 - 12.8) * 18} r={7} fill="#a855f766" />
-              {/* North MEDS 3-MFD Cockpit Arc */}
-              <path
-                d={`M ${(8.2 + 1.4) * 18} ${(16.2 - 12.2) * 18} Q ${(10.0 + 1.4) * 18} ${(16.2 - 13.1) * 18} ${(11.8 + 1.4) * 18} ${(16.2 - 12.2) * 18}`}
-                fill="none"
-                stroke="#ff4f00"
-                strokeWidth="3.2"
-              />
-              {/* East Lab APH Botanical Bed + Workbenches */}
-              <rect x={(15.8 + 1.4) * 18} y={(16.2 - 6.3) * 18} width={3.2 * 18} height={1.4 * 18} fill="#10b98144" stroke="#22c55e" strokeWidth="1.2" />
-              {/* SE 0g Fire Chamber + Machine Racks */}
-              <rect x={(18.0 + 1.4) * 18} y={(16.2 - -4.4) * 18} width={2.8 * 18} height={2.4 * 18} fill="#ef444438" stroke="#f87171" strokeWidth="1.2" />
-              {/* West Hab Bunks */}
-              <rect x={(0.4 + 1.4) * 18} y={(16.2 - 6.2) * 18} width={1.2 * 18} height={2.5 * 18} fill="#38bdf833" stroke="#38bdf8" strokeWidth="1.2" />
-              {/* Compact module acronyms */}
-              {[
-                { label: 'HAB', x: 3.1, y: 1.6, col: '#7dd3fc' },
-                { label: 'HUB', x: 10.0, y: 3.4, col: '#cbd5e1' },
-                { label: 'MEDS', x: 10.0, y: 10.2, col: '#fdba74' },
-                { label: 'LAB', x: 17.2, y: 2.0, col: '#86efac' },
-                { label: 'NBL', x: 2.8, y: -2.9, col: '#38bdf8' },
-                { label: 'ORION', x: 10.0, y: -3.2, col: '#fcd34d' },
-                { label: '4.5G', x: 18.8, y: 10.3, col: '#d8b4fe' },
-                { label: 'ECLSS', x: 17.2, y: -6.8, col: '#fca5a5' },
-              ].map((lbl) => (
-                <text
-                  key={lbl.label}
-                  x={(lbl.x + 1.4) * 18}
-                  y={(16.2 - lbl.y) * 18}
-                  fill={lbl.col}
-                  fontSize="13"
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  opacity="0.88"
+      {(() => {
+        const pSvgX = (hud.x + 2.2) * 12.6 + 20;
+        const pSvgY = (20.2 - hud.y) * 12.6 + 14;
+        const radarHalf = 138;
+        const tSvgX = (guidedStep.targetX + 2.2) * 12.6 + 20;
+        const tSvgY = (20.2 - guidedStep.targetY) * 12.6 + 14;
+        const tDx = tSvgX - pSvgX;
+        const tDy = tSvgY - pSvgY;
+        const tDistSvg = Math.hypot(tDx, tDy);
+        const edgeR = radarHalf - 16;
+        const showEdgeArrow = tDistSvg > edgeR;
+        const edgeX = showEdgeArrow ? pSvgX + (tDx / tDistSvg) * edgeR : tSvgX;
+        const edgeY = showEdgeArrow ? pSvgY + (tDy / tDistSvg) * edgeR : tSvgY;
+        const edgeDeg = (Math.atan2(tDy, tDx) * 180) / Math.PI;
+        return (
+          <div className="pointer-events-none fixed top-2.5 left-2.5 right-2.5 flex items-start justify-between gap-2 z-20">
+            {/* Compact Top-Left Objective Card (vitals moved cleanly to bottom-left icons) */}
+            <div className="pointer-events-auto max-w-[258px] lp-panel rounded-lg px-2 py-1 shadow-lg space-y-0.5">
+              <div className="flex flex-wrap items-center gap-1.5 text-[9px] font-mono">
+                <span
+                  className="font-semibold px-1.5 py-0.5 rounded text-white leading-none"
+                  style={{ backgroundColor: activeMissionConfig.accentHex }}
                 >
-                  {lbl.label}
-                </text>
-              ))}
-              {/* Exterior bulkhead walls + cyan panoramic viewport */}
-              {SPACE_ROOM_COLLIDERS.slice(0, WALL_COLLIDER_COUNT).map((b) => (
-                <rect
-                  key={b[6]}
-                  x={(b[0] + 1.4) * 18}
-                  y={(16.2 - b[4]) * 18}
-                  width={Math.max(3, (b[3] - b[0]) * 18)}
-                  height={Math.max(3, (b[4] - b[1]) * 18)}
-                  fill={b[6] === 'Wall_WestHab_N_Win' ? '#38bdf8' : '#94a3b8'}
-                  opacity="0.82"
-                />
-              ))}
-              {/* Automatic sliding doors */}
-              {simRef.current.doors.map((d) => (
-                <rect
-                  key={d.id}
-                  x={(d.x - (d.axis === 'x' ? 0.2 : 1.0) + 1.4) * 18}
-                  y={(16.2 - (d.y + (d.axis === 'y' ? 0.2 : 1.0))) * 18}
-                  width={(d.axis === 'x' ? 0.4 : 2.0) * 18}
-                  height={(d.axis === 'y' ? 0.4 : 2.0) * 18}
-                  fill={d.openProgress > 0.5 ? '#10b981' : '#f59e0b'}
-                />
-              ))}
-              {/* Loose world pickup items */}
-              {simRef.current.worldItems.map((wi) => (
-                <rect
-                  key={wi.uid}
-                  x={(wi.x + 1.4) * 18 - 2.5}
-                  y={(16.2 - wi.y) * 18 - 2.5}
-                  width="5"
-                  height="5"
-                  fill={wi.category === 'task' ? '#fde047' : '#e2e8f0'}
-                  opacity="0.85"
-                />
-              ))}
-              {/* Guided yellow dashed route */}
-              {miniRouteAssigned && (
-                <polyline
-                  points={miniPathPtsStr}
-                  fill="none"
-                  stroke="#facc15"
-                  strokeWidth="4.2"
-                  strokeDasharray="6 6"
-                />
-              )}
-              {/* Station pins */}
-              {simRef.current.stations.map((st) => (
-                <circle
-                  key={st.id}
-                  cx={(st.x + 1.4) * 18}
-                  cy={(16.2 - st.y) * 18}
-                  r={st.kind === 'npc_crew' ? 6.2 : 4.8}
-                  fill={st.kind === 'npc_crew' ? '#c084fc' : st.done ? '#10b981' : '#38bdf8'}
-                  stroke="#020617"
-                  strokeWidth="1.2"
-                />
-              ))}
-              {/* Target highlight */}
-              {miniRouteAssigned ? (
-                <g transform={`translate(${(guidedStep.targetX + 1.4) * 18}, ${(16.2 - guidedStep.targetY) * 18})`}>
-                  <polygon points="0,-11 11,0 0,11 -11,0" fill="#facc15" stroke="#09090b" strokeWidth="2" />
-                </g>
-              ) : (
-                <circle
-                  cx={(guidedStep.targetX + 1.4) * 18}
-                  cy={(16.2 - guidedStep.targetY) * 18}
-                  r="8.5"
-                  fill="none"
-                  stroke="#38bdf8"
-                  strokeWidth="2.6"
-                />
-              )}
-              {/* Player FOV cone + directional arrow */}
-              <g
-                transform={`translate(${(hud.x + 1.4) * 18}, ${(16.2 - hud.y) * 18}) rotate(${-hud.yawDeg})`}
+                  {lang === 'es' ? activeMissionConfig.badgeEs : activeMissionConfig.badgeEn}
+                </span>
+                <span className="flex items-center gap-1 font-semibold truncate" style={{ color: currentZone.accentHex }}>
+                  <MapPin className="w-2.5 h-2.5 shrink-0" />
+                  {lang === 'es' ? currentZone.nameEs : currentZone.nameEn}
+                </span>
+              </div>
+
+              <div className="text-[10.5px] leading-snug text-slate-900">
+                <span className={`font-semibold mr-1 ${miniRouteAssigned ? 'text-amber-800' : 'text-sky-900'}`}>
+                  {miniRouteAssigned ? '◆ ' : '● '}
+                  {lang === 'es' ? guidedStep.stepTitleEs : guidedStep.stepTitleEn} ({distToGuideM} m):
+                </span>
+                <span className="text-slate-800">{lang === 'es' ? guidedStep.instructionEs : guidedStep.instructionEn}</span>
+              </div>
+            </div>
+
+            {/* Top-Right Compact [ESC] Button + Smaller Circular Player-Centered Mini-Map [M] */}
+            <div className="pointer-events-auto flex flex-col items-end gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.unlock();
+                  soundEngine.playClick();
+                  ignoreNextUnlockRef.current = true;
+                  document.exitPointerLock?.();
+                  lastEscOpenMsRef.current = performance.now();
+                  setEscTabReq((r) => ({ tab: undefined, nonce: r.nonce + 1 }));
+                  setActiveModal((m) => (m === 'esc_menu' ? null : 'esc_menu'));
+                }}
+                className="lp-btn px-2 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 shadow-md"
               >
-                <polygon points="0,0 44,-24 44,24" fill="#22c55e" opacity="0.22" />
-                <polygon points="11,0 -6,-6.5 -3,0 -6,6.5" fill="#22c55e" stroke="#ffffff" strokeWidth="1.6" />
-              </g>
-            </svg>
-          </button>
-        </div>
-      </div>
+                <Sliders className="w-3 h-3 text-sky-700" />
+                <span>
+                  [ESC] {lang === 'es' ? 'Menú' : 'Menu'} ({objectiveProgress.done}/{objectiveProgress.total})
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.unlock();
+                  soundEngine.playClick();
+                  ignoreNextUnlockRef.current = true;
+                  document.exitPointerLock?.();
+                  lastEscOpenMsRef.current = performance.now();
+                  setEscTabReq((r) => ({ tab: 'map_ops', nonce: r.nonce + 1 }));
+                  setActiveModal('esc_menu');
+                }}
+                title={lang === 'es' ? 'Ampliar Mapa Táctico [M]' : 'Expand Tactical Map [M]'}
+                style={{ borderRadius: '9999px' }}
+                className="relative lp-panel hover:bg-white/75 !rounded-full p-1 shadow-lg transition flex items-center justify-center"
+              >
+                <svg
+                  viewBox={`${(pSvgX - radarHalf).toFixed(1)} ${(pSvgY - radarHalf).toFixed(1)} ${radarHalf * 2} ${radarHalf * 2}`}
+                  style={{ borderRadius: '9999px' }}
+                  className="w-[116px] h-[116px] sm:w-[122px] sm:h-[122px] bg-slate-950/90 !rounded-full border border-sky-400/50"
+                >
+                  {/* Extended radar grid tracking astronaut smoothly */}
+                  {Array.from({ length: 24 }, (_, idx) => idx - 6).map((gi) => (
+                    <g key={gi} opacity="0.16">
+                      <line x1={gi * 36} y1={-240} x2={gi * 36} y2={760} stroke="#94a3b8" strokeWidth="1.2" />
+                      <line x1={-240} y1={gi * 36} x2={760} y2={gi * 36} stroke="#94a3b8" strokeWidth="1.2" />
+                    </g>
+                  ))}
+                  {/* Zone floor rectangles with active room tint */}
+                  {STATION_FLOOR_RECTS.map((r) => {
+                    const z = STATION_ZONES.find((sz) => sz.id === r.zoneId);
+                    const active = r.zoneId === currentZone.id;
+                    return (
+                      <rect
+                        key={r.id}
+                        x={(r.minX + 2.2) * 12.6 + 20}
+                        y={(20.2 - r.maxY) * 12.6 + 14}
+                        width={(r.maxX - r.minX) * 12.6}
+                        height={(r.maxY - r.minY) * 12.6}
+                        fill={active ? `${z?.accentHex ?? '#38bdf8'}34` : `${z?.accentHex ?? '#475569'}14`}
+                        stroke={z?.accentHex ?? '#64748b'}
+                        strokeOpacity={r.id.startsWith('corr_') ? 0.55 : 0.85}
+                        strokeWidth={active ? '2.4' : '1.4'}
+                      />
+                    );
+                  })}
+                  {/* Architectural landmarks inside modules */}
+                  <rect x={(-0.85 + 2.2) * 12.6 + 20} y={(20.2 - -6.5) * 12.6 + 14} width={4.1 * 12.6} height={4.1 * 12.6} fill="#0284c755" stroke="#38bdf8" strokeWidth="1.2" rx="3" />
+                  <line x1={(-0.3 + 2.2) * 12.6 + 20} y1={(20.2 - -7.1) * 12.6 + 14} x2={(2.7 + 2.2) * 12.6 + 20} y2={(20.2 - -9.9) * 12.6 + 14} stroke="#facc15" strokeWidth="1.5" opacity="0.7" />
+                  <rect x={(11.2 + 2.2) * 12.6 + 20} y={(20.2 - -5.4) * 12.6 + 14} width={2.8 * 12.6} height={4.2 * 12.6} fill="#0ea5e933" stroke="#38bdf8" strokeWidth="1.1" />
+                  <circle cx={(12.6 + 2.2) * 12.6 + 20} cy={(20.2 - -12.4) * 12.6 + 14} r={22} fill="#f8fafc22" stroke="#f59e0b" strokeWidth="1.6" />
+                  <circle cx={(12.6 + 2.2) * 12.6 + 20} cy={(20.2 - -12.4) * 12.6 + 14} r={8} fill="#38bdf844" stroke="#f8fafc" strokeWidth="1" />
+                  <circle cx={(24.8 + 2.2) * 12.6 + 20} cy={(20.2 - 15.7) * 12.6 + 14} r={18} fill="none" stroke="#a855f7" strokeWidth="1.8" strokeDasharray="5 3" />
+                  <circle cx={(24.8 + 2.2) * 12.6 + 20} cy={(20.2 - 15.7) * 12.6 + 14} r={5} fill="#a855f766" />
+                  <path
+                    d={`M ${(10.6 + 2.2) * 12.6 + 20} ${(20.2 - 15.6) * 12.6 + 14} Q ${(12.6 + 2.2) * 12.6 + 20} ${(20.2 - 16.5) * 12.6 + 14} ${(14.6 + 2.2) * 12.6 + 20} ${(20.2 - 15.6) * 12.6 + 14}`}
+                    fill="none"
+                    stroke="#ff4f00"
+                    strokeWidth="3.2"
+                  />
+                  <rect x={(18.6 + 2.2) * 12.6 + 20} y={(20.2 - 8.5) * 12.6 + 14} width={3.7 * 12.6} height={1.0 * 12.6} fill="#10b98144" stroke="#22c55e" strokeWidth="1.2" />
+                  <rect x={(24.1 + 2.2) * 12.6 + 20} y={(20.2 - -10.95) * 12.6 + 14} width={3.0 * 12.6} height={1.23 * 12.6} fill="#ef444444" stroke="#f87171" strokeWidth="1.2" />
+                  <rect x={(-1.38 + 2.2) * 12.6 + 20} y={(20.2 - 7.0) * 12.6 + 14} width={1.66 * 12.6} height={2.6 * 12.6} fill="#38bdf833" stroke="#38bdf8" strokeWidth="1.2" />
+                  {[
+                    { label: 'HAB', x: 2.7, y: 2.0, col: '#7dd3fc' },
+                    { label: 'HUB', x: 12.6, y: 3.6, col: '#cbd5e1' },
+                    { label: 'MEDS', x: 12.6, y: 12.0, col: '#fdba74' },
+                    { label: 'LAB', x: 22.9, y: 2.0, col: '#86efac' },
+                    { label: 'NBL', x: 2.3, y: -5.2, col: '#38bdf8' },
+                    { label: 'ORION', x: 12.6, y: -4.2, col: '#fcd34d' },
+                    { label: '4.5G', x: 24.3, y: 13.0, col: '#d8b4fe' },
+                    { label: 'ECLSS', x: 24.2, y: -8.1, col: '#fca5a5' },
+                  ].map((lbl) => (
+                    <text
+                      key={lbl.label}
+                      x={(lbl.x + 2.2) * 12.6 + 20}
+                      y={(20.2 - lbl.y) * 12.6 + 14}
+                      fill={lbl.col}
+                      fontSize="11"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                      opacity="0.88"
+                    >
+                      {lbl.label}
+                    </text>
+                  ))}
+                  {/* Exterior bulkhead walls + cyan panoramic viewport */}
+                  {SPACE_ROOM_COLLIDERS.slice(0, WALL_COLLIDER_COUNT).map((b) => (
+                    <rect
+                      key={b[6]}
+                      x={(b[0] + 2.2) * 12.6 + 20}
+                      y={(20.2 - b[4]) * 12.6 + 14}
+                      width={Math.max(2.5, (b[3] - b[0]) * 12.6)}
+                      height={Math.max(2.5, (b[4] - b[1]) * 12.6)}
+                      fill={b[6] === 'Wall_WestHab_N_Win' ? '#38bdf8' : '#94a3b8'}
+                      opacity="0.85"
+                    />
+                  ))}
+                  {/* Automatic sliding doors */}
+                  {simRef.current.doors.map((d) => (
+                    <rect
+                      key={d.id}
+                      x={(d.x - (d.axis === 'x' ? 0.2 : 1.35) + 2.2) * 12.6 + 20}
+                      y={(20.2 - (d.y + (d.axis === 'y' ? 0.2 : 1.35))) * 12.6 + 14}
+                      width={(d.axis === 'x' ? 0.4 : 2.7) * 12.6}
+                      height={(d.axis === 'y' ? 0.4 : 2.7) * 12.6}
+                      fill={d.openProgress > 0.5 ? '#10b981' : '#f59e0b'}
+                    />
+                  ))}
+                  {/* Loose world pickup items */}
+                  {simRef.current.worldItems.map((wi) => (
+                    <rect
+                      key={wi.uid}
+                      x={(wi.x + 2.2) * 12.6 + 20 - 2.4}
+                      y={(20.2 - wi.y) * 12.6 + 14 - 2.4}
+                      width="4.8"
+                      height="4.8"
+                      fill={wi.category === 'task' ? '#fde047' : '#e2e8f0'}
+                      opacity="0.9"
+                    />
+                  ))}
+                  {/* Guided yellow dashed route */}
+                  {miniRouteAssigned && (
+                    <polyline
+                      points={miniPathPtsStr}
+                      fill="none"
+                      stroke="#facc15"
+                      strokeWidth="3.8"
+                      strokeDasharray="6 6"
+                    />
+                  )}
+                  {/* Station pins */}
+                  {simRef.current.stations.map((st) => (
+                    <circle
+                      key={st.id}
+                      cx={(st.x + 2.2) * 12.6 + 20}
+                      cy={(20.2 - st.y) * 12.6 + 14}
+                      r={st.kind === 'npc_crew' ? 5.6 : 4.2}
+                      fill={st.kind === 'npc_crew' ? '#c084fc' : st.done ? '#10b981' : '#38bdf8'}
+                      stroke="#020617"
+                      strokeWidth="1.2"
+                    />
+                  ))}
+                  {/* Target highlight OR clamped perimeter directional indicator when off-radar */}
+                  {showEdgeArrow ? (
+                    <g transform={`translate(${edgeX}, ${edgeY}) rotate(${edgeDeg})`}>
+                      <polygon
+                        points="9,0 -6,-6 -3,0 -6,6"
+                        fill={miniRouteAssigned ? '#facc15' : '#38bdf8'}
+                        stroke="#020617"
+                        strokeWidth="1.5"
+                      />
+                    </g>
+                  ) : miniRouteAssigned ? (
+                    <g transform={`translate(${tSvgX}, ${tSvgY})`}>
+                      <polygon points="0,-10 10,0 0,10 -10,0" fill="#facc15" stroke="#09090b" strokeWidth="2" />
+                    </g>
+                  ) : (
+                    <circle cx={tSvgX} cy={tSvgY} r="7.5" fill="none" stroke="#38bdf8" strokeWidth="2.4" />
+                  )}
+                  {/* Concentric radar rings centered on astronaut */}
+                  <circle cx={pSvgX} cy={pSvgY} r={66} fill="none" stroke="#38bdf8" strokeWidth="1" opacity="0.22" />
+                  <circle cx={pSvgX} cy={pSvgY} r={126} fill="none" stroke="#38bdf8" strokeWidth="1.2" opacity="0.32" />
+                  {/* Player FOV cone + directional arrow ALWAYS centered on astronaut */}
+                  <g transform={`translate(${pSvgX}, ${pSvgY}) rotate(${-hud.yawDeg})`}>
+                    <polygon points="0,0 38,-22 38,22" fill="#22c55e" opacity="0.26" />
+                    <polygon points="11,0 -6,-6.5 -2.8,0 -6,6.5" fill="#22c55e" stroke="#ffffff" strokeWidth="1.6" />
+                  </g>
+                </svg>
+                <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-mono font-bold text-sky-200 bg-slate-950/70 px-1 rounded leading-tight">
+                  N
+                </span>
+                <span className="pointer-events-none absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8.5px] font-mono font-bold text-slate-900 lp-panel-solid px-1.5 rounded-full shadow border border-slate-900/20 leading-tight">
+                  [M]
+                </span>
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Center Reticle + Strict Proximity-Only Context Prompt */}
       {!activeModal && !hud.sleeping && (
@@ -3618,17 +3666,144 @@ export const SpaceSinglePlayerGame: React.FC = () => {
             {!pointerLocked && (
               <div className="mt-1 px-2.5 py-0.5 lp-panel rounded text-[10px] font-mono text-slate-800">
                 {lang === 'es'
-                  ? 'WASD mover · Clic mirar · [1-5] Casillas · [B] Mochila · [E] Usar · [ESC] Menú'
-                  : 'WASD move · Click look · [1-5] Slots · [B] Bag · [E] Use · [ESC] Menu'}
+                  ? 'WASD mover · Clic mirar · [1-5] Casillas · [B] Mochila · [M] Mapa · [E] Usar · [F1-F4] IA'
+                  : 'WASD move · Click look · [1-5] Slots · [B] Bag · [M] Map · [E] Use · [F1-F4] AI'}
               </div>
             )}
           </div>
         </>
       )}
 
-      {/* Bottom-Left Compact Floating NASA Junior Astronaut Training Info Panel */}
+      {/* Bottom-Left Depleting / Critical-Shift NASA Survival Icons (O₂, H₂O, Food, Suit O₂, HP, CO₂, 120V, Rad) */}
+      {!activeModal && !hud.sleeping && (() => {
+        const vitals = [
+          {
+            id: 'o2',
+            label: 'O₂',
+            val: `${hud.o2Percent.toFixed(0)}%`,
+            pct: Math.max(0, Math.min(100, ((hud.o2Percent - 16.5) / 4.5) * 100)),
+            state: hud.o2Percent < 19.2 ? 'crit' : hud.o2Percent < 20.0 ? 'warn' : 'ok',
+            okColor: '#0284c7',
+            Icon: Wind,
+            tip: lang === 'es' ? `O₂ Cabina: ${hud.o2Percent.toFixed(1)}% (crítico <19.2%)` : `Cabin O₂: ${hud.o2Percent.toFixed(1)}% (crit <19.2%)`,
+          },
+          {
+            id: 'h2o',
+            label: 'H₂O',
+            val: `${Math.round(hud.hydrationPercent)}%`,
+            pct: Math.max(0, Math.min(100, hud.hydrationPercent)),
+            state: hud.hydrationPercent < 55 ? 'crit' : hud.hydrationPercent < 72 ? 'warn' : 'ok',
+            okColor: '#0891b2',
+            Icon: Droplets,
+            tip: lang === 'es' ? `Hidratación BVAD: ${Math.round(hud.hydrationPercent)}% (toma WRS/bolsa)` : `BVAD Hydration: ${Math.round(hud.hydrationPercent)}%`,
+          },
+          {
+            id: 'food',
+            label: lang === 'es' ? 'Comida' : 'Food',
+            val: `${Math.round(hud.nutritionPercent)}%`,
+            pct: Math.max(0, Math.min(100, hud.nutritionPercent)),
+            state: hud.nutritionPercent < 35 ? 'crit' : hud.nutritionPercent < 60 ? 'warn' : 'ok',
+            okColor: '#059669',
+            Icon: Utensils,
+            tip: lang === 'es' ? `Nutrición BVAD: ${Math.round(hud.nutritionPercent)}% (${hud.foodKg.toFixed(1)} kg reserva)` : `BVAD Nutrition: ${Math.round(hud.nutritionPercent)}% (${hud.foodKg.toFixed(1)} kg)`,
+          },
+          {
+            id: 'suit',
+            label: lang === 'es' ? 'Traje' : 'Suit',
+            val: `${Math.round(hud.suitO2Percent)}%`,
+            pct: Math.max(0, Math.min(100, hud.suitO2Percent)),
+            state: hud.suitO2Percent < 55 ? 'crit' : hud.suitO2Percent < 75 ? 'warn' : 'ok',
+            okColor: '#0ea5e9',
+            Icon: Shield,
+            tip: lang === 'es' ? `Reserva O₂ Traje (29.6 kPa): ${Math.round(hud.suitO2Percent)}%` : `Suit O₂ (29.6 kPa): ${Math.round(hud.suitO2Percent)}%`,
+          },
+          {
+            id: 'hp',
+            label: 'HP',
+            val: `${Math.round(hud.hp)}`,
+            pct: Math.max(0, Math.min(100, hud.hp)),
+            state: hud.hp < 45 ? 'crit' : hud.hp < 70 ? 'warn' : 'ok',
+            okColor: '#10b981',
+            Icon: Heart,
+            tip: lang === 'es' ? `Salud Tripulante: ${Math.round(hud.hp)}/100` : `Crew Health: ${Math.round(hud.hp)}/100`,
+          },
+          {
+            id: 'co2',
+            label: 'CO₂',
+            val: hud.co2Ppm >= 1000 ? `${(hud.co2Ppm / 1000).toFixed(1)}k` : `${Math.round(hud.co2Ppm)}`,
+            pct: Math.max(6, Math.min(100, (1 - (hud.co2Ppm - 500) / 3500) * 100)),
+            state: hud.co2Ppm > 2500 ? 'crit' : hud.co2Ppm > 1200 ? 'warn' : 'ok',
+            okColor: '#0d9488',
+            Icon: Activity,
+            tip: lang === 'es' ? `CO₂ Cabina: ${Math.round(hud.co2Ppm)} ppm (se despinta al subir >1200 ppm)` : `Cabin CO₂: ${Math.round(hud.co2Ppm)} ppm (unpaints >1200 ppm)`,
+          },
+          {
+            id: 'pwr',
+            label: '120V',
+            val: hud.rpcmTripped ? 'TRIP' : `${hud.powerKwe.toFixed(0)}kW`,
+            pct: hud.rpcmTripped ? 18 : Math.max(12, Math.min(100, (hud.powerKwe / 40) * 100)),
+            state: hud.rpcmTripped || hud.powerKwe < 3 ? 'crit' : hud.powerKwe < 6.5 ? 'warn' : 'ok',
+            okColor: '#d97706',
+            Icon: Zap,
+            tip: lang === 'es' ? `Bus 120V: ${hud.powerKwe.toFixed(1)} kWe · Carga RPCM ${hud.rpcmLoadKwe.toFixed(1)} kW` : `120V Bus: ${hud.powerKwe.toFixed(1)} kWe · RPCM ${hud.rpcmLoadKwe.toFixed(1)} kW`,
+          },
+          {
+            id: 'rad',
+            label: 'Rad',
+            val: `${Math.round(hud.crewRadiationMsv)}`,
+            pct: Math.max(6, Math.min(100, (1 - (hud.crewRadiationMsv - 20) / 260) * 100)),
+            state: hud.crewRadiationMsv >= 250 ? 'crit' : hud.crewRadiationMsv >= 150 ? 'warn' : 'ok',
+            okColor: '#6366f1',
+            Icon: Sparkles,
+            tip: lang === 'es' ? `Dosis SPE: ${hud.crewRadiationMsv.toFixed(1)} mSv (límite 30d: 250 mSv)` : `SPE Dose: ${hud.crewRadiationMsv.toFixed(1)} mSv (30d limit: 250 mSv)`,
+          },
+        ] as const;
+
+        return (
+          <div className="pointer-events-auto fixed bottom-2.5 left-2.5 z-20 flex flex-wrap items-end gap-1">
+            {vitals.map((v) => {
+              const paintColor =
+                v.state === 'crit' ? '#dc2626' : v.state === 'warn' ? '#d97706' : v.okColor;
+              const IconCmp = v.Icon;
+              return (
+                <div
+                  key={v.id}
+                  title={v.tip}
+                  className={`lp-panel w-[38px] h-[44px] rounded-lg relative overflow-hidden flex flex-col items-center justify-center px-0.5 shadow-md transition ${
+                    v.state === 'crit' ? 'ring-1 ring-rose-500 animate-pulse' : ''
+                  }`}
+                >
+                  <div className="relative w-4 h-4 flex items-center justify-center">
+                    <IconCmp className="w-4 h-4 text-slate-900/18" strokeWidth={2.1} />
+                    <div
+                      className="absolute inset-0 flex items-center justify-center transition-all duration-300"
+                      style={{ clipPath: `inset(${(100 - v.pct).toFixed(1)}% 0 0 0)` }}
+                    >
+                      <IconCmp className="w-4 h-4" style={{ color: paintColor }} strokeWidth={2.5} />
+                    </div>
+                  </div>
+                  <span
+                    className="text-[8px] font-mono font-bold leading-none mt-0.5 tracking-tight"
+                    style={{ color: v.state === 'ok' ? '#0f172a' : paintColor }}
+                  >
+                    {v.val}
+                  </span>
+                  <div className="w-full h-[2.5px] bg-slate-900/15 mt-0.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full transition-all duration-300"
+                      style={{ width: `${v.pct.toFixed(0)}%`, backgroundColor: paintColor }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {/* Bottom-Left Floating NASA Junior Astronaut Training Info Panel (positioned above vital icons) */}
       {trainingBrief && !activeModal && !hud.sleeping && (
-        <div className="fixed bottom-2.5 left-2.5 z-20 max-w-[260px] lp-panel rounded-lg p-2 shadow-lg space-y-1 text-slate-900">
+        <div className="fixed bottom-[64px] left-2.5 z-20 max-w-[260px] lp-panel rounded-lg p-2 shadow-lg space-y-1 text-slate-900">
           <div className="flex items-start justify-between gap-1.5">
             <div className="flex items-center gap-1 text-[11px] font-semibold text-sky-900 leading-tight">
               <Info className="w-3.5 h-3.5 shrink-0" />
@@ -3910,6 +4085,8 @@ export const SpaceSinglePlayerGame: React.FC = () => {
             setActiveModal('codex');
           }}
           onOpenMirror={() => setActiveModal('mirror')}
+          initialTab={escTabReq.tab}
+          tabOpenNonce={escTabReq.nonce}
           onReturnMainMenu={() => {
             soundEngine.stopAmbientEnvironment();
             setActiveModal(null);
@@ -3925,10 +4102,21 @@ export const SpaceSinglePlayerGame: React.FC = () => {
           lang={lang}
           fromMissionId={launchTransitTarget.from}
           toMissionId={launchTransitTarget.to}
+          origin={launchTransitTarget.origin}
+          verifiedInOrion3D={simRef.current.orionCryoPurged && simRef.current.orionGncArmed}
           onComplete={() => applyMissionLoad(launchTransitTarget.to, launchTransitTarget.preserveCarry)}
           onCancel={() => {
+            const orig = launchTransitTarget.origin;
             setLaunchTransitTarget(null);
             setActiveModal(null);
+            if (orig === 'menu') {
+              soundEngine.stopAmbientEnvironment();
+              setMenuDrawer('missions');
+              setScreen('menu');
+            } else if (orig === 'esc_menu') {
+              setEscTabReq((r) => ({ tab: 'phases_settings', nonce: r.nonce + 1 }));
+              setActiveModal('esc_menu');
+            }
           }}
         />
       )}

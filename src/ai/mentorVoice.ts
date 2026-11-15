@@ -14,7 +14,14 @@
 import type { Lang } from './mentorTypes';
 import { checkMentorServer, mentorServerUrl } from './mentorClient';
 
-export type VoicePresetId = 'katherine_hud' | 'capcom_warm' | 'gnc_crisp' | 'deep_control' | 'apollo_calm';
+export type VoicePresetId =
+  | 'katherine_hud'
+  | 'capcom_warm'
+  | 'gnc_crisp'
+  | 'deep_control'
+  | 'apollo_calm'
+  | 'nova_bright'
+  | 'commander_baritone';
 
 export interface VoicePreset {
   id: VoicePresetId;
@@ -26,11 +33,13 @@ export interface VoicePreset {
 }
 
 export const VOICE_PRESETS: VoicePreset[] = [
-  { id: 'katherine_hud', labelEs: 'KATHERINE Estándar (HUD)', labelEn: 'KATHERINE Standard (HUD)', rate: 1.02, pitch: 1.06, volume: 0.95 },
+  { id: 'katherine_hud', labelEs: 'KATHERINE Estándar (HUD)', labelEn: 'KATHERINE Standard (HUD)', rate: 1.02, pitch: 1.08, volume: 0.95 },
   { id: 'capcom_warm', labelEs: 'CAPCOM Houston (Cálida)', labelEn: 'Houston CAPCOM (Warm)', rate: 0.94, pitch: 0.96, volume: 0.96 },
-  { id: 'gnc_crisp', labelEs: 'Computadora GNC (Precisa)', labelEn: 'GNC Computer (Crisp)', rate: 1.12, pitch: 1.14, volume: 0.95 },
-  { id: 'deep_control', labelEs: 'Control Orbital (Grave)', labelEn: 'Orbital Control (Deep)', rate: 0.96, pitch: 0.82, volume: 0.98 },
-  { id: 'apollo_calm', labelEs: 'Voz Histórica Apollo (Pausada)', labelEn: 'Historic Apollo (Measured)', rate: 0.88, pitch: 0.9, volume: 0.95 },
+  { id: 'gnc_crisp', labelEs: 'Computadora GNC (Rápida/Precisa)', labelEn: 'GNC Computer (Brisk/Crisp)', rate: 1.15, pitch: 1.18, volume: 0.95 },
+  { id: 'deep_control', labelEs: 'Control Orbital (Grave)', labelEn: 'Orbital Control (Deep)', rate: 0.95, pitch: 0.78, volume: 0.98 },
+  { id: 'apollo_calm', labelEs: 'Voz Histórica Apollo (Pausada)', labelEn: 'Historic Apollo (Measured)', rate: 0.86, pitch: 0.88, volume: 0.95 },
+  { id: 'nova_bright', labelEs: 'Asistente Juvenil (Brillante/Ágil)', labelEn: 'Youth Assistant (Bright/Energetic)', rate: 1.08, pitch: 1.24, volume: 0.96 },
+  { id: 'commander_baritone', labelEs: 'Comandante EVA (Firme/Baja)', labelEn: 'EVA Commander (Firm/Baritone)', rate: 0.92, pitch: 0.70, volume: 0.98 },
 ];
 
 /** Supertonic 3 presets. Labels from listening tests + measured pitch (F5 = lowest, calmest female). */
@@ -311,8 +320,17 @@ export const mentorVoice = {
           neural: true,
         }))
       : [];
-    const browser = browserVoices(l).map((v) => ({ voiceURI: v.voiceURI, name: v.name, lang: v.lang }));
-    return [...hd, ...browser];
+    const primary = browserVoices(l).map((v) => ({ voiceURI: v.voiceURI, name: v.name, lang: v.lang }));
+    const seen = new Set(primary.map((v) => v.voiceURI));
+    const secondary = (synth()?.getVoices() ?? [])
+      .filter((v) => !seen.has(v.voiceURI) && !/undefined/i.test(v.name))
+      .slice(0, 12)
+      .map((v) => ({ voiceURI: v.voiceURI, name: `${v.name} · Alt`, lang: v.lang }));
+    return [...hd, ...primary, ...secondary];
+  },
+
+  getNeuralStatus(): { ready: boolean; count: number } {
+    return { ready: neuralReady(), count: neural.voices.length };
   },
 
   subscribeVoices(cb: () => void): () => void {

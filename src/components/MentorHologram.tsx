@@ -703,24 +703,27 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
       if (e.code === 'KeyT') {
         e.preventDefault();
         h.openChat();
-      } else if (e.code === 'KeyM') {
+      } else if (e.code === 'KeyN') {
         h.toggleVoice();
-      } else if (e.code === 'Digit1' || e.code === 'Numpad1') {
+      } else if (e.code === 'F1') {
+        e.preventDefault();
         if (st === 'check') h.answerCheck(true);
         else if (st === 'quiz') h.answerQuiz(0);
         else if (st === 'level') h.chooseLevel('explorer');
-        else if (st === 'explain') {
-          e.preventDefault();
-          h.openChat();
-        }
-      } else if (e.code === 'Digit2' || e.code === 'Numpad2') {
+        else if (st === 'explain') h.openChat();
+      } else if (e.code === 'F2') {
+        e.preventDefault();
         if (st === 'check') h.answerCheck(false);
         else if (st === 'quiz') h.answerQuiz(1);
         else if (st === 'level') h.chooseLevel('cadet');
         else if (st === 'explain') h.skipExplain();
-      } else if (e.code === 'Digit3' || e.code === 'Numpad3') {
+      } else if (e.code === 'F3') {
+        e.preventDefault();
         if (st === 'quiz') h.answerQuiz(2);
         else if (st === 'level') h.chooseLevel('engineer');
+      } else if (e.code === 'F4') {
+        e.preventDefault();
+        if (st === 'quiz') h.answerQuiz(3);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -755,14 +758,14 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
 
   return (
     <div
-      className="fixed right-2.5 top-[210px] z-30 flex flex-col items-end gap-1.5 max-w-[330px] pointer-events-none"
+      className="fixed right-2.5 top-[184px] z-30 flex flex-col items-end gap-1.5 max-w-[330px] pointer-events-none"
       onContextMenu={(e) => e.stopPropagation()}
     >
       {/* Compact glowing circular blue AI orb directly below the minimap */}
       <div className="pointer-events-auto flex items-center gap-1.5">
         {!collapsed && (
           <div className="flex items-center gap-1 rounded-full bg-slate-950/75 border border-sky-400/50 px-2 py-0.5 backdrop-blur-sm">
-            <button type="button" onClick={toggleVoice} className="text-[11px] text-sky-200 hover:text-white px-1" title={t('Voz [M]', 'Voice [M]')}>
+            <button type="button" onClick={toggleVoice} className="text-[11px] text-sky-200 hover:text-white px-1" title={t('Voz [N]', 'Voice [N]')}>
               {voiceOn ? '🔊' : '🔇'}
             </button>
             <button type="button" onClick={() => setChatOpen((o) => !o)} className="text-[11px] font-mono text-sky-300 hover:text-white px-1" title={t('Chat IA [T]', 'AI Chat [T]')}>
@@ -823,10 +826,10 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
           {typingDone && stage === 'check' && (
             <div className="flex flex-wrap justify-end gap-1 pt-0.5 holo-fade">
               <button type="button" className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80" onClick={() => answerCheck(true)}>
-                [1] {t('Sí, entiendo', 'Yes')}
+                [F1] {t('Sí, entiendo', 'Yes')}
               </button>
               <button type="button" className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80" onClick={() => answerCheck(false)}>
-                [2] {t('Repetir', 'Again')}
+                [F2] {t('Repetir', 'Again')}
               </button>
             </div>
           )}
@@ -839,7 +842,7 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
                   className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80"
                   onClick={() => chooseLevel(lv.id)}
                 >
-                  [{i + 1}] {lv.emoji} {lv[lang]} · {lv.ages} {t('años', 'yrs')}
+                  [F{i + 1}] {lv.emoji} {lv[lang]} · {lv.ages} {t('años', 'yrs')}
                 </button>
               ))}
             </div>
@@ -847,10 +850,10 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
           {typingDone && stage === 'explain' && (
             <div className="flex flex-wrap justify-end gap-1 pt-0.5 holo-fade">
               <button type="button" className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80" onClick={openChat}>
-                [1] {t('Responder (texto o 🎙)', 'Answer (text or 🎙)')}
+                [F1] {t('Responder (texto o 🎙)', 'Answer (text or 🎙)')}
               </button>
               <button type="button" className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80" onClick={skipExplain}>
-                [2] {t('Saltar', 'Skip')}
+                [F2] {t('Saltar', 'Skip')}
               </button>
             </div>
           )}
@@ -858,7 +861,7 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
             <div className="flex flex-col items-end gap-1 pt-0.5 holo-fade">
               {quiz.order.map((optIdx, slot) => (
                 <button key={slot} type="button" className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-400/65 text-[10.5px] font-semibold text-sky-200 hover:bg-sky-800/80 text-right" onClick={() => answerQuiz(slot)}>
-                  [{slot + 1}] {quiz.card.quiz!.options[optIdx][lang]}
+                  [F{slot + 1}] {quiz.card.quiz!.options[optIdx][lang]}
                 </button>
               ))}
             </div>
