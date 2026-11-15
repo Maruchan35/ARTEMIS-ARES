@@ -69,17 +69,22 @@ subprocess.run(["pkill", "-f", "/content/cloudflared tunnel"], check=False)
 time.sleep(1)
 
 KEY = secrets.token_urlsafe(18)
+SRV_CMD = [sys.executable, "/content/mentor_server.py",
+           "--backend", "hf", "--rag", "on", "--ai-root", AI_ROOT,
+           "--host", "127.0.0.1", "--port", str(PORT), "--max-new-tokens", "280",
+           "--api-key", KEY, "--require-key-all",
+           "--adapter", ADAPTER, "--model-id", BASE]
+CF_CMD = [CF, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{PORT}"]
+# Guardado para la celda guardiana (colab_keepalive_cell.py), que reinicia lo que se caiga.
+json.dump({"key": KEY, "port": PORT, "srv_cmd": SRV_CMD, "cf_cmd": CF_CMD},
+          open("/content/katherine_state.json", "w"))
 srv = subprocess.Popen(
-    [sys.executable, "/content/mentor_server.py",
-     "--backend", "hf", "--rag", "on", "--ai-root", AI_ROOT,
-     "--host", "127.0.0.1", "--port", str(PORT), "--max-new-tokens", "280",
-     "--api-key", KEY, "--require-key-all",
-     "--adapter", ADAPTER, "--model-id", BASE],
+    SRV_CMD,
     stdin=subprocess.DEVNULL, stdout=open("/content/mentor_server.log", "w", encoding="utf-8"),
     stderr=subprocess.STDOUT, start_new_session=True, close_fds=True,
 )
 subprocess.Popen(
-    [CF, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{PORT}"],
+    CF_CMD,
     stdin=subprocess.DEVNULL, stdout=open("/content/cloudflared.log", "w", encoding="utf-8"),
     stderr=subprocess.STDOUT, start_new_session=True, close_fds=True,
 )
@@ -114,4 +119,5 @@ print("\nLISTO. Pásale esto a Claude:", flush=True)
 print("MENTOR_URL=" + tunnel_url, flush=True)
 print("MENTOR_KEY=" + KEY, flush=True)
 print("En tu PC (voces HD + RAG):  npm run katherine -- --url " + tunnel_url + " --key " + KEY, flush=True)
+print("Para dejarlo vivo toda la noche ejecuta ahora la celda guardiana (colab_keepalive_cell.py).", flush=True)
 print("Cuando termines: Entorno de ejecución → Desconectar y borrar (para no gastar unidades).", flush=True)

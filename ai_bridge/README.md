@@ -10,7 +10,8 @@ npm run katherine -- --url <MENTOR_URL> --key <MENTOR_KEY>   # con el modelo rea
 
 Las voces HD se generan en tu PC, así que solo aparecen en ⚙ Ajustes cuando el juego se abre con
 `npm run katherine` (con `npm run dev` solo verás las voces del navegador). Para Colab usa la celda
-`ai_bridge/colab_katherine_cell.py`: al final imprime el comando exacto.
+`ai_bridge/colab_katherine_cell.py`: al final imprime el comando exacto. Para una demo larga (toda la noche)
+ejecuta después `ai_bridge/colab_keepalive_cell.py` en otra celda y déjala corriendo: revive el servidor y el túnel.
 
 
 KATHERINE es la IA holográfica que acompaña al cadete: observa la simulación, explica cada decisión con datos
