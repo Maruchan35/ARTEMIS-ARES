@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { SpaceRoomState } from '../game/spaceRoomSimulation';
 import { MentorDirector, PRIORITY, QueuedMentorEvent, buildTelemetry } from '../ai/mentorDirector';
 import { MENTOR_CARDS } from '../ai/mentorKnowledge';
-import { CHECK_PROMPT, PERSONA_LINES, composeOfflineReply, isRealWorldSafetyIssue, safetyReply } from '../ai/offlineMentor';
+import { CHECK_PROMPT, PERSONA_LINES, composeOfflineReply, isRealWorldSafetyIssue, safetyReply, searchCards } from '../ai/offlineMentor';
 import { MentorServerStatus, askMentorServer, checkMentorServer, mentorServerUrl } from '../ai/mentorClient';
-import { mentorEars, mentorVoice } from '../ai/mentorVoice';
+import { NEURAL_VOICES, VOICE_SAMPLE, mentorEars, mentorVoice } from '../ai/mentorVoice';
 import type { Lang, MentorCard, MentorEvent, MentorReply, MentorTurn } from '../ai/mentorTypes';
 import { soundEngine } from '../audio/soundEngine';
 
@@ -31,12 +31,18 @@ interface Shown {
 interface Props {
   simRef: React.MutableRefObject<SpaceRoomState>;
   lang: Lang;
+  /** Lets the player switch the whole game (and KATHERINE's voice) between Spanish and English. */
+  onLangChange?: (lang: Lang) => void;
   /** True while a modal is open or the player sleeps: events wait in the queue. */
   paused: boolean;
 }
 
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const MODEL_KINDS = new Set<MentorEvent['kind']>(['decision', 'objective', 'mission_start', 'ending', 'question', 'explain_again']);
+/** A 4-bit Gemma on Colab takes ~25-35 s per answer; give it room before falling back to the cards. */
+const MODEL_TIMEOUT_MS = 75000;
+const eventKey = (e: MentorEvent) => `${e.kind}|${e.topic}|${e.text ?? ''}`;
+const priorityOf = (e: MentorEvent) => (PRIORITY as Record<string, number>)[e.kind] ?? PRIORITY.decision;
 
 function readPref(key: string, fallback: boolean): boolean {
   try {
@@ -56,7 +62,7 @@ function writePref(key: string, v: boolean) {
 
 function isTypingTarget(t: EventTarget | null): boolean {
   const el = t as HTMLElement | null;
-  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
 }
 
 let audioCtx: AudioContext | null = null;
@@ -114,13 +120,15 @@ const HoloAvatar: React.FC<{ accent: string; speaking: boolean; thinking: boolea
   </svg>
 );
 
-export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
+export const MentorHologram: React.FC<Props> = ({ simRef, lang, onLangChange, paused }) => {
   const directorRef = useRef(new MentorDirector());
   const queueRef = useRef<QueuedMentorEvent[]>([]);
   const busyUntilRef = useRef(0);
   const pendingSinceRef = useRef(0);
   const shownAtRef = useRef(0);
   const processingRef = useRef(false);
+  /** Model replies that arrived while an alarm was on screen: shown when their event comes up again. */
+  const readyRepliesRef = useRef(new Map<string, MentorReply>());
   const historyRef = useRef<MentorTurn[]>([]);
   const langRef = useRef(lang);
   const pausedRef = useRef(paused);
@@ -148,6 +156,10 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
   const [chatText, setChatText] = useState('');
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Re-render when voices load late or voice prefs change.
+  const [, setVoiceTick] = useState(0);
+  useEffect(() => mentorVoice.subscribe(() => setVoiceTick((n) => n + 1)), []);
 
   useEffect(() => {
     langRef.current = lang;
@@ -165,6 +177,7 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
       if (!alive) return;
       serverRef.current = st;
       setServer(st);
+      mentorVoice.setNeural(st.online ? st.voice : null);
       // Re-check often while connected; back off when the bridge is not running (less console noise).
       timer = window.setTimeout(poll, st.online ? 20000 : 60000);
     };
@@ -218,7 +231,9 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
   // ----------------------------------------------------------- handle event
   const handleEvent = useCallback(
     async (event: MentorEvent) => {
-      if (processingRef.current) {
+      // Alarms are composed offline (instant), so they may jump in while the model is still thinking.
+      const ownsLock = !processingRef.current;
+      if (!ownsLock && event.kind !== 'alarm') {
         queueRef.current.unshift({ event, priority: 0 });
         return;
       }
@@ -236,29 +251,46 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
         let reply: MentorReply | null = composeOfflineReply(event, l, tele);
         // The model handles teaching moments; an 'offline' bridge (RAG only) is still used for free questions.
         const srv = serverRef.current;
-        if (srv.online && MODEL_KINDS.has(event.kind) && (srv.backend !== 'offline' || event.kind === 'question')) {
+        const key = eventKey(event);
+        const ready = readyRepliesRef.current.get(key);
+        if (ready) {
+          readyRepliesRef.current.delete(key);
+          reply = ready;
+        } else if (ownsLock && srv.online && MODEL_KINDS.has(event.kind) && (srv.backend !== 'offline' || event.kind === 'question')) {
           const prevStage = stageRef.current;
+          const askedAt = Date.now();
           setStage('thinking');
-          const { reply: r, failed } = await askMentorServer({
-            event,
-            lang: l,
-            telemetry: tele,
-            history: historyRef.current.slice(-6),
-            card: card
-              ? {
-                  say: card.say[l],
-                  fact: card.fact[l],
-                  source: card.source,
-                  simple: card.simple?.[l],
-                  ragQuery: card.ragQuery,
-                  tone: card.tone,
-                }
-              : undefined,
-          });
+          // Free questions are grounded on the closest verified card, so "¿Sabías que…?" stays on topic.
+          const ground = card ?? (event.kind === 'question' ? searchCards(event.text ?? '', l) : undefined);
+          const { reply: r, failed } = await askMentorServer(
+            {
+              event,
+              lang: l,
+              telemetry: tele,
+              history: historyRef.current.slice(-6),
+              card: ground
+                ? {
+                    say: ground.say[l],
+                    fact: ground.fact[l],
+                    source: ground.source,
+                    simple: ground.simple?.[l],
+                    ragQuery: ground.ragQuery,
+                    tone: ground.tone,
+                  }
+                : undefined,
+            },
+            MODEL_TIMEOUT_MS
+          );
           if (r) reply = r;
           else if (failed) {
             serverRef.current = { ...serverRef.current, online: false };
             setServer(serverRef.current);
+          }
+          if (shownAtRef.current > askedAt && reply) {
+            // An alarm took the screen while the model was thinking: keep this answer for right after it.
+            readyRepliesRef.current.set(key, reply);
+            queueRef.current = [{ event, priority: priorityOf(event) }, ...queueRef.current];
+            return;
           }
           if (!reply) setStage(prevStage === 'thinking' ? 'idle' : prevStage);
         }
@@ -282,7 +314,7 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
           wantsButtons ? 'check' : 'message'
         );
       } finally {
-        processingRef.current = false;
+        if (ownsLock) processingRef.current = false;
       }
     },
     [present, setStage, simRef]
@@ -310,13 +342,21 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
         setStage('message');
         busyUntilRef.current = now;
       }
-      if (pausedRef.current || processingRef.current) return;
+      if (pausedRef.current) return;
       const head = queueRef.current[0];
       if (!head) return;
+      if (processingRef.current) {
+        // While the model thinks only an alarm may cut in (crew safety first).
+        if (head.event.kind === 'alarm') {
+          queueRef.current.shift();
+          void handleEvent(head.event);
+        }
+        return;
+      }
       const urgent = head.priority <= PRIORITY.alarm;
       const waitingAnswer = stageRef.current === 'check' || stageRef.current === 'quiz';
       // Decisions may cut a long message short once it has been on screen for a few seconds.
-      const canCut = head.priority <= PRIORITY.decision && now - shownAtRef.current >= 4000;
+      const canCut = head.priority <= PRIORITY.decision && now - shownAtRef.current >= 4000 && shownRef.current?.reply.mode !== 'crisis';
       if (!urgent && (waitingAnswer || (now < busyUntilRef.current && !canCut))) return;
       queueRef.current.shift();
       if (waitingAnswer) {
@@ -436,6 +476,32 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
     if (!voiceRef.current) mentorVoice.stop();
   }, []);
 
+  // ------------------------------------------------------- voice settings
+  const previewVoice = useCallback((l: Lang, text = VOICE_SAMPLE[l]) => {
+    mentorVoice.speak(text, l, () => setSpeaking(true), () => setSpeaking(false));
+  }, []);
+
+  const changeLang = useCallback(
+    (l: Lang) => {
+      if (l === langRef.current) return;
+      langRef.current = l;
+      onLangChange?.(l);
+      if (voiceRef.current) previewVoice(l, l === 'es' ? 'Listo, cadete. Ahora te hablo en español.' : "Got it, cadet. I'll speak English now.");
+      else mentorVoice.stop();
+    },
+    [onLangChange, previewVoice]
+  );
+
+  const chooseVoice = useCallback(
+    (value: string) => {
+      const [kind, id] = [value.slice(0, value.indexOf(':')), value.slice(value.indexOf(':') + 1)];
+      if (kind === 'neural') mentorVoice.setPrefs({ engine: 'auto', neuralVoice: id });
+      else mentorVoice.setPrefs({ engine: 'browser', browserVoice: { [langRef.current]: id } });
+      previewVoice(langRef.current);
+    },
+    [previewVoice]
+  );
+
   // Dev-only console hook to test the mentor: __katherine.sim().crisisDecision = 'food_priority'; __katherine.ask('...')
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -476,9 +542,31 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
   const accent = mode === 'crisis' ? '#fb7185' : mode === 'safety' ? '#fbbf24' : '#38bdf8';
   const t = (es: string, en: string) => (lang === 'es' ? es : en);
   const typingDone = !!shown && typed >= shown.reply.say.length;
-  const coreLabel = server.online
-    ? t(`Núcleo: AstroCopilot Gemma-4 · ${server.backend}`, `Core: AstroCopilot Gemma-4 · ${server.backend}`)
-    : t('Núcleo local: tarjetas NASA verificadas', 'Local core: verified NASA cards');
+  const ragDocs = (server.ragDocs ?? 0).toLocaleString('en-US');
+  const coreLabel = !server.online
+    ? t('Núcleo local: tarjetas NASA verificadas', 'Local core: verified NASA cards')
+    : server.backend === 'offline'
+      ? t(`Núcleo: biblioteca NASA · ${ragDocs} docs`, `Core: NASA library · ${ragDocs} docs`)
+      : t(`Núcleo: AstroCopilot Gemma-4 · ${server.backend}`, `Core: AstroCopilot Gemma-4 · ${server.backend}`);
+
+  const voicePrefs = mentorVoice.getPrefs();
+  const neural = mentorVoice.neural();
+  const neuralReady = neural.status === 'ready' && neural.voices.length > 0;
+  const browserList = mentorVoice.browserVoices(lang);
+  const engineNow = mentorVoice.activeEngine();
+  const voiceValue =
+    engineNow === 'neural' ? `neural:${voicePrefs.neuralVoice}` : `browser:${mentorVoice.chosenBrowserVoice(lang)?.voiceURI ?? ''}`;
+  const voiceStatus = neuralReady
+    ? engineNow === 'neural'
+      ? t('Voz neural HD activa · tu CPU', 'Neural HD voice on · your CPU')
+      : t('Voz neural HD disponible', 'Neural HD voice available')
+    : neural.status === 'loading'
+      ? t('Cargando voz neural HD…', 'Loading neural HD voice…')
+      : neural.status === 'missing'
+        ? t('Voz HD: pip install supertonic', 'HD voice: pip install supertonic')
+        : server.online
+          ? t('Voz HD no disponible: voz del navegador', 'HD voice unavailable: browser voice')
+          : t('Voz HD: inicia ai_bridge/mentor_server.py', 'HD voice: start ai_bridge/mentor_server.py');
 
   const configureServer = () => {
     const url = window.prompt(t('URL del servidor del mentor (ai_bridge/mentor_server.py):', 'Mentor server URL (ai_bridge/mentor_server.py):'), mentorServerUrl);
@@ -524,6 +612,14 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
                 <button type="button" onClick={toggleVoice} className="holo-btn" title={t('Voz [M]', 'Voice [M]')}>
                   {voiceOn ? '🔊' : '🔇'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen((o) => !o)}
+                  className={`holo-btn ${settingsOpen ? 'holo-choice-on' : ''}`}
+                  title={t('Idioma y voz', 'Language & voice')}
+                >
+                  ⚙
+                </button>
                 <button type="button" onClick={() => setCollapsed(true)} className="holo-btn" title={t('Minimizar', 'Minimize')}>
                   ▁
                 </button>
@@ -535,6 +631,62 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
             </button>
           </div>
         </div>
+
+        {settingsOpen && (
+          <div className="mx-2.5 mb-2 p-2 border border-sky-800/70 bg-slate-950/70 text-[11px] text-slate-300 space-y-2 holo-fade">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-black tracking-widest text-sky-300">{t('IDIOMA', 'LANGUAGE')}</span>
+              <div className="flex gap-1">
+                {(['es', 'en'] as Lang[]).map((l) => (
+                  <button key={l} type="button" onClick={() => changeLang(l)} className={`holo-choice !py-0.5 ${lang === l ? 'holo-choice-on' : ''}`}>
+                    {l === 'es' ? 'Español' : 'English'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="block">
+              <span className="font-black tracking-widest text-sky-300">{t('VOZ', 'VOICE')}</span>
+              <select value={voiceValue} onChange={(e) => chooseVoice(e.target.value)} className="holo-select mt-1">
+                {neuralReady && (
+                  <optgroup label={t('Voz neural HD · Supertonic 3', 'Neural HD voice · Supertonic 3')}>
+                    {NEURAL_VOICES.filter((v) => neural.voices.includes(v.id)).map((v) => (
+                      <option key={v.id} value={`neural:${v.id}`}>
+                        {v[lang]}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label={t('Voces del navegador', 'Browser voices')}>
+                  {browserList.slice(0, 14).map((v) => (
+                    <option key={v.voiceURI} value={`browser:${v.voiceURI}`}>
+                      {v.name.replace(/^(Microsoft|Google)\s+/, '').replace(/\s+-\s+.*$/, '')} · {v.lang}
+                    </option>
+                  ))}
+                  {browserList.length === 0 && <option value="browser:">{t('(sin voces instaladas)', '(no voices installed)')}</option>}
+                </optgroup>
+              </select>
+            </label>
+            <label className="flex items-center gap-2">
+              <span className="font-black tracking-widest text-sky-300 shrink-0">{t('VELOCIDAD', 'SPEED')}</span>
+              <input
+                type="range"
+                min={0.8}
+                max={1.25}
+                step={0.05}
+                value={voicePrefs.rate}
+                onChange={(e) => mentorVoice.setPrefs({ rate: Number(e.target.value) })}
+                className="flex-1 accent-sky-400"
+              />
+              <span className="w-10 text-right font-mono">{voicePrefs.rate.toFixed(2)}x</span>
+            </label>
+            <div className="flex items-center justify-between gap-2">
+              <button type="button" className="holo-choice !py-0.5" onClick={() => previewVoice(lang)}>
+                ▶ {t('Probar voz', 'Test voice')}
+              </button>
+              <span className={`text-[10px] text-right ${engineNow === 'neural' ? 'text-emerald-300' : 'text-slate-400'}`}>{voiceStatus}</span>
+            </div>
+          </div>
+        )}
 
         <div className="px-3 pb-2.5 text-[13px] leading-snug text-slate-100 min-h-[48px]">
           {stage === 'thinking' && (

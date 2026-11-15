@@ -693,7 +693,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     const onKeyDown = (e: KeyboardEvent) => {
       // Typing to KATHERINE (mentor chat) must not move the astronaut or trigger actions.
       const tgt = e.target as HTMLElement | null;
-      if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable)) return;
+      if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT' || tgt.isContentEditable)) return;
       keysRef.current[e.code] = true;
       if (e.code === 'KeyQ') {
         document.exitPointerLock?.();
@@ -2252,7 +2252,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       </div>
 
       {/* KATHERINE · holographic mentor AI (ai_bridge/mentor_server.py + verified offline cards) */}
-      <MentorHologram simRef={simRef} lang={lang} paused={!!activeModal || hud.sleeping} />
+      <MentorHologram simRef={simRef} lang={lang} onLangChange={setLang} paused={!!activeModal || hud.sleeping} />
 
       {/* MODALS */}
       {activeModal === 'checklist' && (

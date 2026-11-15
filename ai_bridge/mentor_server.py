@@ -16,6 +16,9 @@ Backends (--backend):
   mock     Fake model that echoes the card as JSON (integration tests, no GPU).
   offline  No model: questions are answered from the RAG library, events fall back to the game's cards.
 
+Neural voice (optional, --voice auto): POST /api/tts renders KATHERINE's lines with Supertonic 3 on the CPU
+(pip install supertonic). Without it the game uses the browser's own voices.
+
 Examples:
   python ai_bridge/mentor_server.py --backend offline --ai-root "E:/trabajos uni/colab_entorno"
   python ai_bridge/mentor_server.py --backend remote --remote-url https://xxx.trycloudflare.com --api-key KEY
@@ -32,6 +35,7 @@ import re
 import sys
 import threading
 import time
+import unicodedata
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -43,6 +47,11 @@ CACHE_DIR = HERE / ".cache"
 DEFAULT_MODEL_ID = "unsloth/gemma-4-E4B-it"
 USER_AGENT = "katherine-mentor-bridge/1.0"
 MAX_BODY_BYTES = 64 * 1024
+
+try:  # optional neural voice (ai_bridge/mentor_voice.py + `pip install supertonic`)
+    from mentor_voice import VoiceEngine
+except ImportError:  # e.g. only mentor_server.py was copied to Colab
+    VoiceEngine = None  # type: ignore[assignment,misc]
 
 # --------------------------------------------------------------------------- persona
 # English system prompt close to the AstroCopilot training prompt (the LoRA was trained on it),
@@ -87,7 +96,9 @@ TASKS = {
     "question": (
         "The cadet asked you something. In 'say' answer in max 3 short sentences grounded ONLY in the context; if the context "
         "does not contain the answer, say honestly you are not sure and suggest what to check in the game. 'did_you_know' may "
-        "hold one related real fact from the context or be empty. 'check_question' may be one short Socratic question."
+        "hold ONE real fact about the SAME topic, taken from the VERIFIED_FACT_CARD (preferred) or the NASA context, "
+        "otherwise leave it empty; never copy document titles, ids or dataset names. 'check_question' may be one short "
+        "Socratic question about the SAME topic the cadet asked."
     ),
 }
 OUTPUT_RULE = 'Output ONLY one JSON object, no markdown: {"say": "...", "did_you_know": "...", "check_question": "..."}'
@@ -115,6 +126,79 @@ SAFETY_REPLY = {
 
 
 # --------------------------------------------------------------------------- RAG
+# The NASA corpus is English, so Spanish questions are mapped to English keywords before retrieval
+# (raw Spanish text pulls random Spanish-language docs from the mega-RAG).
+ES_EN_GLOSSARY: dict[str, str] = {
+    "luna": "moon lunar", "lunar": "moon lunar", "marte": "mars", "tierra": "earth", "sol": "sun solar",
+    "gravedad": "gravity", "peso": "weight", "pesas": "weight", "pesa": "weight", "pesar": "weight", "masa": "mass",
+    "inercia": "inertia", "caminar": "walking gait", "caminas": "walking gait", "camina": "walking gait",
+    "caminan": "walking gait", "saltar": "hopping jump", "saltas": "hopping jump", "brincar": "hopping jump",
+    "ingravidez": "microgravity weightlessness", "microgravedad": "microgravity", "flotan": "microgravity floating",
+    "flotar": "microgravity floating", "flotas": "microgravity floating",
+    "agua": "water", "orina": "urine", "sudor": "sweat", "reciclan": "recycling recovery", "reciclar": "recycling recovery",
+    "reciclaje": "recycling recovery", "recicla": "recycling recovery", "beber": "drinking water", "potable": "potable water",
+    "oxigeno": "oxygen", "aire": "air atmosphere", "respirar": "breathing oxygen", "respiran": "breathing oxygen",
+    "co2": "CO2 carbon dioxide scrubber", "dioxido": "carbon dioxide", "carbono": "carbon", "filtro": "scrubber filter",
+    "radiacion": "radiation", "tormenta": "storm", "llamarada": "solar flare", "particulas": "particle event",
+    "energia": "power energy", "electricidad": "electric power", "bateria": "battery", "baterias": "battery",
+    "reactor": "fission reactor kilopower", "nuclear": "nuclear fission", "paneles": "solar arrays", "panel": "solar array",
+    "solar": "solar", "luz": "light", "comida": "food", "comer": "food eating", "comen": "food eating", "alimentos": "food", "alimento": "food",
+    "plantas": "plant growth crop", "planta": "plant growth", "cultivar": "crop growth", "lechuga": "lettuce veggie",
+    "invernadero": "greenhouse plant growth", "semillas": "seeds", "huesos": "bone loss", "hueso": "bone loss",
+    "musculos": "muscle atrophy", "musculo": "muscle atrophy", "ejercicio": "exercise countermeasure",
+    "dormir": "sleep", "duermen": "sleep", "sueno": "sleep", "astronauta": "astronaut", "astronautas": "astronaut crew",
+    "traje": "spacesuit", "caminata": "spacewalk EVA", "nave": "spacecraft", "cohete": "rocket launch",
+    "despegue": "launch", "lanzamiento": "launch", "estacion": "space station ISS", "temperatura": "temperature thermal",
+    "calor": "heat thermal", "frio": "cold thermal", "polvo": "dust regolith", "regolito": "regolith",
+    "vehiculo": "vehicle rover", "presion": "pressure", "vacio": "vacuum", "cuerpo": "human body physiology",
+    "corazon": "heart cardiovascular", "sangre": "blood", "ojos": "vision eyes", "vista": "vision",
+    "basura": "waste", "bano": "toilet waste", "orbita": "orbit", "estrella": "star", "planeta": "planet",
+    "asteroide": "asteroid", "cometa": "comet", "galaxia": "galaxy", "telescopio": "telescope", "eclipse": "eclipse",
+    "atmosfera": "atmosphere", "hielo": "ice", "crater": "crater", "habitat": "habitat", "base": "base outpost",
+}
+EN_STOP = set(
+    "the a an of and or to in on is are was were be why how what when where who which does do did can could would "
+    "with for from that this it its you your they them about into than then there their if so not no yes my me i".split()
+)
+RAG_QUERY_PREFIX = "NASA ISS spaceflight mission "
+_DATASET_NOISE = re.compile(r"nasa-sde|nasa-impact|benchmark|MEGA-|NTRS-LIB|doc_id|\[[A-Z0-9_-]{6,}\]|Context ?\(", re.I)
+
+
+_EN_MARKERS = re.compile(r"\b(the|of|and|was|were|with|which|using|for|has|have|is|are)\b", re.I)
+_ES_MARKERS = re.compile(r"\b(el|la|los|las|de|del|que|y|en|con|por|para|es|son|una?)\b", re.I)
+
+
+def looks_english(s: str) -> bool:
+    return bool(s) and len(_EN_MARKERS.findall(s)) > len(_ES_MARKERS.findall(s))
+
+
+def _strip_accents(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+
+
+def rag_terms(text: str, lang: str) -> list[str]:
+    """English keywords for retrieval/relevance: glossary-mapped for Spanish, stopword-filtered for English."""
+    words = re.findall(r"[a-z0-9]+", _strip_accents(text.lower()))
+    if lang == "es":
+        out = " ".join(ES_EN_GLOSSARY[w] for w in words if w in ES_EN_GLOSSARY).lower().split()
+    else:
+        out = [w for w in words if len(w) > 2 and w not in EN_STOP]
+    return list(dict.fromkeys(out))
+
+
+def relevant_docs(docs: list[dict[str, Any]], terms: list[str], keep: int = 2) -> list[dict[str, Any]]:
+    """Drops retrieved docs that share (almost) no keywords with the question."""
+    if not terms:
+        return docs[:keep]
+    need = 1 if len(terms) <= 2 else 2
+    out = []
+    for d in docs:
+        hay = f"{d.get('title', '')} {str(d.get('content', ''))[:2000]}".lower()
+        if sum(1 for t in terms if t in hay) >= need:
+            out.append(d)
+    return out[:keep]
+
+
 def find_ai_root(cli_value: str | None) -> Path | None:
     candidates = [cli_value, os.environ.get("ASTRO_AI_ROOT"), HERE.parents[2] if len(HERE.parents) > 2 else None,
                   HERE.parent.parent / "colab_entorno", HERE.parent.parent / "buchencio2"]
@@ -150,10 +234,15 @@ class RagLibrary:
             print(f"[rag] Could not load nasa_rag_engine: {exc}", flush=True)
             self.engine = None
 
-    def retrieve(self, query: str, top_k: int = 2) -> list[dict[str, Any]]:
+    def retrieve(self, query: str, top_k: int = 2, min_score: float | None = None) -> list[dict[str, Any]]:
         if not self.engine or not query.strip():
             return []
         try:
+            if min_score is not None:
+                try:
+                    return list(self.engine.retrieve(query, top_k=top_k, min_score=min_score))
+                except TypeError:  # older engine without min_score
+                    pass
             return list(self.engine.retrieve(query, top_k=top_k))
         except Exception as exc:
             print(f"[rag] retrieve failed: {exc}", flush=True)
@@ -318,22 +407,27 @@ def parse_model_json(raw: str | None) -> dict[str, str] | None:
         say = _clip(t, 420)
         return {"say": say, "did_you_know": "", "check_question": ""} if say else None
     say = obj.get("say") or obj.get("copilot_message") or obj.get("message") or obj.get("answer") or ""
+    dyk = str(obj.get("did_you_know") or obj.get("fact") or "")
+    if _DATASET_NOISE.search(dyk):  # the model copied a raw RAG title/id instead of a real fact
+        dyk = ""
     return {
         "say": _clip(say, 420),
-        "did_you_know": _clip(obj.get("did_you_know") or obj.get("fact") or "", 320),
+        "did_you_know": _clip(dyk, 320),
         "check_question": _clip(obj.get("check_question") or obj.get("question") or "", 160),
     }
 
 
 class MentorService:
-    def __init__(self, backend: Backend, rag: RagLibrary, max_new_tokens: int, temperature: float) -> None:
+    def __init__(self, backend: Backend, rag: RagLibrary, max_new_tokens: int, temperature: float, voice: Any = None) -> None:
         self.backend = backend
         self.rag = rag
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
+        self.voice = voice
 
     def health(self) -> dict[str, Any]:
-        return {"ok": True, "backend": self.backend.name, "model": self.backend.model, "rag_docs": self.rag.doc_count}
+        return {"ok": True, "backend": self.backend.name, "model": self.backend.model, "rag_docs": self.rag.doc_count,
+                "voice": self.voice.info() if self.voice else {"status": "off", "voices": []}}
 
     def build_messages(self, req: dict, docs: list[dict], rules: list[str]) -> list[dict[str, str]]:
         lang = "en" if req.get("lang") == "en" else "es"
@@ -380,8 +474,16 @@ class MentorService:
                 return {"say": SAFETY_REPLY[lang], "sources": ["Real-world safety protocol"], "mode": "safety", "origin": "card",
                         "latency_ms": int((time.time() - t0) * 1000)}
 
-        query = text if kind == "question" else str(card.get("ragQuery") or ev.get("topic") or "")
-        docs = self.rag.retrieve(query, top_k=2)
+        if kind == "question":
+            terms = rag_terms(text, lang)
+            # Bare keywords trip the engine's "casual banter" intent gate; the prefix keeps them in the technical lane.
+            query = (RAG_QUERY_PREFIX + " ".join(terms)) if terms else text
+            docs = relevant_docs(self.rag.retrieve(query, top_k=6, min_score=8.0), terms)
+            if not docs and card.get("ragQuery"):
+                docs = self.rag.retrieve(str(card["ragQuery"]), top_k=1)
+        else:
+            query = str(card.get("ragQuery") or ev.get("topic") or "")
+            docs = self.rag.retrieve(query, top_k=2)
         rules = self.rag.rules(query) if kind == "question" else []
         sources = ([card["source"]] if card.get("source") else []) + [str(d.get("doc_id")) for d in docs]
 
@@ -393,7 +495,12 @@ class MentorService:
 
         parsed = parse_model_json(raw)
         if parsed and parsed["say"]:
-            return {"say": parsed["say"], "did_you_know": parsed["did_you_know"], "check_question": parsed["check_question"],
+            dyk = parsed["did_you_know"]
+            if lang == "es" and looks_english(dyk):  # copied straight from an English RAG doc
+                dyk = ""
+            if not dyk and kind != "explain_again":
+                dyk = _clip(card.get("fact"), 320)  # fall back to the verified card fact
+            return {"say": parsed["say"], "did_you_know": dyk, "check_question": parsed["check_question"],
                     "sources": sources[:4], "mode": "chat" if kind == "question" else "socratic", "origin": "model",
                     "latency_ms": int((time.time() - t0) * 1000)}
 
@@ -440,6 +547,15 @@ def make_handler(service: MentorService, api_key: str, require_key_all: bool):
             self.end_headers()
             self.wfile.write(body)
 
+        def _send_audio(self, data: bytes) -> None:
+            self.send_response(200)
+            self._cors()
+            self.send_header("Content-Type", "audio/wav")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
         def _authorized(self) -> bool:
             if not api_key:
                 return True
@@ -473,6 +589,15 @@ def make_handler(service: MentorService, api_key: str, require_key_all: bool):
                         self._send(401, {"error": "unauthorized"})
                         return
                     self._send(200, service.reply(body))
+                elif path == "/api/tts":
+                    if require_key_all and not self._authorized():
+                        self._send(401, {"error": "unauthorized"})
+                        return
+                    if not service.voice or service.voice.status != "ready":
+                        self._send(503, {"error": "voice not available"})
+                        return
+                    self._send_audio(service.voice.synthesize(str(body.get("text") or ""), str(body.get("lang") or "es"),
+                                                              str(body.get("voice") or ""), float(body.get("speed") or 1.0)))
                 elif path == "/api/generate":
                     if not self._authorized():
                         self._send(401, {"error": "unauthorized"})
@@ -509,6 +634,9 @@ def main() -> None:
     ap.add_argument("--require-key-all", action="store_true", help="Also protect /api/mentor (use when exposed through a tunnel).")
     ap.add_argument("--max-new-tokens", type=int, default=220)
     ap.add_argument("--temperature", type=float, default=0.6)
+    ap.add_argument("--voice", choices=["auto", "off"], default="auto",
+                    help="Neural voice with Supertonic 3 on the CPU (needs `pip install supertonic`).")
+    ap.add_argument("--voice-steps", type=int, default=8, help="Supertonic quality steps (5 fast … 12 best).")
     args = ap.parse_args()
 
     ai_root = find_ai_root(args.ai_root)
@@ -532,7 +660,8 @@ def main() -> None:
     else:
         backend = OfflineBackend()
 
-    service = MentorService(backend, rag, args.max_new_tokens, args.temperature)
+    voice = VoiceEngine(args.voice, args.voice_steps) if VoiceEngine and args.voice != "off" else None
+    service = MentorService(backend, rag, args.max_new_tokens, args.temperature, voice)
     httpd = ThreadingHTTPServer((args.host, args.port), make_handler(service, args.api_key, args.require_key_all))
     print(f"[mentor] KATHERINE listening on http://{args.host}:{args.port} | backend={backend.name} | rag_docs={rag.doc_count:,}", flush=True)
     print("MENTOR_SERVER_READY", flush=True)

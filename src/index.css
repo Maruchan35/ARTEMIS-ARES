@@ -220,6 +220,11 @@
   color: #e0f2fe;
 }
 .holo-choice:hover { background: rgba(22, 90, 150, 0.75); border-color: #7dd3fc; }
+.holo-choice-on { background: rgba(14, 165, 233, 0.45); border-color: #7dd3fc; color: #fff; box-shadow: 0 0 8px rgba(56, 189, 248, 0.45); }
+.holo-select { width: 100%; background: #020617; border: 1px solid rgba(3, 105, 161, 0.9); padding: 4px 6px; font-size: 12px; color: #f1f5f9; outline: none; }
+.holo-select:focus { border-color: #38bdf8; }
+.holo-select optgroup { color: #7dd3fc; background: #020617; }
+.holo-select option { color: #f1f5f9; background: #0f172a; }
 .holo-listening { animation: holo-pulse-kf 0.8s ease-in-out infinite; border-color: #fb7185; }
 .holo-spin, .holo-spin-rev, .holo-spin-fast, .holo-pulse, .holo-wave, .holo-blink {
   transform-box: fill-box;

@@ -33,9 +33,25 @@ El juego busca el puente en `http://localhost:8765`. Para cambiarlo: clic en la 
 
 `--merge` fusiona el LoRA en bf16: respuestas más rápidas, necesita L4/A100.
 
+## Voz de KATHERINE (cálida, en español e inglés)
+- **Voz neural HD (recomendada):** [Supertonic 3](https://github.com/supertone-inc/supertonic) corre en la CPU
+  (~4x más rápido que tiempo real, sin GPU) y cada voz habla español **e** inglés, así KATHERINE suena igual en
+  los dos idiomas. Se activa sola si el puente está corriendo y tienes el paquete:
+  ```
+  pip install supertonic
+  python ai_bridge/mentor_server.py --backend offline      # o cualquier otro backend
+  ```
+  La primera vez baja ~400 MB a `ai_bridge/.cache/supertonic3/` (o a `$SUPERTONIC_DIR`). `--voice off` la apaga.
+  `mentor_voice.py` convierte números, unidades y símbolos a palabras ("1,350 ppm" → "mil trescientos cincuenta
+  partes por millón", "CO₂" → "ce o dos"), porque el modelo lee mal los dígitos en español.
+- **Sin puente:** usa la mejor voz instalada del navegador (en Edge, las voces "Natural" como Dalia o Ava suenan muy bien).
+- **⚙ en el panel:** el jugador elige idioma (Español / English, cambia todo el juego), voz, velocidad y puede
+  probarla. Se guarda en el navegador.
+- Modelo de voz: licencia OpenRAIL-M (uso permitido con restricciones de uso responsable); código MIT.
+
 ## Controles en el juego
 - **[T]** hablar con KATHERINE (🎙 micrófono en Chrome/Edge) · **[1]/[2]** responder · **[M]** voz on/off
-- El panel se puede minimizar (▁). La voz usa las voces del sistema (en Edge, "Dalia Natural" suena mejor).
+- **⚙** idioma y voz · El panel se puede minimizar (▁).
 
 ## Cómo extenderlo
 - **Nuevo dato / decisión:** agrega una tarjeta en `src/ai/mentorKnowledge.ts` (`say`, `fact`, `source`,
@@ -44,6 +60,8 @@ El juego busca el puente en `http://localhost:8765`. Para cambiarlo: clic en la 
   Las decisiones usan el id `<grupo>_<valor>` (p. ej. `act2_krusty_spe`), los objetivos `obj_<clave>`.
 - **Personalidad:** frases en `src/ai/offlineMentor.ts` (`OPENERS`, `PERSONA_LINES`) y `SYSTEM_PROMPT` en
   `mentor_server.py`.
+- **Voz:** nombres de voces en `src/ai/mentorVoice.ts` (`NEURAL_VOICES`); pronunciación de unidades y símbolos
+  en `ai_bridge/mentor_voice.py` (`_UNIT_WORDS`, `_PHRASES`).
 - **Probar desde la consola (solo `npm run dev`):**
   `__katherine.sim().crisisDecision = 'food_priority'` · `__katherine.ask('¿por qué la luz es magenta?')`
 
