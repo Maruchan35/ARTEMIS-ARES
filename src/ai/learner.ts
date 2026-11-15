@@ -40,6 +40,8 @@ export interface Concept {
   explain: Bilingual;
   /** Keywords (accent-free, lowercase) that a good open answer usually mentions. */
   keywords: Record<Lang, string[]>;
+  /** Known wrong ideas (accent-free regex): if the answer matches, it is a miss no matter what. */
+  wrongIdeas?: RegExp[];
 }
 
 export const CONCEPTS: Record<ConceptId, Concept> = {
@@ -108,6 +110,7 @@ export const CONCEPTS: Record<ConceptId, Concept> = {
     id: 'supervivencia',
     name: { es: 'Qué cuidar primero', en: 'What to protect first' },
     prereqs: ['aire', 'agua'],
+    wrongIdeas: [/^\W*(primero\s+)?(la\s+)?comida/, /primero\s+(la\s+)?comida/, /comida\s+(va\s+)?(primero|antes)/, /primero\s+(el\s+)?agua\b(?![^.]*aire\s+(va\s+)?(primero|antes))/, /^\W*(first\s+)?food/, /food\s+(comes\s+)?first/, /first\s+(the\s+)?food/],
     explain: {
       es: 'Si todo falla al mismo tiempo, ¿qué cuidas primero y por qué?',
       en: 'If everything fails at once, what do you protect first and why?',
@@ -432,8 +435,15 @@ const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,
 /** Offline grading of an open answer: how many key ideas it mentions. */
 export function gradeOpenAnswer(id: ConceptId, answer: string, lang: Lang): 'good' | 'partial' | 'miss' {
   const a = norm(answer);
+  if (hasWrongIdea(id, answer)) return 'miss';
   const hits = CONCEPTS[id].keywords[lang].filter((k) => a.includes(k)).length;
   if (hits >= 2) return 'good';
   if (hits === 1) return 'partial';
   return 'miss';
+}
+
+/** True when the answer states one of the concept's known wrong ideas (e.g. "primero la comida"). */
+export function hasWrongIdea(id: ConceptId, answer: string): boolean {
+  const a = norm(answer).trim();
+  return (CONCEPTS[id].wrongIdeas ?? []).some((re) => re.test(a));
 }

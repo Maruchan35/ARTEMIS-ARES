@@ -111,9 +111,11 @@ TASKS = {
         "'did_you_know' give ONE real fact from the card. In 'check_question' ask what they would change next time."
     ),
     "grade": (
-        "The cadet explained the idea of the VERIFIED_FACT_CARD in their own words (CADET_ANSWER). Judge ONLY against "
-        "the card: 'verdict' is good (main idea right), partial (right direction, key piece missing) or miss (wrong "
-        "or unrelated). In 'say' give warm feedback in max 2 sentences: praise what is right, then add the missing "
+        "The cadet explained the idea of the VERIFIED_FACT_CARD in their own words (CADET_ANSWER). Be a STRICT but kind "
+        "teacher and judge ONLY against the card: 'verdict' is good only if the answer states the card's main idea "
+        "correctly; partial if it is in the right direction but misses the key reason; miss if it is wrong, "
+        "contradicts the card (for example puts things in a different order or picks a different priority) or is "
+        "unrelated. Never praise a wrong answer: if verdict is miss, 'say' must kindly say it is not right and why. In 'say' give warm feedback in max 2 sentences: praise what is right, then add the missing "
         "piece or correct the error kindly. In 'misconception' write the wrong belief in max 12 words, or leave it "
         "empty. Output keys: say, verdict, misconception."
     ),
@@ -517,6 +519,9 @@ class MentorService:
             parts.append(f"[CADET_ASKS] {_clip(ev.get('text'), 400)}")
         if kind == "grade":
             parts.append(f"[CADET_ANSWER] {_clip(ev.get('text'), 400)}")
+        elif kind != "question" and card:
+            parts.append("STYLE: rewrite the card's meaning in YOUR OWN words for this audience; do not copy its "
+                         "sentences verbatim, and keep every fact and number exactly as in the card.")
         learner = req.get("learner") or {}
         level = learner.get("level") if learner.get("level") in LEVEL_RULES else "cadet"
         profile = f"[LEARNER] level={LEVEL_LABEL[level]}"
@@ -597,7 +602,7 @@ class MentorService:
         card = req.get("card") or {}
         raw = None
         try:
-            raw = self.backend.generate(self.build_messages(req, [], []), 160, 0.3)
+            raw = self.backend.generate(self.build_messages(req, [], []), 160, 0.1)
         except Exception as exc:
             print(f"[mentor] grading failed: {exc}", flush=True)
         parsed = parse_model_json(raw) or {}

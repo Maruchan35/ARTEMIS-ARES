@@ -5,7 +5,7 @@ import { MENTOR_CARDS } from '../ai/mentorKnowledge';
 import { CHECK_PROMPT, PERSONA_LINES, composeOfflineReply, isRealWorldSafetyIssue, safetyReply, searchCards } from '../ai/offlineMentor';
 import { MentorServerStatus, askMentorServer, checkMentorServer, mentorServerUrl } from '../ai/mentorClient';
 import { mentorEars, mentorVoice } from '../ai/mentorVoice';
-import { AgeLevel, CONCEPTS, ConceptId, LEVELS, gradeOpenAnswer, learner } from '../ai/learner';
+import { AgeLevel, CONCEPTS, ConceptId, LEVELS, gradeOpenAnswer, hasWrongIdea, learner } from '../ai/learner';
 import type { Lang, MentorCard, MentorEvent, MentorReply, MentorTurn } from '../ai/mentorTypes';
 import { soundEngine } from '../audio/soundEngine';
 
@@ -607,6 +607,11 @@ export const MentorHologram: React.FC<Props> = ({ simRef, lang, paused }) => {
         );
         if (reply?.verdict) verdict = reply.verdict;
         if (reply?.say) feedback = reply.say;
+        // Safety net for a kids' game: a known wrong idea is never praised, whatever the model said.
+        if (hasWrongIdea(ex.concept, answer) && verdict !== 'miss') {
+          verdict = 'miss';
+          feedback = '';
+        }
         if (reply?.misconception) learner.addMisconception(reply.misconception);
       }
       learner.markExplained(ex.concept);
