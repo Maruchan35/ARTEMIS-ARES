@@ -531,10 +531,11 @@ export const LaunchTransitModal: React.FC<{
   lang: 'es' | 'en';
   fromMissionId: MissionId;
   toMissionId: MissionId;
+  origin?: 'menu' | 'esc_menu' | 'station';
   verifiedInOrion3D?: boolean;
   onComplete: () => void;
   onCancel: () => void;
-}> = ({ lang, fromMissionId, toMissionId, verifiedInOrion3D = false, onComplete, onCancel }) => {
+}> = ({ lang, fromMissionId, toMissionId, origin = 'station', verifiedInOrion3D = false, onComplete, onCancel }) => {
   const targetMission = AETHER4_MISSIONS.find((m) => m.id === toMissionId) ?? AETHER4_MISSIONS[1];
   const fromMission = AETHER4_MISSIONS.find((m) => m.id === fromMissionId) ?? AETHER4_MISSIONS[0];
   const needsSurfaceLanding =
@@ -2015,6 +2016,11 @@ export const LaunchTransitModal: React.FC<{
                 soundEngine.setRocketThruster(0);
                 onCancel();
               }}
+              title={
+                origin === 'menu'
+                  ? lang === 'es' ? 'Volver al Menú de Fases' : 'Return to Phases Menu'
+                  : lang === 'es' ? 'Volver a la estación actual' : 'Return to current station'
+              }
               className="lp-btn px-2.5 py-1 text-xs"
             >
               ✕
@@ -2229,7 +2235,14 @@ export const LaunchTransitModal: React.FC<{
           </div>
         </div>
         <div className="text-[10px] text-zinc-400 flex flex-wrap justify-between">
-          <span>{lang === 'es' ? `Origen: ${fromMission.badgeEs}` : `Origin: ${fromMission.badgeEn}`} → <b>{lang === 'es' ? targetMission.titleEs : targetMission.titleEn}</b></span>
+          <span>
+            {origin === 'menu'
+              ? lang === 'es' ? 'Origen: MENÚ DE FASES (LC-39B KSC)' : 'Origin: PHASES MENU (LC-39B KSC)'
+              : origin === 'esc_menu'
+              ? lang === 'es' ? 'Origen: SELECTOR TÁCTICO [ESC]' : 'Origin: TACTICAL SELECTOR [ESC]'
+              : lang === 'es' ? `Origen: ${fromMission.badgeEs}` : `Origin: ${fromMission.badgeEn}`}{' '}
+            → <b>{lang === 'es' ? targetMission.titleEs : targetMission.titleEn}</b>
+          </span>
           <span>{lang === 'es' ? 'Pantallas MFD 3D en cabina muestran elevación, horizonte FDAI y propulsión en tiempo real.' : 'In-cockpit 3D MFD screens render live trajectory, FDAI attitude & propulsion telemetry.'}</span>
         </div>
       </div>
@@ -3242,6 +3255,8 @@ export const EscTacticalMenuModal: React.FC<{
   onOpenTerminal: () => void;
   onOpenPapers: () => void;
   onOpenMirror: () => void;
+  initialTab?: 'map_ops' | 'telemetry' | 'phases_settings';
+  tabOpenNonce?: number;
   onReturnMainMenu: () => void;
   onClose: () => void;
 }> = ({
@@ -3265,10 +3280,15 @@ export const EscTacticalMenuModal: React.FC<{
   onOpenTerminal,
   onOpenPapers,
   onOpenMirror,
+  initialTab,
+  tabOpenNonce = 0,
   onReturnMainMenu,
   onClose,
 }) => {
-  const [tab, setTab] = useState<'map_ops' | 'telemetry' | 'phases_settings'>('map_ops');
+  const [tab, setTab] = useState<'map_ops' | 'telemetry' | 'phases_settings'>(initialTab ?? 'map_ops');
+  useEffect(() => {
+    if (initialTab) setTab(initialTab);
+  }, [initialTab, tabOpenNonce]);
   const [voiceURI, setVoiceURI] = useState(() => mentorVoice.getSelectedVoiceURI(lang));
   const [voicePreset, setVoicePreset] = useState<VoicePresetId>(() => mentorVoice.getPresetId());
   const [voiceTick, setVoiceTick] = useState(0);

@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import {
+  Activity,
   Compass,
   DoorOpen,
+  Droplets,
+  Heart,
   Info,
   Layers,
   MapPin,
@@ -10,11 +13,15 @@ import {
   Newspaper,
   Package,
   Rocket,
+  Shield,
   Sliders,
   Sparkles,
   User,
+  Utensils,
   Volume2,
   VolumeX,
+  Wind,
+  Zap,
 } from 'lucide-react';
 import { NASA_CONSTANTS } from '../data/nasaConstants';
 import {
@@ -152,6 +159,12 @@ function getMissionObjectiveSummary(missionId: MissionId, obj: SpaceRoomState['o
 
 export const SpaceSinglePlayerGame: React.FC = () => {
   const [screen, setScreen] = useState<ScreenMode>('menu');
+  const screenRef = useRef<ScreenMode>('menu');
+  screenRef.current = screen;
+  const [escTabReq, setEscTabReq] = useState<{
+    tab?: 'map_ops' | 'telemetry' | 'phases_settings';
+    nonce: number;
+  }>({ nonce: 0 });
   const [lang, setLang] = useState<LangMode>('es');
   const [audioOn, setAudioOn] = useState(soundEngine.enabled);
   const [musicOn, setMusicOn] = useState(soundEngine.musicEnabled);
@@ -186,6 +199,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     from: MissionId;
     to: MissionId;
     preserveCarry: boolean;
+    origin: 'menu' | 'esc_menu' | 'station';
   } | null>(null);
 
   const [codexInit, setCodexInit] = useState<{ tab: 'papers' | 'notes'; paperId: number; noteId: number }>({
@@ -245,6 +259,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
     pressureKpa: simRef.current.cabinPressureKpa,
     suitO2Percent: simRef.current.suitO2Percent,
     hydrationPercent: simRef.current.hydrationPercent,
+    nutritionPercent: simRef.current.nutritionPercent,
     airlockStep: simRef.current.airlockStep,
     airlockPressureKpa: simRef.current.airlockPressureKpa,
     rpcmLoadKwe: simRef.current.rpcmLoadKwe,
@@ -312,6 +327,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       pressureKpa: s.cabinPressureKpa,
       suitO2Percent: s.suitO2Percent,
       hydrationPercent: s.hydrationPercent,
+      nutritionPercent: s.nutritionPercent,
       airlockStep: s.airlockStep,
       airlockPressureKpa: s.airlockPressureKpa,
       rpcmLoadKwe: s.rpcmLoadKwe,
@@ -476,10 +492,16 @@ export const SpaceSinglePlayerGame: React.FC = () => {
         return;
       }
       const fromId = simRef.current.currentMissionId;
+      const origin: 'menu' | 'esc_menu' | 'station' =
+        screenRef.current === 'menu'
+          ? 'menu'
+          : activeModalRef.current === 'esc_menu'
+          ? 'esc_menu'
+          : 'station';
       ignoreNextUnlockRef.current = true;
       document.exitPointerLock?.();
       setScreen('room');
-      setLaunchTransitTarget({ from: fromId, to: missionId, preserveCarry });
+      setLaunchTransitTarget({ from: fromId, to: missionId, preserveCarry, origin });
       setActiveModal('launch_transit');
     },
     [applyMissionLoad]
@@ -624,6 +646,8 @@ export const SpaceSinglePlayerGame: React.FC = () => {
           sim.hydrationPercent = 100;
           sim.heartRateBpm = Math.max(66, sim.heartRateBpm - 6);
         } else {
+          sim.nutritionPercent = 100;
+          sim.foodKg = Math.max(2.0, Number((sim.foodKg - 0.27).toFixed(2)));
           sim.crewMoralePercent = Math.min(100, sim.crewMoralePercent + 4);
         }
         animPulsesRef.current.consume = 1.0;
@@ -744,6 +768,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
           from: res.openLaunchTransit.from,
           to: res.openLaunchTransit.to,
           preserveCarry: true,
+          origin: 'station',
         });
         setActiveModal('launch_transit');
         return;
@@ -1020,7 +1045,15 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       const tgt = e.target as HTMLElement | null;
       if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT' || tgt.isContentEditable)) return;
       keysRef.current[e.code] = true;
-      if (e.code === 'KeyQ') {
+      if (e.code === 'KeyM' && (!activeModalRef.current || activeModalRef.current === 'esc_menu')) {
+        e.preventDefault();
+        ignoreNextUnlockRef.current = true;
+        document.exitPointerLock?.();
+        lastEscOpenMsRef.current = performance.now();
+        soundEngine.playClick();
+        setEscTabReq((r) => ({ tab: 'map_ops', nonce: r.nonce + 1 }));
+        setActiveModal((m) => (m === 'esc_menu' ? null : 'esc_menu'));
+      } else if (e.code === 'KeyQ') {
         ignoreNextUnlockRef.current = true;
         document.exitPointerLock?.();
         setActiveModal((m) => (m === 'esc_menu' ? null : 'esc_menu'));
@@ -3291,7 +3324,7 @@ export const SpaceSinglePlayerGame: React.FC = () => {
             )}
 
             <div className="text-[10px] font-mono text-slate-600 pt-2 border-t border-slate-900/10 flex flex-wrap gap-2">
-              <span>[WASD] MOVER</span>·<span>[1-5] CASILLAS</span>·<span>[B] MOCHILA</span>·<span>[ESC] MENÚ</span>
+              <span>[WASD] MOVER</span>·<span>[1-5] CASILLAS</span>·<span>[B] MOCHILA</span>·<span>[M] MAPA</span>·<span>[F1-F4] IA</span>·<span>[ESC] MENÚ</span>
             </div>
           </div>
 
@@ -3377,247 +3410,246 @@ export const SpaceSinglePlayerGame: React.FC = () => {
       )}
 
       {/* COMPACT LOCKDOWN TRANSLUCENT-WHITE TOP HUD */}
-      <div className="pointer-events-none fixed top-2.5 left-2.5 right-2.5 flex items-start justify-between gap-2 z-20">
-        {/* Top-Left Compact Translucent Guided Step & Core Telemetry Card */}
-        <div className="pointer-events-auto max-w-[325px] lp-panel rounded-lg px-2.5 py-1.5 shadow-lg space-y-1">
-          <div className="flex flex-wrap items-center gap-1.5 text-[9.5px] font-mono">
-            <span
-              className="font-semibold px-1.5 py-0.5 rounded text-white leading-none"
-              style={{ backgroundColor: activeMissionConfig.accentHex }}
-            >
-              {lang === 'es' ? activeMissionConfig.badgeEs : activeMissionConfig.badgeEn}
-            </span>
-            <span className="flex items-center gap-1 font-semibold truncate" style={{ color: currentZone.accentHex }}>
-              <MapPin className="w-2.5 h-2.5 shrink-0" />
-              {lang === 'es' ? currentZone.nameEs : currentZone.nameEn}
-            </span>
-          </div>
-
-          <div className="text-[11px] leading-tight text-slate-900">
-            <span className={`font-semibold mr-1 ${miniRouteAssigned ? 'text-amber-800' : 'text-sky-900'}`}>
-              {miniRouteAssigned ? '◆ ' : '● '}
-              {lang === 'es' ? guidedStep.stepTitleEs : guidedStep.stepTitleEn} ({distToGuideM} m):
-            </span>
-            <span className="text-slate-800">{lang === 'es' ? guidedStep.instructionEs : guidedStep.instructionEn}</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-mono pt-1 border-t border-slate-900/15">
-            <span className={hud.o2Percent < 19.5 ? 'text-rose-700 font-bold' : 'text-sky-900 font-semibold'}>
-              O₂ {hud.o2Percent.toFixed(1)}%
-            </span>
-            <span className={hud.co2Ppm > 1200 ? 'text-amber-800 font-bold' : 'text-slate-800'}>
-              CO₂ {Math.round(hud.co2Ppm)}ppm
-            </span>
-            <span className={hud.powerKwe < 5 ? 'text-rose-700 font-bold' : 'text-amber-800 font-semibold'}>
-              {hud.powerKwe.toFixed(1)}kWe
-            </span>
-            <span className={hud.hp < 50 ? 'text-rose-700 font-bold' : 'text-emerald-800 font-semibold'}>
-              HP {Math.round(hud.hp)}
-            </span>
-            <span className={hud.suitO2Percent < 55 ? 'text-rose-700 font-bold' : 'text-cyan-900 font-semibold'}>
-              {lang === 'es' ? 'Traje' : 'Suit'} {Math.round(hud.suitO2Percent)}%
-            </span>
-            <span className={hud.hydrationPercent < 55 ? 'text-rose-700 font-bold' : 'text-emerald-900 font-semibold'}>
-              H₂O {Math.round(hud.hydrationPercent)}%
-            </span>
-            <span className={hud.airlockStep === 5 ? 'text-emerald-800 font-bold' : 'text-slate-800'}>
-              {hud.airlockPressureKpa.toFixed(1)}kPa
-            </span>
-            <span className={hud.rpcmTripped ? 'text-rose-700 font-bold' : 'text-slate-800'}>
-              120V:{hud.rpcmLoadKwe.toFixed(1)}kW{hud.rpcmTripped ? '!' : ''}
-            </span>
-          </div>
-        </div>
-
-        {/* Top-Right Compact [ESC] Button + Detailed Architectural Mini-Map */}
-        <div className="pointer-events-auto flex flex-col items-end gap-1">
-          <button
-            type="button"
-            onClick={() => {
-              soundEngine.unlock();
-              soundEngine.playClick();
-              ignoreNextUnlockRef.current = true;
-              document.exitPointerLock?.();
-              lastEscOpenMsRef.current = performance.now();
-              setActiveModal((m) => (m === 'esc_menu' ? null : 'esc_menu'));
-            }}
-            className="lp-btn px-2 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 shadow-md"
-          >
-            <Sliders className="w-3 h-3 text-sky-700" />
-            <span>
-              [ESC] {lang === 'es' ? 'Menú' : 'Menu'} ({objectiveProgress.done}/{objectiveProgress.total})
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              soundEngine.unlock();
-              ignoreNextUnlockRef.current = true;
-              document.exitPointerLock?.();
-              lastEscOpenMsRef.current = performance.now();
-              setActiveModal('esc_menu');
-            }}
-            title={lang === 'es' ? 'Ampliar Mapa Táctico [ESC]' : 'Expand Tactical Map [ESC]'}
-            className="lp-panel hover:bg-white/75 rounded-lg p-1 shadow-lg text-left transition"
-          >
-            <svg viewBox="0 0 440 480" className="w-[154px] h-[168px] bg-slate-950/88 rounded border border-slate-400/35">
-              {/* Subtle radar grid (~2.5m per cell across 31.4m × 36.0m station) */}
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((gi) => (
-                <g key={gi} opacity="0.16">
-                  <line x1={gi * 36} y1={0} x2={gi * 36} y2={480} stroke="#94a3b8" strokeWidth="1" />
-                  <line x1={0} y1={gi * 36} x2={440} y2={gi * 36} stroke="#94a3b8" strokeWidth="1" />
-                </g>
-              ))}
-              {/* Zone floor rectangles with active room tint */}
-              {STATION_FLOOR_RECTS.map((r) => {
-                const z = STATION_ZONES.find((sz) => sz.id === r.zoneId);
-                const active = r.zoneId === currentZone.id;
-                return (
-                  <rect
-                    key={r.id}
-                    x={(r.minX + 2.2) * 12.6 + 20}
-                    y={(20.2 - r.maxY) * 12.6 + 14}
-                    width={(r.maxX - r.minX) * 12.6}
-                    height={(r.maxY - r.minY) * 12.6}
-                    fill={active ? `${z?.accentHex ?? '#38bdf8'}30` : `${z?.accentHex ?? '#475569'}10`}
-                    stroke={z?.accentHex ?? '#64748b'}
-                    strokeOpacity={r.id.startsWith('corr_') ? 0.55 : 0.85}
-                    strokeWidth={active ? '2.2' : '1.4'}
-                  />
-                );
-              })}
-              {/* Architectural landmarks inside modules */}
-              {/* SW NBL Pool water basin + submerged ISS truss */}
-              <rect x={(-0.85 + 2.2) * 12.6 + 20} y={(20.2 - -6.5) * 12.6 + 14} width={4.1 * 12.6} height={4.1 * 12.6} fill="#0284c755" stroke="#38bdf8" strokeWidth="1.2" rx="3" />
-              <line x1={(-0.3 + 2.2) * 12.6 + 20} y1={(20.2 - -7.1) * 12.6 + 14} x2={(2.7 + 2.2) * 12.6 + 20} y2={(20.2 - -9.9) * 12.6 + 14} stroke="#facc15" strokeWidth="1.5" opacity="0.7" />
-              {/* South Orion Capsule & Gantry */}
-              <rect x={(11.2 + 2.2) * 12.6 + 20} y={(20.2 - -5.4) * 12.6 + 14} width={2.8 * 12.6} height={4.2 * 12.6} fill="#0ea5e933" stroke="#38bdf8" strokeWidth="1.1" />
-              <circle cx={(12.6 + 2.2) * 12.6 + 20} cy={(20.2 - -12.4) * 12.6 + 14} r={22} fill="#f8fafc22" stroke="#f59e0b" strokeWidth="1.6" />
-              <circle cx={(12.6 + 2.2) * 12.6 + 20} cy={(20.2 - -12.4) * 12.6 + 14} r={8} fill="#38bdf844" stroke="#f8fafc" strokeWidth="1" />
-              {/* NE 4.5G Centrifuge track */}
-              <circle cx={(24.8 + 2.2) * 12.6 + 20} cy={(20.2 - 15.7) * 12.6 + 14} r={18} fill="none" stroke="#a855f7" strokeWidth="1.8" strokeDasharray="5 3" />
-              <circle cx={(24.8 + 2.2) * 12.6 + 20} cy={(20.2 - 15.7) * 12.6 + 14} r={5} fill="#a855f766" />
-              {/* North MEDS 3-MFD Cockpit Arc */}
-              <path
-                d={`M ${(10.6 + 2.2) * 12.6 + 20} ${(20.2 - 15.6) * 12.6 + 14} Q ${(12.6 + 2.2) * 12.6 + 20} ${(20.2 - 16.5) * 12.6 + 14} ${(14.6 + 2.2) * 12.6 + 20} ${(20.2 - 15.6) * 12.6 + 14}`}
-                fill="none"
-                stroke="#ff4f00"
-                strokeWidth="3.2"
-              />
-              {/* East Lab APH Botanical Bed */}
-              <rect x={(18.6 + 2.2) * 12.6 + 20} y={(20.2 - 8.5) * 12.6 + 14} width={3.7 * 12.6} height={1.0 * 12.6} fill="#10b98144" stroke="#22c55e" strokeWidth="1.2" />
-              {/* SE 0g Fire Chamber + Machine Racks */}
-              <rect x={(24.1 + 2.2) * 12.6 + 20} y={(20.2 - -10.95) * 12.6 + 14} width={3.0 * 12.6} height={1.23 * 12.6} fill="#ef444444" stroke="#f87171" strokeWidth="1.2" />
-              {/* West Hab Bunks */}
-              <rect x={(-1.38 + 2.2) * 12.6 + 20} y={(20.2 - 7.0) * 12.6 + 14} width={1.66 * 12.6} height={2.6 * 12.6} fill="#38bdf833" stroke="#38bdf8" strokeWidth="1.2" />
-              {/* Compact module acronyms */}
-              {[
-                { label: 'HAB', x: 2.7, y: 2.0, col: '#7dd3fc' },
-                { label: 'HUB', x: 12.6, y: 3.6, col: '#cbd5e1' },
-                { label: 'MEDS', x: 12.6, y: 12.0, col: '#fdba74' },
-                { label: 'LAB', x: 22.9, y: 2.0, col: '#86efac' },
-                { label: 'NBL', x: 2.3, y: -5.2, col: '#38bdf8' },
-                { label: 'ORION', x: 12.6, y: -4.2, col: '#fcd34d' },
-                { label: '4.5G', x: 24.3, y: 13.0, col: '#d8b4fe' },
-                { label: 'ECLSS', x: 24.2, y: -8.1, col: '#fca5a5' },
-              ].map((lbl) => (
-                <text
-                  key={lbl.label}
-                  x={(lbl.x + 2.2) * 12.6 + 20}
-                  y={(20.2 - lbl.y) * 12.6 + 14}
-                  fill={lbl.col}
-                  fontSize="12"
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  opacity="0.88"
+      {(() => {
+        const pSvgX = (hud.x + 2.2) * 12.6 + 20;
+        const pSvgY = (20.2 - hud.y) * 12.6 + 14;
+        const radarHalf = 138;
+        const tSvgX = (guidedStep.targetX + 2.2) * 12.6 + 20;
+        const tSvgY = (20.2 - guidedStep.targetY) * 12.6 + 14;
+        const tDx = tSvgX - pSvgX;
+        const tDy = tSvgY - pSvgY;
+        const tDistSvg = Math.hypot(tDx, tDy);
+        const edgeR = radarHalf - 16;
+        const showEdgeArrow = tDistSvg > edgeR;
+        const edgeX = showEdgeArrow ? pSvgX + (tDx / tDistSvg) * edgeR : tSvgX;
+        const edgeY = showEdgeArrow ? pSvgY + (tDy / tDistSvg) * edgeR : tSvgY;
+        const edgeDeg = (Math.atan2(tDy, tDx) * 180) / Math.PI;
+        return (
+          <div className="pointer-events-none fixed top-2.5 left-2.5 right-2.5 flex items-start justify-between gap-2 z-20">
+            {/* Compact Top-Left Objective Card (vitals moved cleanly to bottom-left icons) */}
+            <div className="pointer-events-auto max-w-[258px] lp-panel rounded-lg px-2 py-1 shadow-lg space-y-0.5">
+              <div className="flex flex-wrap items-center gap-1.5 text-[9px] font-mono">
+                <span
+                  className="font-semibold px-1.5 py-0.5 rounded text-white leading-none"
+                  style={{ backgroundColor: activeMissionConfig.accentHex }}
                 >
-                  {lbl.label}
-                </text>
-              ))}
-              {/* Exterior bulkhead walls + cyan panoramic viewport */}
-              {SPACE_ROOM_COLLIDERS.slice(0, WALL_COLLIDER_COUNT).map((b) => (
-                <rect
-                  key={b[6]}
-                  x={(b[0] + 2.2) * 12.6 + 20}
-                  y={(20.2 - b[4]) * 12.6 + 14}
-                  width={Math.max(2.5, (b[3] - b[0]) * 12.6)}
-                  height={Math.max(2.5, (b[4] - b[1]) * 12.6)}
-                  fill={b[6] === 'Wall_WestHab_N_Win' ? '#38bdf8' : '#94a3b8'}
-                  opacity="0.82"
-                />
-              ))}
-              {/* Automatic sliding doors */}
-              {simRef.current.doors.map((d) => (
-                <rect
-                  key={d.id}
-                  x={(d.x - (d.axis === 'x' ? 0.2 : 1.35) + 2.2) * 12.6 + 20}
-                  y={(20.2 - (d.y + (d.axis === 'y' ? 0.2 : 1.35))) * 12.6 + 14}
-                  width={(d.axis === 'x' ? 0.4 : 2.7) * 12.6}
-                  height={(d.axis === 'y' ? 0.4 : 2.7) * 12.6}
-                  fill={d.openProgress > 0.5 ? '#10b981' : '#f59e0b'}
-                />
-              ))}
-              {/* Loose world pickup items */}
-              {simRef.current.worldItems.map((wi) => (
-                <rect
-                  key={wi.uid}
-                  x={(wi.x + 2.2) * 12.6 + 20 - 2.2}
-                  y={(20.2 - wi.y) * 12.6 + 14 - 2.2}
-                  width="4.4"
-                  height="4.4"
-                  fill={wi.category === 'task' ? '#fde047' : '#e2e8f0'}
-                  opacity="0.85"
-                />
-              ))}
-              {/* Guided yellow dashed route */}
-              {miniRouteAssigned && (
-                <polyline
-                  points={miniPathPtsStr}
-                  fill="none"
-                  stroke="#facc15"
-                  strokeWidth="3.6"
-                  strokeDasharray="6 6"
-                />
-              )}
-              {/* Station pins */}
-              {simRef.current.stations.map((st) => (
-                <circle
-                  key={st.id}
-                  cx={(st.x + 2.2) * 12.6 + 20}
-                  cy={(20.2 - st.y) * 12.6 + 14}
-                  r={st.kind === 'npc_crew' ? 5.2 : 4.0}
-                  fill={st.kind === 'npc_crew' ? '#c084fc' : st.done ? '#10b981' : '#38bdf8'}
-                  stroke="#020617"
-                  strokeWidth="1.2"
-                />
-              ))}
-              {/* Target highlight */}
-              {miniRouteAssigned ? (
-                <g transform={`translate(${(guidedStep.targetX + 2.2) * 12.6 + 20}, ${(20.2 - guidedStep.targetY) * 12.6 + 14})`}>
-                  <polygon points="0,-10 10,0 0,10 -10,0" fill="#facc15" stroke="#09090b" strokeWidth="2" />
-                </g>
-              ) : (
-                <circle
-                  cx={(guidedStep.targetX + 2.2) * 12.6 + 20}
-                  cy={(20.2 - guidedStep.targetY) * 12.6 + 14}
-                  r="7.5"
-                  fill="none"
-                  stroke="#38bdf8"
-                  strokeWidth="2.4"
-                />
-              )}
-              {/* Player FOV cone + directional arrow */}
-              <g
-                transform={`translate(${(hud.x + 2.2) * 12.6 + 20}, ${(20.2 - hud.y) * 12.6 + 14}) rotate(${-hud.yawDeg})`}
+                  {lang === 'es' ? activeMissionConfig.badgeEs : activeMissionConfig.badgeEn}
+                </span>
+                <span className="flex items-center gap-1 font-semibold truncate" style={{ color: currentZone.accentHex }}>
+                  <MapPin className="w-2.5 h-2.5 shrink-0" />
+                  {lang === 'es' ? currentZone.nameEs : currentZone.nameEn}
+                </span>
+              </div>
+
+              <div className="text-[10.5px] leading-snug text-slate-900">
+                <span className={`font-semibold mr-1 ${miniRouteAssigned ? 'text-amber-800' : 'text-sky-900'}`}>
+                  {miniRouteAssigned ? '◆ ' : '● '}
+                  {lang === 'es' ? guidedStep.stepTitleEs : guidedStep.stepTitleEn} ({distToGuideM} m):
+                </span>
+                <span className="text-slate-800">{lang === 'es' ? guidedStep.instructionEs : guidedStep.instructionEn}</span>
+              </div>
+            </div>
+
+            {/* Top-Right Compact [ESC] Button + Smaller Circular Player-Centered Mini-Map [M] */}
+            <div className="pointer-events-auto flex flex-col items-end gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.unlock();
+                  soundEngine.playClick();
+                  ignoreNextUnlockRef.current = true;
+                  document.exitPointerLock?.();
+                  lastEscOpenMsRef.current = performance.now();
+                  setEscTabReq((r) => ({ tab: undefined, nonce: r.nonce + 1 }));
+                  setActiveModal((m) => (m === 'esc_menu' ? null : 'esc_menu'));
+                }}
+                className="lp-btn px-2 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 shadow-md"
               >
-                <polygon points="0,0 36,-20 36,20" fill="#22c55e" opacity="0.22" />
-                <polygon points="10,0 -5.5,-6 -2.5,0 -5.5,6" fill="#22c55e" stroke="#ffffff" strokeWidth="1.5" />
-              </g>
-            </svg>
-          </button>
-        </div>
-      </div>
+                <Sliders className="w-3 h-3 text-sky-700" />
+                <span>
+                  [ESC] {lang === 'es' ? 'Menú' : 'Menu'} ({objectiveProgress.done}/{objectiveProgress.total})
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.unlock();
+                  soundEngine.playClick();
+                  ignoreNextUnlockRef.current = true;
+                  document.exitPointerLock?.();
+                  lastEscOpenMsRef.current = performance.now();
+                  setEscTabReq((r) => ({ tab: 'map_ops', nonce: r.nonce + 1 }));
+                  setActiveModal('esc_menu');
+                }}
+                title={lang === 'es' ? 'Ampliar Mapa Táctico [M]' : 'Expand Tactical Map [M]'}
+                style={{ borderRadius: '9999px' }}
+                className="relative lp-panel hover:bg-white/75 !rounded-full p-1 shadow-lg transition flex items-center justify-center"
+              >
+                <svg
+                  viewBox={`${(pSvgX - radarHalf).toFixed(1)} ${(pSvgY - radarHalf).toFixed(1)} ${radarHalf * 2} ${radarHalf * 2}`}
+                  style={{ borderRadius: '9999px' }}
+                  className="w-[116px] h-[116px] sm:w-[122px] sm:h-[122px] bg-slate-950/90 !rounded-full border border-sky-400/50"
+                >
+                  {/* Extended radar grid tracking astronaut smoothly */}
+                  {Array.from({ length: 24 }, (_, idx) => idx - 6).map((gi) => (
+                    <g key={gi} opacity="0.16">
+                      <line x1={gi * 36} y1={-240} x2={gi * 36} y2={760} stroke="#94a3b8" strokeWidth="1.2" />
+                      <line x1={-240} y1={gi * 36} x2={760} y2={gi * 36} stroke="#94a3b8" strokeWidth="1.2" />
+                    </g>
+                  ))}
+                  {/* Zone floor rectangles with active room tint */}
+                  {STATION_FLOOR_RECTS.map((r) => {
+                    const z = STATION_ZONES.find((sz) => sz.id === r.zoneId);
+                    const active = r.zoneId === currentZone.id;
+                    return (
+                      <rect
+                        key={r.id}
+                        x={(r.minX + 2.2) * 12.6 + 20}
+                        y={(20.2 - r.maxY) * 12.6 + 14}
+                        width={(r.maxX - r.minX) * 12.6}
+                        height={(r.maxY - r.minY) * 12.6}
+                        fill={active ? `${z?.accentHex ?? '#38bdf8'}34` : `${z?.accentHex ?? '#475569'}14`}
+                        stroke={z?.accentHex ?? '#64748b'}
+                        strokeOpacity={r.id.startsWith('corr_') ? 0.55 : 0.85}
+                        strokeWidth={active ? '2.4' : '1.4'}
+                      />
+                    );
+                  })}
+                  {/* Architectural landmarks inside modules */}
+                  <rect x={(-0.85 + 2.2) * 12.6 + 20} y={(20.2 - -6.5) * 12.6 + 14} width={4.1 * 12.6} height={4.1 * 12.6} fill="#0284c755" stroke="#38bdf8" strokeWidth="1.2" rx="3" />
+                  <line x1={(-0.3 + 2.2) * 12.6 + 20} y1={(20.2 - -7.1) * 12.6 + 14} x2={(2.7 + 2.2) * 12.6 + 20} y2={(20.2 - -9.9) * 12.6 + 14} stroke="#facc15" strokeWidth="1.5" opacity="0.7" />
+                  <rect x={(11.2 + 2.2) * 12.6 + 20} y={(20.2 - -5.4) * 12.6 + 14} width={2.8 * 12.6} height={4.2 * 12.6} fill="#0ea5e933" stroke="#38bdf8" strokeWidth="1.1" />
+                  <circle cx={(12.6 + 2.2) * 12.6 + 20} cy={(20.2 - -12.4) * 12.6 + 14} r={22} fill="#f8fafc22" stroke="#f59e0b" strokeWidth="1.6" />
+                  <circle cx={(12.6 + 2.2) * 12.6 + 20} cy={(20.2 - -12.4) * 12.6 + 14} r={8} fill="#38bdf844" stroke="#f8fafc" strokeWidth="1" />
+                  <circle cx={(24.8 + 2.2) * 12.6 + 20} cy={(20.2 - 15.7) * 12.6 + 14} r={18} fill="none" stroke="#a855f7" strokeWidth="1.8" strokeDasharray="5 3" />
+                  <circle cx={(24.8 + 2.2) * 12.6 + 20} cy={(20.2 - 15.7) * 12.6 + 14} r={5} fill="#a855f766" />
+                  <path
+                    d={`M ${(10.6 + 2.2) * 12.6 + 20} ${(20.2 - 15.6) * 12.6 + 14} Q ${(12.6 + 2.2) * 12.6 + 20} ${(20.2 - 16.5) * 12.6 + 14} ${(14.6 + 2.2) * 12.6 + 20} ${(20.2 - 15.6) * 12.6 + 14}`}
+                    fill="none"
+                    stroke="#ff4f00"
+                    strokeWidth="3.2"
+                  />
+                  <rect x={(18.6 + 2.2) * 12.6 + 20} y={(20.2 - 8.5) * 12.6 + 14} width={3.7 * 12.6} height={1.0 * 12.6} fill="#10b98144" stroke="#22c55e" strokeWidth="1.2" />
+                  <rect x={(24.1 + 2.2) * 12.6 + 20} y={(20.2 - -10.95) * 12.6 + 14} width={3.0 * 12.6} height={1.23 * 12.6} fill="#ef444444" stroke="#f87171" strokeWidth="1.2" />
+                  <rect x={(-1.38 + 2.2) * 12.6 + 20} y={(20.2 - 7.0) * 12.6 + 14} width={1.66 * 12.6} height={2.6 * 12.6} fill="#38bdf833" stroke="#38bdf8" strokeWidth="1.2" />
+                  {[
+                    { label: 'HAB', x: 2.7, y: 2.0, col: '#7dd3fc' },
+                    { label: 'HUB', x: 12.6, y: 3.6, col: '#cbd5e1' },
+                    { label: 'MEDS', x: 12.6, y: 12.0, col: '#fdba74' },
+                    { label: 'LAB', x: 22.9, y: 2.0, col: '#86efac' },
+                    { label: 'NBL', x: 2.3, y: -5.2, col: '#38bdf8' },
+                    { label: 'ORION', x: 12.6, y: -4.2, col: '#fcd34d' },
+                    { label: '4.5G', x: 24.3, y: 13.0, col: '#d8b4fe' },
+                    { label: 'ECLSS', x: 24.2, y: -8.1, col: '#fca5a5' },
+                  ].map((lbl) => (
+                    <text
+                      key={lbl.label}
+                      x={(lbl.x + 2.2) * 12.6 + 20}
+                      y={(20.2 - lbl.y) * 12.6 + 14}
+                      fill={lbl.col}
+                      fontSize="11"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                      opacity="0.88"
+                    >
+                      {lbl.label}
+                    </text>
+                  ))}
+                  {/* Exterior bulkhead walls + cyan panoramic viewport */}
+                  {SPACE_ROOM_COLLIDERS.slice(0, WALL_COLLIDER_COUNT).map((b) => (
+                    <rect
+                      key={b[6]}
+                      x={(b[0] + 2.2) * 12.6 + 20}
+                      y={(20.2 - b[4]) * 12.6 + 14}
+                      width={Math.max(2.5, (b[3] - b[0]) * 12.6)}
+                      height={Math.max(2.5, (b[4] - b[1]) * 12.6)}
+                      fill={b[6] === 'Wall_WestHab_N_Win' ? '#38bdf8' : '#94a3b8'}
+                      opacity="0.85"
+                    />
+                  ))}
+                  {/* Automatic sliding doors */}
+                  {simRef.current.doors.map((d) => (
+                    <rect
+                      key={d.id}
+                      x={(d.x - (d.axis === 'x' ? 0.2 : 1.35) + 2.2) * 12.6 + 20}
+                      y={(20.2 - (d.y + (d.axis === 'y' ? 0.2 : 1.35))) * 12.6 + 14}
+                      width={(d.axis === 'x' ? 0.4 : 2.7) * 12.6}
+                      height={(d.axis === 'y' ? 0.4 : 2.7) * 12.6}
+                      fill={d.openProgress > 0.5 ? '#10b981' : '#f59e0b'}
+                    />
+                  ))}
+                  {/* Loose world pickup items */}
+                  {simRef.current.worldItems.map((wi) => (
+                    <rect
+                      key={wi.uid}
+                      x={(wi.x + 2.2) * 12.6 + 20 - 2.4}
+                      y={(20.2 - wi.y) * 12.6 + 14 - 2.4}
+                      width="4.8"
+                      height="4.8"
+                      fill={wi.category === 'task' ? '#fde047' : '#e2e8f0'}
+                      opacity="0.9"
+                    />
+                  ))}
+                  {/* Guided yellow dashed route */}
+                  {miniRouteAssigned && (
+                    <polyline
+                      points={miniPathPtsStr}
+                      fill="none"
+                      stroke="#facc15"
+                      strokeWidth="3.8"
+                      strokeDasharray="6 6"
+                    />
+                  )}
+                  {/* Station pins */}
+                  {simRef.current.stations.map((st) => (
+                    <circle
+                      key={st.id}
+                      cx={(st.x + 2.2) * 12.6 + 20}
+                      cy={(20.2 - st.y) * 12.6 + 14}
+                      r={st.kind === 'npc_crew' ? 5.6 : 4.2}
+                      fill={st.kind === 'npc_crew' ? '#c084fc' : st.done ? '#10b981' : '#38bdf8'}
+                      stroke="#020617"
+                      strokeWidth="1.2"
+                    />
+                  ))}
+                  {/* Target highlight OR clamped perimeter directional indicator when off-radar */}
+                  {showEdgeArrow ? (
+                    <g transform={`translate(${edgeX}, ${edgeY}) rotate(${edgeDeg})`}>
+                      <polygon
+                        points="9,0 -6,-6 -3,0 -6,6"
+                        fill={miniRouteAssigned ? '#facc15' : '#38bdf8'}
+                        stroke="#020617"
+                        strokeWidth="1.5"
+                      />
+                    </g>
+                  ) : miniRouteAssigned ? (
+                    <g transform={`translate(${tSvgX}, ${tSvgY})`}>
+                      <polygon points="0,-10 10,0 0,10 -10,0" fill="#facc15" stroke="#09090b" strokeWidth="2" />
+                    </g>
+                  ) : (
+                    <circle cx={tSvgX} cy={tSvgY} r="7.5" fill="none" stroke="#38bdf8" strokeWidth="2.4" />
+                  )}
+                  {/* Concentric radar rings centered on astronaut */}
+                  <circle cx={pSvgX} cy={pSvgY} r={66} fill="none" stroke="#38bdf8" strokeWidth="1" opacity="0.22" />
+                  <circle cx={pSvgX} cy={pSvgY} r={126} fill="none" stroke="#38bdf8" strokeWidth="1.2" opacity="0.32" />
+                  {/* Player FOV cone + directional arrow ALWAYS centered on astronaut */}
+                  <g transform={`translate(${pSvgX}, ${pSvgY}) rotate(${-hud.yawDeg})`}>
+                    <polygon points="0,0 38,-22 38,22" fill="#22c55e" opacity="0.26" />
+                    <polygon points="11,0 -6,-6.5 -2.8,0 -6,6.5" fill="#22c55e" stroke="#ffffff" strokeWidth="1.6" />
+                  </g>
+                </svg>
+                <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-mono font-bold text-sky-200 bg-slate-950/70 px-1 rounded leading-tight">
+                  N
+                </span>
+                <span className="pointer-events-none absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8.5px] font-mono font-bold text-slate-900 lp-panel-solid px-1.5 rounded-full shadow border border-slate-900/20 leading-tight">
+                  [M]
+                </span>
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Center Reticle + Strict Proximity-Only Context Prompt */}
       {!activeModal && !hud.sleeping && (
@@ -3634,17 +3666,144 @@ export const SpaceSinglePlayerGame: React.FC = () => {
             {!pointerLocked && (
               <div className="mt-1 px-2.5 py-0.5 lp-panel rounded text-[10px] font-mono text-slate-800">
                 {lang === 'es'
-                  ? 'WASD mover · Clic mirar · [1-5] Casillas · [B] Mochila · [E] Usar · [ESC] Menú'
-                  : 'WASD move · Click look · [1-5] Slots · [B] Bag · [E] Use · [ESC] Menu'}
+                  ? 'WASD mover · Clic mirar · [1-5] Casillas · [B] Mochila · [M] Mapa · [E] Usar · [F1-F4] IA'
+                  : 'WASD move · Click look · [1-5] Slots · [B] Bag · [M] Map · [E] Use · [F1-F4] AI'}
               </div>
             )}
           </div>
         </>
       )}
 
-      {/* Bottom-Left Compact Floating NASA Junior Astronaut Training Info Panel */}
+      {/* Bottom-Left Depleting / Critical-Shift NASA Survival Icons (O₂, H₂O, Food, Suit O₂, HP, CO₂, 120V, Rad) */}
+      {!activeModal && !hud.sleeping && (() => {
+        const vitals = [
+          {
+            id: 'o2',
+            label: 'O₂',
+            val: `${hud.o2Percent.toFixed(0)}%`,
+            pct: Math.max(0, Math.min(100, ((hud.o2Percent - 16.5) / 4.5) * 100)),
+            state: hud.o2Percent < 19.2 ? 'crit' : hud.o2Percent < 20.0 ? 'warn' : 'ok',
+            okColor: '#0284c7',
+            Icon: Wind,
+            tip: lang === 'es' ? `O₂ Cabina: ${hud.o2Percent.toFixed(1)}% (crítico <19.2%)` : `Cabin O₂: ${hud.o2Percent.toFixed(1)}% (crit <19.2%)`,
+          },
+          {
+            id: 'h2o',
+            label: 'H₂O',
+            val: `${Math.round(hud.hydrationPercent)}%`,
+            pct: Math.max(0, Math.min(100, hud.hydrationPercent)),
+            state: hud.hydrationPercent < 55 ? 'crit' : hud.hydrationPercent < 72 ? 'warn' : 'ok',
+            okColor: '#0891b2',
+            Icon: Droplets,
+            tip: lang === 'es' ? `Hidratación BVAD: ${Math.round(hud.hydrationPercent)}% (toma WRS/bolsa)` : `BVAD Hydration: ${Math.round(hud.hydrationPercent)}%`,
+          },
+          {
+            id: 'food',
+            label: lang === 'es' ? 'Comida' : 'Food',
+            val: `${Math.round(hud.nutritionPercent)}%`,
+            pct: Math.max(0, Math.min(100, hud.nutritionPercent)),
+            state: hud.nutritionPercent < 35 ? 'crit' : hud.nutritionPercent < 60 ? 'warn' : 'ok',
+            okColor: '#059669',
+            Icon: Utensils,
+            tip: lang === 'es' ? `Nutrición BVAD: ${Math.round(hud.nutritionPercent)}% (${hud.foodKg.toFixed(1)} kg reserva)` : `BVAD Nutrition: ${Math.round(hud.nutritionPercent)}% (${hud.foodKg.toFixed(1)} kg)`,
+          },
+          {
+            id: 'suit',
+            label: lang === 'es' ? 'Traje' : 'Suit',
+            val: `${Math.round(hud.suitO2Percent)}%`,
+            pct: Math.max(0, Math.min(100, hud.suitO2Percent)),
+            state: hud.suitO2Percent < 55 ? 'crit' : hud.suitO2Percent < 75 ? 'warn' : 'ok',
+            okColor: '#0ea5e9',
+            Icon: Shield,
+            tip: lang === 'es' ? `Reserva O₂ Traje (29.6 kPa): ${Math.round(hud.suitO2Percent)}%` : `Suit O₂ (29.6 kPa): ${Math.round(hud.suitO2Percent)}%`,
+          },
+          {
+            id: 'hp',
+            label: 'HP',
+            val: `${Math.round(hud.hp)}`,
+            pct: Math.max(0, Math.min(100, hud.hp)),
+            state: hud.hp < 45 ? 'crit' : hud.hp < 70 ? 'warn' : 'ok',
+            okColor: '#10b981',
+            Icon: Heart,
+            tip: lang === 'es' ? `Salud Tripulante: ${Math.round(hud.hp)}/100` : `Crew Health: ${Math.round(hud.hp)}/100`,
+          },
+          {
+            id: 'co2',
+            label: 'CO₂',
+            val: hud.co2Ppm >= 1000 ? `${(hud.co2Ppm / 1000).toFixed(1)}k` : `${Math.round(hud.co2Ppm)}`,
+            pct: Math.max(6, Math.min(100, (1 - (hud.co2Ppm - 500) / 3500) * 100)),
+            state: hud.co2Ppm > 2500 ? 'crit' : hud.co2Ppm > 1200 ? 'warn' : 'ok',
+            okColor: '#0d9488',
+            Icon: Activity,
+            tip: lang === 'es' ? `CO₂ Cabina: ${Math.round(hud.co2Ppm)} ppm (se despinta al subir >1200 ppm)` : `Cabin CO₂: ${Math.round(hud.co2Ppm)} ppm (unpaints >1200 ppm)`,
+          },
+          {
+            id: 'pwr',
+            label: '120V',
+            val: hud.rpcmTripped ? 'TRIP' : `${hud.powerKwe.toFixed(0)}kW`,
+            pct: hud.rpcmTripped ? 18 : Math.max(12, Math.min(100, (hud.powerKwe / 40) * 100)),
+            state: hud.rpcmTripped || hud.powerKwe < 3 ? 'crit' : hud.powerKwe < 6.5 ? 'warn' : 'ok',
+            okColor: '#d97706',
+            Icon: Zap,
+            tip: lang === 'es' ? `Bus 120V: ${hud.powerKwe.toFixed(1)} kWe · Carga RPCM ${hud.rpcmLoadKwe.toFixed(1)} kW` : `120V Bus: ${hud.powerKwe.toFixed(1)} kWe · RPCM ${hud.rpcmLoadKwe.toFixed(1)} kW`,
+          },
+          {
+            id: 'rad',
+            label: 'Rad',
+            val: `${Math.round(hud.crewRadiationMsv)}`,
+            pct: Math.max(6, Math.min(100, (1 - (hud.crewRadiationMsv - 20) / 260) * 100)),
+            state: hud.crewRadiationMsv >= 250 ? 'crit' : hud.crewRadiationMsv >= 150 ? 'warn' : 'ok',
+            okColor: '#6366f1',
+            Icon: Sparkles,
+            tip: lang === 'es' ? `Dosis SPE: ${hud.crewRadiationMsv.toFixed(1)} mSv (límite 30d: 250 mSv)` : `SPE Dose: ${hud.crewRadiationMsv.toFixed(1)} mSv (30d limit: 250 mSv)`,
+          },
+        ] as const;
+
+        return (
+          <div className="pointer-events-auto fixed bottom-2.5 left-2.5 z-20 flex flex-wrap items-end gap-1">
+            {vitals.map((v) => {
+              const paintColor =
+                v.state === 'crit' ? '#dc2626' : v.state === 'warn' ? '#d97706' : v.okColor;
+              const IconCmp = v.Icon;
+              return (
+                <div
+                  key={v.id}
+                  title={v.tip}
+                  className={`lp-panel w-[38px] h-[44px] rounded-lg relative overflow-hidden flex flex-col items-center justify-center px-0.5 shadow-md transition ${
+                    v.state === 'crit' ? 'ring-1 ring-rose-500 animate-pulse' : ''
+                  }`}
+                >
+                  <div className="relative w-4 h-4 flex items-center justify-center">
+                    <IconCmp className="w-4 h-4 text-slate-900/18" strokeWidth={2.1} />
+                    <div
+                      className="absolute inset-0 flex items-center justify-center transition-all duration-300"
+                      style={{ clipPath: `inset(${(100 - v.pct).toFixed(1)}% 0 0 0)` }}
+                    >
+                      <IconCmp className="w-4 h-4" style={{ color: paintColor }} strokeWidth={2.5} />
+                    </div>
+                  </div>
+                  <span
+                    className="text-[8px] font-mono font-bold leading-none mt-0.5 tracking-tight"
+                    style={{ color: v.state === 'ok' ? '#0f172a' : paintColor }}
+                  >
+                    {v.val}
+                  </span>
+                  <div className="w-full h-[2.5px] bg-slate-900/15 mt-0.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full transition-all duration-300"
+                      style={{ width: `${v.pct.toFixed(0)}%`, backgroundColor: paintColor }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {/* Bottom-Left Floating NASA Junior Astronaut Training Info Panel (positioned above vital icons) */}
       {trainingBrief && !activeModal && !hud.sleeping && (
-        <div className="fixed bottom-2.5 left-2.5 z-20 max-w-[260px] lp-panel rounded-lg p-2 shadow-lg space-y-1 text-slate-900">
+        <div className="fixed bottom-[64px] left-2.5 z-20 max-w-[260px] lp-panel rounded-lg p-2 shadow-lg space-y-1 text-slate-900">
           <div className="flex items-start justify-between gap-1.5">
             <div className="flex items-center gap-1 text-[11px] font-semibold text-sky-900 leading-tight">
               <Info className="w-3.5 h-3.5 shrink-0" />
@@ -3926,6 +4085,8 @@ export const SpaceSinglePlayerGame: React.FC = () => {
             setActiveModal('codex');
           }}
           onOpenMirror={() => setActiveModal('mirror')}
+          initialTab={escTabReq.tab}
+          tabOpenNonce={escTabReq.nonce}
           onReturnMainMenu={() => {
             soundEngine.stopAmbientEnvironment();
             setActiveModal(null);
@@ -3941,11 +4102,21 @@ export const SpaceSinglePlayerGame: React.FC = () => {
           lang={lang}
           fromMissionId={launchTransitTarget.from}
           toMissionId={launchTransitTarget.to}
+          origin={launchTransitTarget.origin}
           verifiedInOrion3D={simRef.current.orionCryoPurged && simRef.current.orionGncArmed}
           onComplete={() => applyMissionLoad(launchTransitTarget.to, launchTransitTarget.preserveCarry)}
           onCancel={() => {
+            const orig = launchTransitTarget.origin;
             setLaunchTransitTarget(null);
             setActiveModal(null);
+            if (orig === 'menu') {
+              soundEngine.stopAmbientEnvironment();
+              setMenuDrawer('missions');
+              setScreen('menu');
+            } else if (orig === 'esc_menu') {
+              setEscTabReq((r) => ({ tab: 'phases_settings', nonce: r.nonce + 1 }));
+              setActiveModal('esc_menu');
+            }
           }}
         />
       )}

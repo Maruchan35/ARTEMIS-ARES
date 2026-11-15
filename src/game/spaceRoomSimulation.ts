@@ -339,6 +339,7 @@ export interface SpaceRoomState {
   cabinPressureKpa: number;
   suitO2Percent: number;
   hydrationPercent: number;
+  nutritionPercent: number;
   airlockStep: number;
   airlockPressureKpa: number;
   rpcmBreakers: RpcBreakerState[];
@@ -2405,6 +2406,7 @@ export function createInitialSpaceRoomState(
     cabinPressureKpa: NASA_CONSTANTS.HABITAT_ATMOSPHERE.NOMINAL_PRESSURE_KPA,
     suitO2Percent: 100,
     hydrationPercent: 92,
+    nutritionPercent: 94,
     airlockStep: 0,
     airlockPressureKpa: NASA_CONSTANTS.QUEST_AIRLOCK_EVA.CABIN_NOMINAL_KPA,
     rpcmBreakers: [
@@ -2734,12 +2736,15 @@ export function stepSpaceRoomSimulation(
     sim.powerKwe = 12.4 + sim.stsRedeploySteps * 5.2;
   }
 
-  // Personal NASA vital mechanics: Hydration (BVAD 2.00-2.79 L/d) & Suit O2 (29.6 kPa)
+  // Personal NASA vital mechanics: Hydration (BVAD 2.00-2.79 L/d), Nutrition (BVAD 0.80 kg/d) & Suit O2 (29.6 kPa)
   const hydrationDrain = exercising ? 0.16 : player.sprinting ? 0.11 : 0.032;
   sim.hydrationPercent = Math.max(12, sim.hydrationPercent - hydrationDrain * dt);
   if (sim.hydrationPercent < 55) {
     sim.heartRateBpm = Math.min(168, sim.heartRateBpm + (55 - sim.hydrationPercent) * 0.28 * dt);
   }
+
+  const nutritionDrain = exercising ? 0.085 : player.sprinting ? 0.055 : 0.018;
+  sim.nutritionPercent = Math.max(10, sim.nutritionPercent - nutritionDrain * dt);
 
   const suitDrain = sim.airlockPressureKpa < 90 ? (player.sprinting ? 0.22 : 0.12) : 0.018;
   sim.suitO2Percent = Math.max(15, sim.suitO2Percent - suitDrain * dt);
