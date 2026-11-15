@@ -28,6 +28,7 @@ import {
   UserCheck,
   Volume2,
   VolumeX,
+  Wind,
   Wrench,
 } from 'lucide-react';
 import { NASA_CONSTANTS } from '../data/nasaConstants';
@@ -530,13 +531,15 @@ export const LaunchTransitModal: React.FC<{
   lang: 'es' | 'en';
   fromMissionId: MissionId;
   toMissionId: MissionId;
+  verifiedInOrion3D?: boolean;
   onComplete: () => void;
   onCancel: () => void;
-}> = ({ lang, fromMissionId, toMissionId, onComplete, onCancel }) => {
+}> = ({ lang, fromMissionId, toMissionId, verifiedInOrion3D = false, onComplete, onCancel }) => {
   const targetMission = AETHER4_MISSIONS.find((m) => m.id === toMissionId) ?? AETHER4_MISSIONS[1];
   const fromMission = AETHER4_MISSIONS.find((m) => m.id === fromMissionId) ?? AETHER4_MISSIONS[0];
   const needsSurfaceLanding =
     toMissionId === 'act1_2_surface' || toMissionId === 'act3_greenhouse' || toMissionId === 'act4_storm_rover';
+  const isMarsTarget = toMissionId === 'act3_greenhouse';
   const targetG = targetMission.gravityMs2;
 
   const [phase, setPhase] = useState<'ascent' | 'descent' | 'landed'>('ascent');
@@ -546,14 +549,14 @@ export const LaunchTransitModal: React.FC<{
   const [throttle, setThrottle] = useState(92);
   const [pitchErr, setPitchErr] = useState(0);
   const [yawErr, setYawErr] = useState(0);
-  const [descentAltM, setDescentAltM] = useState(180);
-  const [descentVelMs, setDescentVelMs] = useState(28);
+  const [descentAltM, setDescentAltM] = useState(240);
+  const [descentVelMs, setDescentVelMs] = useState(isMarsTarget ? 11.5 : 6.8);
   const [descentOffsetM, setDescentOffsetM] = useState(4.3);
   const [retroActive, setRetroActive] = useState(false);
   const [landingMsg, setLandingMsg] = useState<string | null>(null);
-  const [chkHatch, setChkHatch] = useState(false);
-  const [chkCryo, setChkCryo] = useState(false);
-  const [chkGnc, setChkGnc] = useState(false);
+  const [chkHatch, setChkHatch] = useState(verifiedInOrion3D);
+  const [chkCryo, setChkCryo] = useState(verifiedInOrion3D);
+  const [chkGnc, setChkGnc] = useState(verifiedInOrion3D);
   const padVerified = chkHatch && chkCryo && chkGnc;
 
   const canvasMountRef = useRef<HTMLCanvasElement | null>(null);
@@ -565,8 +568,8 @@ export const LaunchTransitModal: React.FC<{
     throttle: 92,
     pitchErr: 0,
     yawErr: 0,
-    descentAltM: 180,
-    descentVelMs: 28,
+    descentAltM: 240,
+    descentVelMs: isMarsTarget ? 11.5 : 6.8,
     descentX: 3.6,
     descentZ: -2.4,
     descentVx: 0,
@@ -624,9 +627,11 @@ export const LaunchTransitModal: React.FC<{
       if (needsSurfaceLanding) {
         const dTimer = window.setTimeout(() => {
           soundEngine.playStagePyro();
+          simRef.current.descentAltM = 240;
+          simRef.current.descentVelMs = isMarsTarget ? 11.5 : 6.8;
           setPhase('descent');
-          setDescentAltM(180);
-          setDescentVelMs(26);
+          setDescentAltM(240);
+          setDescentVelMs(isMarsTarget ? 11.5 : 6.8);
           setPitchErr(0);
           setYawErr(0);
         }, 1400);
@@ -639,7 +644,7 @@ export const LaunchTransitModal: React.FC<{
       setStageIdx((prev) => Math.min(4, prev + 1));
     }, 2400);
     return () => window.clearTimeout(timer);
-  }, [phase, ignited, stageIdx, needsSurfaceLanding, throttle]);
+  }, [phase, ignited, stageIdx, needsSurfaceLanding, isMarsTarget, throttle]);
 
   // Physics loop for attitude stabilization & powered planetary landing
   useEffect(() => {
@@ -671,17 +676,18 @@ export const LaunchTransitModal: React.FC<{
         s.pitchErr = Math.max(-18, Math.min(18, s.pitchErr * 0.92 + pyIn * 15 * dt));
 
         // Active RCS Lateral Translation over Lunar/Martian Landing Circle (WASD / Arrows / UI Pads)
-        s.descentVx = s.descentVx * Math.pow(0.28, dt) + pxIn * 6.8 * dt;
-        s.descentVz = s.descentVz * Math.pow(0.28, dt) + pyIn * 6.8 * dt;
+        s.descentVx = s.descentVx * Math.pow(0.32, dt) + pxIn * 5.8 * dt;
+        s.descentVz = s.descentVz * Math.pow(0.32, dt) + pyIn * 5.8 * dt;
         s.descentX = Math.max(-18, Math.min(18, s.descentX + s.descentVx * dt));
         s.descentZ = Math.max(-18, Math.min(18, s.descentZ + s.descentVz * dt));
 
-        // 1D Vertical Descent under real destination gravity (Moon 1.62 / Mars 3.70 m/s^2)
-        const retroAccel = s.retroActive ? targetG * 2.95 + 3.8 : 0;
+        // 1D Vertical Descent under real destination gravity (Moon 1.62 / Mars 3.70 m/s^2) with N2 cold-gas RCS / hypergolic brake
+        const retroAccel = s.retroActive ? (isMarsTarget ? 8.8 : 4.2) : 0;
         const netAccel = targetG - retroAccel;
-        s.descentVelMs = Math.max(-2.5, Math.min(48, s.descentVelMs + netAccel * dt));
+        const maxSink = isMarsTarget ? 28 : 15.5;
+        s.descentVelMs = Math.max(-2.2, Math.min(maxSink, s.descentVelMs + netAccel * dt));
         s.descentAltM = Math.max(0, s.descentAltM - s.descentVelMs * dt);
-        soundEngine.setRocketThruster(s.retroActive ? 0.72 : Math.abs(pxIn) + Math.abs(pyIn) > 0 ? 0.34 : 0.18);
+        soundEngine.setRocketThruster(s.retroActive ? 0.48 : Math.abs(pxIn) + Math.abs(pyIn) > 0 ? 0.24 : 0.08);
 
         if (s.descentAltM <= 0.01) {
           const padOffset = Math.hypot(s.descentX, s.descentZ);
@@ -700,15 +706,15 @@ export const LaunchTransitModal: React.FC<{
                 : `Touchdown stabilized in safe zone (${padOffset.toFixed(1)} m from beacon ring).`
             );
           } else {
-            // NASA Go-Around abort back to 58 m so pilot retries retro-thrust cleanly
+            // Go-around abort back to 65 m at light lunar speed
             const hitVel = Math.abs(s.descentVelMs);
             soundEngine.playAlarm();
-            s.descentAltM = 58;
-            s.descentVelMs = 14;
+            s.descentAltM = 65;
+            s.descentVelMs = isMarsTarget ? 10.5 : 7.0;
             setLandingMsg(
               lang === 'es'
-                ? `Velocidad de contacto alta (${hitVel.toFixed(1)} m/s > 6.2 m/s). Retropropulsores [ESPACIO] activados para reintento a 58 m.`
-                : `Touchdown speed too fast (${hitVel.toFixed(1)} m/s > 6.2 m/s). Go-around burn engaged at 58 m — hold [SPACE] to brake.`
+                ? `Velocidad de contacto alta (${hitVel.toFixed(1)} m/s > 6.2 m/s). Impulso RCS N₂ a 65 m — mantén [ESPACIO] para frenar.`
+                : `Touchdown speed too fast (${hitVel.toFixed(1)} m/s > 6.2 m/s). N₂ cold-gas bounce to 65 m — hold [SPACE] to brake.`
             );
           }
         }
@@ -937,31 +943,77 @@ export const LaunchTransitModal: React.FC<{
         ctx.fillRect(rx, ry, i % 4 === 0 ? 4 : 2, 2);
       }
     });
-    terrainTex.wrapS = THREE.ClampToEdgeWrapping;
-    terrainTex.wrapT = THREE.ClampToEdgeWrapping;
+    terrainTex.wrapS = THREE.RepeatWrapping;
+    terrainTex.wrapT = THREE.RepeatWrapping;
+    terrainTex.repeat.set(8, 8);
 
-    // 6. Earth Horizon Texture (Ocean, Continents, Clouds)
-    const earthTex = mkPixelTex(256, 128, (ctx) => {
-      ctx.fillStyle = '#0c4a6e';
-      ctx.fillRect(0, 0, 256, 128);
-      ctx.fillStyle = '#1d4ed8';
-      for (let y = 0; y < 128; y += 4) {
-        for (let x = 0; x < 256; x += 4) {
-          if (((x + y * 3) & 15) < 6) ctx.fillRect(x, y, 4, 4);
+    // 6. Equirectangular Pixel-Art Earth Texture (Latitude-corrected Oceans, Continents, Polar Ice — Zero Vertical Stripes!)
+    const earthTex = mkPixelTex(512, 256, (ctx) => {
+      const n2 = (x: number, y: number) => {
+        const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+        return s - Math.floor(s);
+      };
+      const smoothN = (x: number, y: number) => {
+        const ix = Math.floor(x);
+        const iy = Math.floor(y);
+        const fx = x - ix;
+        const fy = y - iy;
+        const a = n2(ix, iy);
+        const b = n2(ix + 1, iy);
+        const c = n2(ix, iy + 1);
+        const d = n2(ix + 1, iy + 1);
+        const ux = fx * fx * (3 - 2 * fx);
+        const uy = fy * fy * (3 - 2 * fy);
+        return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+      };
+      for (let py = 0; py < 256; py += 2) {
+        const lat = (py / 256 - 0.5) * Math.PI; // -pi/2..+pi/2
+        const absLat = Math.abs(lat) / (Math.PI / 2);
+        const cosL = Math.max(0.18, Math.cos(lat));
+        for (let px = 0; px < 512; px += 2) {
+          const lon = (px / 512) * Math.PI * 2;
+          // Longitudinal periodic continent mask weighted by cos(lat) so poles never stripe
+          const cx = Math.cos(lon) * cosL * 2.4 + 4.1;
+          const cy = Math.sin(lon) * cosL * 2.4 + 3.7;
+          const cz = Math.sin(lat) * 2.4 + 2.5;
+          const fbm =
+            0.55 * smoothN(cx * 1.4, cy * 1.4 + cz) +
+            0.30 * smoothN(cx * 2.9 + 5.2, cy * 2.9 + cz * 1.7) +
+            0.15 * smoothN(cx * 6.0, cy * 6.0 - cz * 2.1);
+
+          let col = '#0c3b66';
+          if (absLat > 0.84 + fbm * 0.09) {
+            col = '#f1f5f9'; // Polar ice caps
+          } else if (fbm > 0.575) {
+            // Landmasses: arid subtropical belt vs temperate forests & highlands
+            if (fbm > 0.72) col = '#a8a29e';
+            else if (absLat < 0.34 && fbm < 0.65) col = '#b48a3e';
+            else col = '#15803d';
+          } else if (fbm > 0.535) {
+            col = '#0284c7'; // Shallow coastal shelf
+          } else if (fbm > 0.44) {
+            col = '#1d4ed8';
+          }
+          ctx.fillStyle = col;
+          ctx.fillRect(px, py, 2, 2);
         }
       }
-      // Continents
-      ctx.fillStyle = '#15803d';
-      ctx.fillRect(36, 24, 52, 34);
-      ctx.fillRect(142, 30, 66, 42);
-      ctx.fillStyle = '#ca8a04';
-      ctx.fillRect(156, 40, 26, 16);
-      // Swirling cloud bands
-      ctx.fillStyle = 'rgba(248, 250, 252, 0.72)';
-      for (let cy = 8; cy < 120; cy += 18) {
-        ctx.fillRect((cy * 3) % 180, cy, 74, 6);
+    });
+    earthTex.wrapS = THREE.RepeatWrapping;
+    earthTex.wrapT = THREE.ClampToEdgeWrapping;
+
+    const earthCloudTex = mkPixelTex(512, 256, (ctx) => {
+      ctx.clearRect(0, 0, 512, 256);
+      for (let i = 0; i < 420; i++) {
+        const cx = ((i * 97) % 512);
+        const cy = 14 + ((i * 53) % 228);
+        const w = 12 + (i % 5) * 6;
+        const h = 4 + (i % 3) * 2;
+        ctx.fillStyle = i % 3 === 0 ? 'rgba(248, 250, 252, 0.72)' : 'rgba(226, 232, 240, 0.48)';
+        ctx.fillRect(cx, cy, w, h);
       }
     });
+    earthCloudTex.wrapS = THREE.RepeatWrapping;
 
     // 7. Cockpit Overhead Switch & Circuit Breaker Panel Texture
     const cockpitPanelTex = mkPixelTex(256, 128, (ctx) => {
@@ -1230,7 +1282,7 @@ export const LaunchTransitModal: React.FC<{
     landerLegsGrp.visible = false;
     rocketGroup.add(landerLegsGrp);
 
-    // Volumetric Multi-Layer Main Exhaust Plume + Shock Diamonds + Vapor Collar + Nozzle Light
+    // Volumetric Multi-Layer Main Exhaust Plume + Vacuum Cold-Gas N2 Thrusters + Lateral RCS Jets
     const plumeGrp = new THREE.Group();
     plumeGrp.position.y = -2.48;
     const plumeCore = new THREE.Mesh(
@@ -1260,6 +1312,42 @@ export const LaunchTransitModal: React.FC<{
     plumeGrp.add(plumeCore, plumeOuter, engineLight);
     rocketGroup.add(plumeGrp);
 
+    // Vacuum Pressurized Cold-Gas N2 Thruster Plume (zero oxygen / zero flame in lunar vacuum!)
+    const coldGasPlume = new THREE.Group();
+    coldGasPlume.position.y = -2.42;
+    const coldGasCone = new THREE.Mesh(
+      new THREE.ConeGeometry(0.75, 2.6, 16, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.32, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    coldGasCone.rotation.x = Math.PI;
+    coldGasCone.position.y = -1.25;
+    const coldGasCore = new THREE.Mesh(
+      new THREE.ConeGeometry(0.28, 1.4, 12),
+      new THREE.MeshBasicMaterial({ color: 0xf0f9ff, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    coldGasCore.rotation.x = Math.PI;
+    coldGasCore.position.y = -0.7;
+    coldGasPlume.add(coldGasCone, coldGasCore);
+    coldGasPlume.visible = false;
+    rocketGroup.add(coldGasPlume);
+
+    // 4 Radial Lateral N2 Cold-Gas RCS Nozzles near upper service module
+    const rcsJetMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.62, depthWrite: false });
+    const mkRcsJet = (x: number, z: number, rz: number, rx: number) => {
+      const m = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.72, 8), rcsJetMat);
+      m.position.set(x, 0.55, z);
+      m.rotation.set(rx, 0, rz);
+      m.visible = false;
+      rocketGroup.add(m);
+      return m;
+    };
+    const rcsJets = {
+      left: mkRcsJet(-0.85, 0, Math.PI / 2, 0),
+      right: mkRcsJet(0.85, 0, -Math.PI / 2, 0),
+      fore: mkRcsJet(0, -0.85, 0, -Math.PI / 2),
+      aft: mkRcsJet(0, 0.85, 0, Math.PI / 2),
+    };
+
     // Max-Q Prandtl-Glauert Vapor Condensation Cone
     const maxQHalo = new THREE.Mesh(
       new THREE.ConeGeometry(1.15, 0.95, 24, 1, true),
@@ -1270,10 +1358,10 @@ export const LaunchTransitModal: React.FC<{
     rocketGroup.add(maxQHalo);
     scene.add(rocketGroup);
 
-    // ---- Stars, Detailed LC-39B Truss Tower, Steam Clouds, Earth Horizon & Textured Terrain ----
-    const starPositions = new Float32Array(2000 * 3);
-    for (let i = 0; i < 2000; i++) {
-      const r = 130 + Math.random() * 170;
+    // ---- Stars, Atmospheric Sky Dome + Clouds, Detailed KSC LC-39B Pad & Vast Terrain ----
+    const starPositions = new Float32Array(2200 * 3);
+    for (let i = 0; i < 2200; i++) {
+      const r = 180 + Math.random() * 220;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
       starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
@@ -1282,23 +1370,108 @@ export const LaunchTransitModal: React.FC<{
     }
     const starGeo = new THREE.BufferGeometry();
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-    const starMat = new THREE.PointsMaterial({ color: 0xf8fafc, size: 1.25, transparent: true, opacity: 0.0 });
+    const starMat = new THREE.PointsMaterial({ color: 0xf8fafc, size: 1.35, transparent: true, opacity: 0.0 });
     scene.add(new THREE.Points(starGeo, starMat));
 
+    // Atmospheric Daylight Horizon Sky Dome + Volumetric Pixel Clouds for Launch Pad
+    const skyGradTex = mkPixelTex(32, 128, (ctx) => {
+      for (let y = 0; y < 128; y++) {
+        const f = y / 128;
+        ctx.fillStyle = f < 0.25 ? '#072a57' : f < 0.45 ? '#0e5ca8' : f < 0.56 ? '#38bdf8' : f < 0.68 ? '#bae6fd' : '#1e3a5f';
+        ctx.fillRect(0, y, 32, 1);
+      }
+    });
+    const skyDomeMat = new THREE.MeshBasicMaterial({ map: skyGradTex, side: THREE.BackSide, transparent: true, opacity: 1.0, depthWrite: false });
+    const skyDome = new THREE.Mesh(new THREE.SphereGeometry(420, 28, 18), skyDomeMat);
+    scene.add(skyDome);
+
+    const padCloudGroup = new THREE.Group();
+    const cloudMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.95, metalness: 0.0, flatShading: true });
+    const cloudUnderMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.95, metalness: 0.0, flatShading: true });
+    for (let ci = 0; ci < 24; ci++) {
+      const ang = (ci / 24) * Math.PI * 2;
+      const dist = 58 + (ci % 4) * 34;
+      const cl = new THREE.Group();
+      cl.position.set(Math.cos(ang) * dist, 15 + (ci % 5) * 6.5, -24 + Math.sin(ang) * dist * 0.85);
+      const puffs = 3 + (ci % 3);
+      for (let pi = 0; pi < puffs; pi++) {
+        const pw = 6.5 + ((ci + pi) % 3) * 3.2;
+        const ph = 2.1 + (pi % 2) * 1.1;
+        const box = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, pw * 0.65), pi === 0 ? cloudUnderMat : cloudMat);
+        box.position.set((pi - 1) * 3.4, pi % 2 === 0 ? 0 : 1.0, (pi % 2) * 1.4);
+        cl.add(box);
+      }
+      padCloudGroup.add(cl);
+    }
+    scene.add(padCloudGroup);
+
     const padGroup = new THREE.Group();
-    const padConcrete = new THREE.Mesh(
-      new THREE.CircleGeometry(96, 40),
-      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.94 })
+    // Kennedy Space Center Coastal Terrain + Atlantic Ocean Horizon + Pad Crawlerway
+    const kscCoastGrass = new THREE.Mesh(
+      new THREE.PlaneGeometry(460, 460),
+      new THREE.MeshStandardMaterial({ color: 0x2f4b32, roughness: 0.96, metalness: 0.02 })
     );
-    padConcrete.rotation.x = -Math.PI / 2;
-    padConcrete.position.y = -4.2;
-    const flameTrench = new THREE.Mesh(new THREE.BoxGeometry(10, 1.0, 26), darkSteelMat);
-    flameTrench.position.set(0, -4.1, -18);
-    padGroup.add(padConcrete, flameTrench);
+    kscCoastGrass.rotation.x = -Math.PI / 2;
+    kscCoastGrass.position.set(0, -4.45, -18);
+    const atlanticSea = new THREE.Mesh(
+      new THREE.PlaneGeometry(240, 460),
+      new THREE.MeshStandardMaterial({ color: 0x0c4a6e, roughness: 0.35, metalness: 0.45 })
+    );
+    atlanticSea.rotation.x = -Math.PI / 2;
+    atlanticSea.position.set(170, -4.38, -28);
+    const padConcreteApron = new THREE.Mesh(
+      new THREE.CylinderGeometry(34, 38, 0.35, 8),
+      new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.92 })
+    );
+    padConcreteApron.position.set(0, -4.25, -17.5);
+    const crawlerwayStrip = new THREE.Mesh(
+      new THREE.BoxGeometry(11, 0.14, 95),
+      new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.92 })
+    );
+    crawlerwayStrip.position.set(0, -4.22, -62);
+    // Elevated Mobile Launcher Platform (MLP-1) Concrete Deck + Flame Trench + Steel Flame Deflector
+    const mlpDeck = new THREE.Mesh(
+      new THREE.BoxGeometry(14.5, 1.35, 16.5),
+      new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85, metalness: 0.25 })
+    );
+    mlpDeck.position.set(0, -3.55, -17.5);
+    const holdDownBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.1, 2.6, 0.65, 12),
+      darkSteelMat
+    );
+    holdDownBase.position.set(0, -2.68, -17.5);
+    const flameTrench = new THREE.Mesh(new THREE.BoxGeometry(5.8, 1.2, 22), darkSteelMat);
+    flameTrench.position.set(0, -3.72, -17.5);
+    const flameDeflector = new THREE.Mesh(
+      new THREE.ConeGeometry(2.8, 2.2, 4),
+      new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8, metalness: 0.4 })
+    );
+    flameDeflector.rotation.y = Math.PI / 4;
+    flameDeflector.position.set(0, -3.3, -17.5);
+    const vabHangar = new THREE.Mesh(
+      new THREE.BoxGeometry(22, 20, 18),
+      new THREE.MeshStandardMaterial({ color: 0xdbe4ee, roughness: 0.7 })
+    );
+    vabHangar.position.set(-72, 5.5, -148);
+    const vabStripe = new THREE.Mesh(
+      new THREE.BoxGeometry(22.2, 11, 4),
+      new THREE.MeshStandardMaterial({ color: 0x0b3d91, roughness: 0.5 })
+    );
+    vabStripe.position.set(-72, 7.5, -138.8);
+    padGroup.add(kscCoastGrass, atlanticSea, padConcreteApron, crawlerwayStrip, mlpDeck, holdDownBase, flameTrench, flameDeflector, vabHangar, vabStripe);
+
+    // 4 Tall LC-39B Perimeter Lightning Protection Masts (clearly framing pad & visible from cockpit)
+    for (const [lx, lz] of [[-12.5, -28.5], [12.5, -28.5], [-12.5, -6.5], [12.5, -6.5]]) {
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.36, 28, 6), whiteStageMat);
+      mast.position.set(lx, 9.6, lz);
+      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 8), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+      tip.position.set(lx, 23.8, lz);
+      padGroup.add(mast, tip);
+    }
 
     // Structural Truss Umbilical Tower ML-1 + Retracting Crew Access Arm
     const towerGrp = new THREE.Group();
-    towerGrp.position.set(-2.6, 0.8, -18);
+    towerGrp.position.set(-2.6, 1.0, -17.5);
     const towerMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.45, metalness: 0.7 });
     for (const [cx, cz] of [[-0.65, -0.65], [0.65, -0.65], [-0.65, 0.65], [0.65, 0.65]]) {
       const col = new THREE.Mesh(new THREE.BoxGeometry(0.14, 11.5, 0.14), towerMat);
@@ -1310,7 +1483,7 @@ export const LaunchTransitModal: React.FC<{
       deck.position.y = dy;
       towerGrp.add(deck);
     }
-    const towerBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+    const towerBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
     towerBeacon.position.y = 6.2;
     const swingArmPivot = new THREE.Group();
     swingArmPivot.position.set(0.65, 2.4, 0.55);
@@ -1320,42 +1493,48 @@ export const LaunchTransitModal: React.FC<{
     towerGrp.add(towerBeacon, swingArmPivot);
     padGroup.add(towerGrp);
 
-    // Pad water-suppression steam cloud puffs at T-0
+    // Pad water-suppression steam cloud puffs at T-0 ignition ONLY
     const steamClouds: THREE.Mesh[] = [];
     for (let si = 0; si < 10; si++) {
       const st = new THREE.Mesh(
         new THREE.SphereGeometry(0.85 + (si % 3) * 0.35, 10, 8),
-        new THREE.MeshBasicMaterial({ color: 0xf1f5f9, transparent: true, opacity: 0.48 })
+        new THREE.MeshBasicMaterial({ color: 0xf1f5f9, transparent: true, opacity: 0.52 })
       );
       const ang = (si / 10) * Math.PI * 2;
-      st.position.set(Math.cos(ang) * 2.2, -3.5, -18 + Math.sin(ang) * 1.8);
+      st.position.set(Math.cos(ang) * 2.4, -3.1, -17.5 + Math.sin(ang) * 2.0);
+      st.visible = false;
       padGroup.add(st);
       steamClouds.push(st);
     }
     scene.add(padGroup);
 
-    // Earth Curvature + Atmospheric Blue Limb Halo
+    // Earth Curvature + Independent 3D Rotating Cloud Layer + Atmospheric Blue Limb Halo
     const earthGroup = new THREE.Group();
-    earthGroup.position.set(0, -86, -48);
+    earthGroup.position.set(0, -88, -50);
     const earthSphere = new THREE.Mesh(
-      new THREE.SphereGeometry(72, 40, 28),
-      new THREE.MeshStandardMaterial({ map: earthTex, emissive: 0x0c4a6e, emissiveIntensity: 0.25, roughness: 0.72 })
+      new THREE.SphereGeometry(72, 48, 32),
+      new THREE.MeshStandardMaterial({ map: earthTex, emissive: 0x093556, emissiveIntensity: 0.28, roughness: 0.74 })
+    );
+    const earthCloudSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(73.1, 44, 28),
+      new THREE.MeshStandardMaterial({ map: earthCloudTex, transparent: true, opacity: 0.85, roughness: 0.9, depthWrite: false })
     );
     const earthAtmo = new THREE.Mesh(
-      new THREE.SphereGeometry(74.4, 36, 24),
-      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.18, side: THREE.BackSide, blending: THREE.AdditiveBlending })
+      new THREE.SphereGeometry(74.8, 36, 24),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.22, side: THREE.BackSide, blending: THREE.AdditiveBlending })
     );
-    earthGroup.add(earthSphere, earthAtmo);
+    earthGroup.add(earthSphere, earthCloudSphere, earthAtmo);
     scene.add(earthGroup);
 
-    // 3D Cratered Lunar / Martian Regolith Terrain + Boulders + Centered Artemis Landing Apron
-    const surfGeo = new THREE.PlaneGeometry(180, 180, 96, 96);
+    // Vast 680x680m Cratered Lunar / Martian Regolith Terrain + Distant Ridges (no harsh horizon cutoff)
+    const surfGeo = new THREE.PlaneGeometry(680, 680, 128, 128);
     surfGeo.rotateX(-Math.PI / 2);
     const craterSpecs: Array<[number, number, number, number]> = [
       [-22, -16, 8.5, 2.2], [19, -20, 10.2, 2.6], [-28, 14, 11.4, 2.9], [24, 16, 7.6, 1.9],
       [-12, -38, 13.0, 3.1], [32, -8, 12.2, 2.8], [-38, -28, 14.5, 3.4], [14, -46, 9.8, 2.1],
       [-8, 26, 7.2, 1.6], [36, 28, 11.5, 2.5], [-44, 6, 9.5, 2.1], [28, -36, 8.4, 1.8],
-      [-54, -44, 18.0, 4.2], [52, -48, 16.5, 3.8], [0, -64, 22.0, 5.1], [-58, 32, 15.0, 3.3],
+      [-78, -64, 22.0, 4.8], [84, -72, 24.0, 5.2], [0, -112, 28.0, 6.2], [-96, 52, 21.0, 4.4],
+      [115, 44, 26.0, 5.4], [-135, -18, 30.0, 6.0], [140, -135, 34.0, 6.8], [-160, 120, 32.0, 6.5],
     ];
     const posAttr = surfGeo.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < posAttr.count; i++) {
@@ -1364,8 +1543,8 @@ export const LaunchTransitModal: React.FC<{
       const d = Math.hypot(vx, vz);
       let h = 0;
       if (d > 8.5) {
-        const apronBlend = Math.min(1, (d - 8.5) / 6.5);
-        h += (Math.sin(vx * 0.09) * Math.cos(vz * 0.08) * 1.15 + Math.sin(vx * 0.21 + vz * 0.17) * 0.42) * apronBlend;
+        const apronBlend = Math.min(1, (d - 8.5) / 8.5);
+        h += (Math.sin(vx * 0.045) * Math.cos(vz * 0.04) * 1.85 + Math.sin(vx * 0.14 + vz * 0.11) * 0.65) * apronBlend;
         for (const [cx, cz, cr, cDepth] of craterSpecs) {
           const cd = Math.hypot(vx - cx, vz - cz);
           if (cd < cr * 1.45) {
@@ -1374,9 +1553,9 @@ export const LaunchTransitModal: React.FC<{
             h += profile * apronBlend;
           }
         }
-        // Distant lunar/Mars crater rim mountains framing horizon
-        if (d > 54) {
-          h += Math.pow((d - 54) / 28, 1.5) * (6.2 + Math.sin(Math.atan2(vz, vx) * 7) * 2.8);
+        // Gentle lunar massif ridges across outer horizon ring
+        if (d > 140) {
+          h += Math.sin(Math.atan2(vz, vx) * 6 + d * 0.025) * 4.5 + Math.min(14, (d - 140) * 0.08);
         }
       }
       posAttr.setY(i, h);
@@ -1390,46 +1569,46 @@ export const LaunchTransitModal: React.FC<{
 
     // Sintered regolith landing pad deck & beacons centered directly at (0,0,0) beneath descent trajectory
     const padApron = new THREE.Mesh(
-      new THREE.CylinderGeometry(6.6, 7.1, 0.06, 16),
+      new THREE.CylinderGeometry(6.8, 7.3, 0.08, 16),
       new THREE.MeshStandardMaterial({ color: isMars ? 0x3b2319 : 0x1f2937, roughness: 0.85, metalness: 0.25 })
     );
     padApron.position.y = 0.02;
     const padBeacon = new THREE.Mesh(
-      new THREE.RingGeometry(4.1, 4.7, 36),
+      new THREE.RingGeometry(4.2, 4.9, 36),
       new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
     );
     padBeacon.rotation.x = -Math.PI / 2;
-    padBeacon.position.y = 0.065;
+    padBeacon.position.y = 0.075;
     const padCenterCross = new THREE.Mesh(
-      new THREE.RingGeometry(1.4, 1.9, 28),
+      new THREE.RingGeometry(1.5, 2.0, 28),
       new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide })
     );
     padCenterCross.rotation.x = -Math.PI / 2;
-    padCenterCross.position.y = 0.07;
-    const padBarX = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 0.26), new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide }));
+    padCenterCross.position.y = 0.08;
+    const padBarX = new THREE.Mesh(new THREE.PlaneGeometry(6.6, 0.28), new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide }));
     padBarX.rotation.x = -Math.PI / 2;
-    padBarX.position.y = 0.068;
+    padBarX.position.y = 0.078;
     const padBarZ = padBarX.clone();
     padBarZ.rotation.z = Math.PI / 2;
     surfaceGroup.add(surfMesh, padApron, padBeacon, padCenterCross, padBarX, padBarZ);
 
     // 4 Corner Approach Strobe Beacons around Landing Circle
-    for (const [bx, bz] of [[-4.8, -4.8], [4.8, -4.8], [-4.8, 4.8], [4.8, 4.8]]) {
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.55, 8), darkSteelMat);
-      post.position.set(bx, 0.28, bz);
-      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
-      lamp.position.set(bx, 0.62, bz);
+    for (const [bx, bz] of [[-4.9, -4.9], [4.9, -4.9], [-4.9, 4.9], [4.9, 4.9]]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.60, 8), darkSteelMat);
+      post.position.set(bx, 0.30, bz);
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+      lamp.position.set(bx, 0.66, bz);
       surfaceGroup.add(post, lamp);
     }
 
-    // 28 3D Regolith & Basalt Boulders scattered beyond the pad perimeter
+    // 52 3D Regolith & Basalt Boulders scattered widely beyond pad perimeter
     const rockMat = new THREE.MeshStandardMaterial({ color: isMars ? 0x5c2410 : 0x3f4a5c, roughness: 0.92, flatShading: true });
-    for (let ri = 0; ri < 28; ri++) {
+    for (let ri = 0; ri < 52; ri++) {
       const ang = ri * 2.39996;
-      const rad = 11.5 + ((ri * 7.3) % 34);
+      const rad = 12.5 + ((ri * 13.7) % 145);
       const rx = Math.cos(ang) * rad;
       const rz = Math.sin(ang) * rad;
-      const scale = 0.28 + ((ri * 19) % 10) * 0.095;
+      const scale = 0.32 + ((ri * 19) % 12) * 0.11;
       const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(scale, 0), rockMat);
       rock.scale.set(1.2, 0.68, 0.95);
       rock.rotation.set(ri * 0.7, ri * 1.1, ri * 0.4);
@@ -1630,13 +1809,20 @@ export const LaunchTransitModal: React.FC<{
       if (s.phase === 'ascent') {
         surfaceGroup.visible = false;
         landerLegsGrp.visible = false;
+        coldGasPlume.visible = false;
+        rcsJets.left.visible = rcsJets.right.visible = rcsJets.fore.visible = rcsJets.aft.visible = false;
         const climbFrac = s.ignited ? Math.min(1, s.stageIdx / 3.5 + 0.08) : 0;
-        const skyColor = new THREE.Color(s.stageIdx === 0 ? 0x0b4f8c : s.stageIdx === 1 ? 0x091e42 : 0x020617);
+        const skyColor = new THREE.Color(s.stageIdx === 0 ? 0x0e4f8f : s.stageIdx === 1 ? 0x091e42 : 0x020617);
         (scene.background as THREE.Color).lerp(skyColor, 0.08);
         if (scene.fog instanceof THREE.FogExp2) {
           scene.fog.color.copy(scene.background as THREE.Color);
-          scene.fog.density = s.stageIdx <= 1 ? 0.0022 : 0.0002;
+          scene.fog.density = s.stageIdx <= 1 ? 0.0018 : 0.0002;
         }
+        skyDome.visible = s.stageIdx <= 1;
+        skyDomeMat.opacity = s.stageIdx === 0 ? 1.0 : 0.35;
+        padCloudGroup.visible = s.stageIdx <= 1;
+        padCloudGroup.rotation.y = tSec * 0.008;
+        padCloudGroup.position.y = -s.stageIdx * 36 - (s.ignited ? Math.min(28, (tSec % 4) * 4.5) : 0);
         starMat.opacity = s.stageIdx >= 2 ? 0.96 : s.ignited ? 0.35 : 0;
 
         padGroup.visible = s.stageIdx <= 1;
@@ -1646,12 +1832,13 @@ export const LaunchTransitModal: React.FC<{
           const st = steamClouds[si];
           const pulse = s.ignited ? 1.15 + Math.sin(tSec * 8 + si) * 0.25 : 0.6;
           st.scale.setScalar(pulse);
-          st.visible = s.stageIdx === 0 || (s.ignited && s.stageIdx === 1);
+          st.visible = s.ignited && (s.stageIdx === 0 || s.stageIdx === 1);
         }
 
         earthGroup.visible = s.stageIdx >= 2;
-        earthGroup.position.y = -86 - (s.stageIdx - 2) * 10;
-        earthSphere.rotation.y = tSec * 0.03;
+        earthGroup.position.y = -88 - (s.stageIdx - 2) * 10;
+        earthSphere.rotation.y = tSec * 0.025;
+        earthCloudSphere.rotation.y = tSec * 0.042;
 
         // Animated Twin SRB Separation at Stage 2+ & LAS Tower Jettison at Stage 3+
         if (s.stageIdx >= 2) {
@@ -1693,6 +1880,8 @@ export const LaunchTransitModal: React.FC<{
         }
 
         plumeGrp.visible = s.ignited;
+        plumeOuter.visible = true;
+        for (const p of plumePuffs) p.visible = true;
         maxQHalo.visible = s.ignited && s.stageIdx === 1;
         maxQHalo.scale.setScalar(0.95 + Math.sin(tSec * 18) * 0.08);
         plumeGrp.scale.set(1, (0.78 + Math.sin(tSec * 32) * 0.15) * (s.throttle / 100), 1);
@@ -1702,14 +1891,22 @@ export const LaunchTransitModal: React.FC<{
           plumePuffs[pi].scale.setScalar(0.75 + cycle * 0.9);
         }
 
-        rocketGroup.position.set(s.yawErr * 0.03, Math.sin(tSec * 3) * 0.04, -17.5 + climbFrac * 1.8);
-        rocketGroup.rotation.set(s.pitchErr * 0.015, Math.sin(tSec * 0.4) * 0.08, -s.yawErr * 0.015);
+        if (!s.ignited) {
+          // Grounded completely stationary on MLP-1 before SLS ignition (zero pre-launch bobbing)
+          rocketGroup.position.set(0, 0, -17.5);
+          rocketGroup.rotation.set(0, 0, 0);
+        } else {
+          rocketGroup.position.set(s.yawErr * 0.03, Math.sin(tSec * 3) * 0.04, -17.5 + climbFrac * 1.8);
+          rocketGroup.rotation.set(s.pitchErr * 0.015, Math.sin(tSec * 0.4) * 0.08, -s.yawErr * 0.015);
+        }
       } else {
         (scene.background as THREE.Color).set(isMars ? 0x2a1006 : 0x020617);
         if (scene.fog instanceof THREE.FogExp2) {
           scene.fog.color.copy(scene.background as THREE.Color);
-          scene.fog.density = isMars ? 0.0028 : 0.0002;
+          scene.fog.density = isMars ? 0.0028 : 0.0022;
         }
+        skyDome.visible = false;
+        padCloudGroup.visible = false;
         starMat.opacity = isMars ? 0.35 : 0.96;
         padGroup.visible = false;
         earthGroup.visible = false;
@@ -1721,13 +1918,30 @@ export const LaunchTransitModal: React.FC<{
         landerLegsGrp.visible = true;
         for (const w of solarWings) w.scale.set(1, 1, 1);
 
-        plumeGrp.visible = s.retroActive && s.phase === 'descent';
-        plumeGrp.scale.set(0.85, 0.8 + Math.sin(tSec * 28) * 0.15, 0.85);
-        surfaceGroup.position.set(-s.descentX, -(s.descentAltM * 0.34 + 1.12), -14 - s.descentZ);
+        // Vacuum Cold-Gas N2 Thrusters (Moon: no oxygen combustion fire/smoke!) vs Mars atmospheric plumes
+        const vacuumMode = !isMars;
+        if (vacuumMode) {
+          plumeGrp.visible = false;
+          coldGasPlume.visible = s.retroActive && s.phase === 'descent';
+          coldGasPlume.scale.set(0.95, 0.85 + Math.sin(tSec * 24) * 0.14, 0.95);
+        } else {
+          coldGasPlume.visible = false;
+          plumeGrp.visible = s.retroActive && s.phase === 'descent';
+          plumeOuter.visible = true;
+          for (const p of plumePuffs) p.visible = true;
+          plumeGrp.scale.set(0.85, 0.8 + Math.sin(tSec * 28) * 0.15, 0.85);
+        }
+        const activeRcs = s.phase === 'descent';
+        rcsJets.left.visible = activeRcs && (s.keys.has('KeyD') || s.keys.has('ArrowRight') || s.steerCmdX > 0 || s.yawErr < -2);
+        rcsJets.right.visible = activeRcs && (s.keys.has('KeyA') || s.keys.has('ArrowLeft') || s.steerCmdX < 0 || s.yawErr > 2);
+        rcsJets.fore.visible = activeRcs && (s.keys.has('KeyS') || s.keys.has('ArrowDown') || s.steerCmdY > 0 || s.pitchErr < -2);
+        rcsJets.aft.visible = activeRcs && (s.keys.has('KeyW') || s.keys.has('ArrowUp') || s.steerCmdY < 0 || s.pitchErr > 2);
+
+        surfaceGroup.position.set(-s.descentX, -(s.descentAltM * 0.16 + 1.35), -14 - s.descentZ);
         rocketGroup.position.set(0, 1.8, -14);
         const tiltX = s.phase === 'landed' ? 0 : s.pitchErr * 0.014;
         const tiltZ = s.phase === 'landed' ? 0 : -s.yawErr * 0.014;
-        const spinY = s.phase === 'landed' ? 0.35 : tSec * 0.22;
+        const spinY = s.phase === 'landed' ? 0.35 : tSec * 0.18;
         rocketGroup.rotation.set(tiltX, spinY, tiltZ);
       }
 
@@ -1737,13 +1951,23 @@ export const LaunchTransitModal: React.FC<{
         stick.rotation.set(s.pitchErr * 0.018, 0, -s.yawErr * 0.018);
         const vib = (s.ignited && s.stageIdx === 1) || (s.retroActive && s.phase === 'descent') ? Math.sin(tSec * 45) * 0.009 : 0;
         camera.position.set(vib, 1.24 + vib * 0.5, 0.24);
-        const lookY = s.phase === 'descent' ? 0.82 - s.pitchErr * 0.015 : 1.07 - s.pitchErr * 0.015;
+        const lookY = s.phase === 'descent' ? 0.66 - s.pitchErr * 0.015 : 1.07 - s.pitchErr * 0.015;
         camera.lookAt(s.yawErr * 0.02, lookY, -14);
       } else {
         cockpitGroup.visible = false;
         rocketGroup.visible = true;
-        camera.position.set(6.2, s.phase === 'ascent' ? 2.6 : 3.2, -9.2);
-        camera.lookAt(rocketGroup.position.x, rocketGroup.position.y + 0.15, rocketGroup.position.z - 0.5);
+        if (s.phase === 'ascent') {
+          if (!s.ignited) {
+            camera.position.set(11.5, 4.6, -2.5);
+            camera.lookAt(0, 0.2, -17.5);
+          } else {
+            camera.position.set(7.6, 3.0, -7.8);
+            camera.lookAt(rocketGroup.position.x, rocketGroup.position.y + 0.2, rocketGroup.position.z);
+          }
+        } else {
+          camera.position.set(6.8, s.phase === 'landed' ? 3.2 : 9.4, -4.8);
+          camera.lookAt(rocketGroup.position.x * 0.4, s.phase === 'landed' ? 0.2 : -2.6, -14.2);
+        }
       }
 
       renderer.render(scene, camera);
@@ -1827,52 +2051,68 @@ export const LaunchTransitModal: React.FC<{
           </div>
         )}
 
-        {/* Pre-Ignition NASA Orion Pad Checklist before SLS Ignition */}
+        {/* Pre-Ignition NASA Orion Pad Checklist + Educational NASA System Explainers */}
         {phase === 'ascent' && !ignited && (
-          <div className="bg-sky-950/55 border border-sky-400/35 rounded-lg p-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px]">
-            <span className="font-mono font-semibold text-sky-200 uppercase">
-              {lang === 'es' ? 'Verificación Pre-Ignición (LC-39B):' : 'Pre-Ignition Pad Poll (LC-39B):'}
-            </span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  soundEngine.playClick();
-                  setChkHatch((v) => !v);
-                }}
-                className={`px-2.5 py-1 rounded border font-mono ${
-                  chkHatch ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200' : 'bg-white/[0.06] border-white/25 text-zinc-200'
-                }`}
-              >
-                {chkHatch ? '✓ ' : ''}
-                {lang === 'es' ? 'Escotilla 101.3 kPa' : 'Hatch 101.3 kPa'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  soundEngine.playClick();
-                  setChkCryo((v) => !v);
-                }}
-                className={`px-2.5 py-1 rounded border font-mono ${
-                  chkCryo ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200' : 'bg-white/[0.06] border-white/25 text-zinc-200'
-                }`}
-              >
-                {chkCryo ? '✓ ' : ''}
-                {lang === 'es' ? 'Purga Crio LOX/LH₂' : 'LOX/LH₂ Cryo Purge'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  soundEngine.playClick();
-                  setChkGnc((v) => !v);
-                }}
-                className={`px-2.5 py-1 rounded border font-mono ${
-                  chkGnc ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200' : 'bg-white/[0.06] border-white/25 text-zinc-200'
-                }`}
-              >
-                {chkGnc ? '✓ ' : ''}
-                {lang === 'es' ? 'GNC / Bus 28V ARM' : 'GNC / 28V Bus ARM'}
-              </button>
+          <div className="bg-sky-950/55 border border-sky-400/35 rounded-lg p-2.5 space-y-2 text-[11px]">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-mono font-semibold text-sky-200 uppercase">
+                {lang === 'es' ? 'Verificación Pre-Ignición (LC-39B):' : 'Pre-Ignition Pad Poll (LC-39B):'}
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundEngine.playClick();
+                    setChkHatch((v) => !v);
+                  }}
+                  className={`px-2.5 py-1 rounded border font-mono ${
+                    chkHatch ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200' : 'bg-white/[0.06] border-white/25 text-zinc-200'
+                  }`}
+                >
+                  {chkHatch ? '✓ ' : ''}
+                  {lang === 'es' ? 'Escotilla 101.3 kPa' : 'Hatch 101.3 kPa'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundEngine.playClick();
+                    setChkCryo((v) => !v);
+                  }}
+                  className={`px-2.5 py-1 rounded border font-mono ${
+                    chkCryo ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200' : 'bg-white/[0.06] border-white/25 text-zinc-200'
+                  }`}
+                >
+                  {chkCryo ? '✓ ' : ''}
+                  {lang === 'es' ? 'Purga Crio LOX/LH₂' : 'LOX/LH₂ Cryo Purge'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundEngine.playClick();
+                    setChkGnc((v) => !v);
+                  }}
+                  className={`px-2.5 py-1 rounded border font-mono ${
+                    chkGnc ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200' : 'bg-white/[0.06] border-white/25 text-zinc-200'
+                  }`}
+                >
+                  {chkGnc ? '✓ ' : ''}
+                  {lang === 'es' ? 'GNC / Bus 28V ARM' : 'GNC / 28V Bus ARM'}
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px] text-sky-100/90 border-t border-sky-400/20 pt-1.5">
+              <div>
+                <b className="text-amber-300">{lang === 'es' ? 'Purga Crio:' : 'Cryo Purge:'}</b>{' '}
+                {lang === 'es'
+                  ? 'Inyecta Helio/GN₂ seco para expulsar humedad antes de cargar LOX (-183 °C) y LH₂ (-253 °C), evitando tapones de hielo en válvulas RS-25.'
+                  : 'Flushes dry He/GN₂ to purge moisture before loading LOX (-183 °C) & LH₂ (-253 °C), preventing ice lock in RS-25 valves.'}
+              </div>
+              <div>
+                <b className="text-sky-300">{lang === 'es' ? 'GNC 28V:' : '28V GNC:'}</b>{' '}
+                {lang === 'es'
+                  ? 'Guía, Navegación y Control: arma giroscopios IMU, computadora de vuelo y actuadores cardán (gimbal) + propulsores RCS.'
+                  : 'Guidance, Navigation & Control: arms IMU gyros, flight computers, RS-25 gimbal TVC & attitude RCS jets.'}
+              </div>
             </div>
           </div>
         )}
@@ -1956,11 +2196,20 @@ export const LaunchTransitModal: React.FC<{
                 onTouchStart={() => setRetroActive(true)}
                 onTouchEnd={() => setRetroActive(false)}
                 className={`px-3.5 py-2 rounded-md text-xs font-semibold border ${
-                  retroActive ? 'bg-amber-400 text-zinc-950 border-white' : 'bg-white/20 text-white border-white/50'
+                  retroActive ? 'bg-sky-300 text-zinc-950 border-white' : 'bg-white/20 text-white border-white/50'
                 }`}
               >
-                <Flame className="w-3.5 h-3.5 inline mr-1" />
-                {lang === 'es' ? 'RETRO-FRENO [ESPACIO]' : 'RETRO-BURN [SPACE]'}
+                {isMarsTarget ? (
+                  <>
+                    <Flame className="w-3.5 h-3.5 inline mr-1" />
+                    {lang === 'es' ? 'RETRO-FRENO [ESPACIO]' : 'RETRO-BURN [SPACE]'}
+                  </>
+                ) : (
+                  <>
+                    <Wind className="w-3.5 h-3.5 inline mr-1 text-sky-200" />
+                    {lang === 'es' ? 'RETRO N₂ VACÍO [ESPACIO]' : 'VACUUM N₂ RETRO [SPACE]'}
+                  </>
+                )}
               </button>
             )}
             {(phase === 'landed' || (!needsSurfaceLanding && stageIdx >= 4)) && (
@@ -3068,9 +3317,9 @@ export const EscTacticalMenuModal: React.FC<{
       ? allObjectiveRows.filter((r) => r.group === sim.currentMissionId)
       : allObjectiveRows.filter((r) => r.group === 'aether4');
 
-  // SVG viewport maps X: -1.4..23.0 (width 24.4) and Y: -9.4..16.2 (height 25.6), flipped vertically so North (Y+) is UP
-  const toSvgX = (wx: number) => (wx + 1.4) * 18;
-  const toSvgY = (wy: number) => (16.2 - wy) * 18;
+  // SVG viewport maps X: -2.2..29.2 (width 31.4m) and Y: -15.8..20.2 (height 36.0m), scaled cleanly at 12.6 px/m
+  const toSvgX = (wx: number) => (wx + 2.2) * 12.6 + 20;
+  const toSvgY = (wy: number) => (20.2 - wy) * 12.6 + 14;
   const pathPoints = computeStationPathWaypoints(playerX, playerY, guidedStep.targetX, guidedStep.targetY);
   const pathPointsStr = pathPoints.map((p) => `${toSvgX(p.x).toFixed(1)},${toSvgY(p.y).toFixed(1)}`).join(' ');
 
@@ -3249,11 +3498,11 @@ export const EscTacticalMenuModal: React.FC<{
                       : `Available (Blue) · ${distToTargetM} m`}
                 </span>
               </div>
-              <svg viewBox="0 0 440 462" className="w-full h-auto bg-zinc-950/95 border border-zinc-500/35 rounded">
-                {/* 2m Blueprint Grid */}
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((gi) => (
+              <svg viewBox="0 0 440 480" className="w-full h-auto bg-zinc-950/95 border border-zinc-500/35 rounded">
+                {/* ~2.5m Blueprint Grid */}
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((gi) => (
                   <g key={gi} opacity="0.14">
-                    <line x1={gi * 36} y1={0} x2={gi * 36} y2={462} stroke="#94a3b8" strokeWidth="1" />
+                    <line x1={gi * 36} y1={0} x2={gi * 36} y2={480} stroke="#94a3b8" strokeWidth="1" />
                     <line x1={0} y1={gi * 36} x2={440} y2={gi * 36} stroke="#94a3b8" strokeWidth="1" />
                   </g>
                 ))}
@@ -3280,15 +3529,16 @@ export const EscTacticalMenuModal: React.FC<{
                   );
                 })}
                 {/* Architectural Module Landmarks */}
-                <rect x={toSvgX(0.15)} y={toSvgY(-3.9)} width={3.3 * 18} height={3.8 * 18} fill="#0284c744" stroke="#38bdf8" strokeWidth="1.2" rx="3" />
-                <line x1={toSvgX(0.5)} y1={toSvgY(-4.5)} x2={toSvgX(3.1)} y2={toSvgY(-7.1)} stroke="#facc15" strokeWidth="1.4" opacity="0.7" />
-                <circle cx={toSvgX(10.0)} cy={toSvgY(-6.1)} r={20} fill="#f8fafc18" stroke="#f59e0b" strokeWidth="1.5" />
-                <circle cx={toSvgX(10.0)} cy={toSvgY(-6.1)} r={8} fill="#38bdf833" stroke="#f8fafc" strokeWidth="0.9" />
-                <circle cx={toSvgX(18.8)} cy={toSvgY(12.8)} r={24} fill="none" stroke="#a855f7" strokeWidth="1.6" strokeDasharray="4 3" />
-                <path d={`M ${toSvgX(8.2)} ${toSvgY(12.2)} Q ${toSvgX(10.0)} ${toSvgY(13.1)} ${toSvgX(11.8)} ${toSvgY(12.2)}`} fill="none" stroke="#ff4f00" strokeWidth="2.8" />
-                <rect x={toSvgX(15.8)} y={toSvgY(6.3)} width={3.2 * 18} height={1.4 * 18} fill="#10b98138" stroke="#22c55e" strokeWidth="1.1" />
-                <rect x={toSvgX(18.0)} y={toSvgY(-4.4)} width={2.8 * 18} height={2.4 * 18} fill="#ef444428" stroke="#f87171" strokeWidth="1.1" />
-                <rect x={toSvgX(0.4)} y={toSvgY(6.2)} width={1.2 * 18} height={2.5 * 18} fill="#38bdf824" stroke="#38bdf8" strokeWidth="1.0" />
+                <rect x={toSvgX(-0.85)} y={toSvgY(-6.5)} width={4.1 * 12.6} height={4.1 * 12.6} fill="#0284c744" stroke="#38bdf8" strokeWidth="1.2" rx="3" />
+                <line x1={toSvgX(-0.3)} y1={toSvgY(-7.1)} x2={toSvgX(2.7)} y2={toSvgY(-9.9)} stroke="#facc15" strokeWidth="1.4" opacity="0.7" />
+                <rect x={toSvgX(11.2)} y={toSvgY(-5.4)} width={2.8 * 12.6} height={4.2 * 12.6} fill="#0ea5e933" stroke="#38bdf8" strokeWidth="1.1" />
+                <circle cx={toSvgX(12.6)} cy={toSvgY(-12.4)} r={20} fill="#f8fafc18" stroke="#f59e0b" strokeWidth="1.5" />
+                <circle cx={toSvgX(12.6)} cy={toSvgY(-12.4)} r={8} fill="#38bdf833" stroke="#f8fafc" strokeWidth="0.9" />
+                <circle cx={toSvgX(24.8)} cy={toSvgY(15.7)} r={17} fill="none" stroke="#a855f7" strokeWidth="1.6" strokeDasharray="4 3" />
+                <path d={`M ${toSvgX(10.6)} ${toSvgY(15.6)} Q ${toSvgX(12.6)} ${toSvgY(16.5)} ${toSvgX(14.6)} ${toSvgY(15.6)}`} fill="none" stroke="#ff4f00" strokeWidth="2.8" />
+                <rect x={toSvgX(18.6)} y={toSvgY(8.5)} width={3.7 * 12.6} height={1.0 * 12.6} fill="#10b98138" stroke="#22c55e" strokeWidth="1.1" />
+                <rect x={toSvgX(24.1)} y={toSvgY(-10.95)} width={3.0 * 12.6} height={1.23 * 12.6} fill="#ef444428" stroke="#f87171" strokeWidth="1.1" />
+                <rect x={toSvgX(-1.38)} y={toSvgY(7.0)} width={1.66 * 12.6} height={2.6 * 12.6} fill="#38bdf824" stroke="#38bdf8" strokeWidth="1.0" />
 
                 {/* Zone Labels */}
                 {STATION_ZONES.map((z) => {

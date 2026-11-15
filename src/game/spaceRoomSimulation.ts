@@ -160,94 +160,94 @@ export function getSpaceItemLabel(itemKey: string, lang: 'es' | 'en'): string {
 export const STATION_ZONES: RoomZoneInfo[] = [
   {
     id: 'west_hab',
-    minX: 0.0,
-    maxX: 6.2,
-    minY: 0.0,
-    maxY: 7.0,
+    minX: -1.4,
+    maxX: 6.8,
+    minY: -0.6,
+    maxY: 8.6,
     nameEs: 'Habitación y Biomédica (Oeste)',
     nameEn: 'Crew Habitation & Biomed (West)',
     accentHex: '#38bdf8',
   },
   {
     id: 'central_corridor',
-    minX: 6.2,
-    maxX: 13.8,
-    minY: -1.4,
-    maxY: 8.4,
+    minX: 6.8,
+    maxX: 18.4,
+    minY: -2.5,
+    maxY: 10.5,
     nameEs: 'Pasillos y Núcleo Central',
     nameEn: 'Corridors & Central Hub',
     accentHex: '#94a3b8',
   },
   {
     id: 'east_lab',
-    minX: 13.8,
-    maxX: 20.6,
-    minY: 0.0,
-    maxY: 7.0,
+    minX: 18.4,
+    maxX: 27.4,
+    minY: -0.6,
+    maxY: 8.6,
     nameEs: 'Laboratorio Ingeniería y Botánica (Este)',
     nameEn: 'Engineering & Botany Lab (East)',
     accentHex: '#22c55e',
   },
   {
     id: 'north_meds',
-    minX: 7.2,
-    maxX: 12.8,
-    minY: 8.4,
-    maxY: 13.4,
+    minX: 8.6,
+    maxX: 16.6,
+    minY: 10.5,
+    maxY: 16.9,
     nameEs: 'Puente de Mando MEDS (Norte)',
     nameEn: 'MEDS Flight Deck (North)',
     accentHex: '#FF4F00',
   },
   {
     id: 'south_airlock',
-    minX: 6.8,
-    maxX: 13.2,
-    minY: -8.2,
-    maxY: -1.4,
-    nameEs: 'Hangar Sur y Cápsula Orion',
-    nameEn: 'South Hangar & Orion Capsule',
+    minX: 7.6,
+    maxX: 17.6,
+    minY: -15.4,
+    maxY: -2.5,
+    nameEs: 'Hangar Sur, Pasarela y Cápsula Orion',
+    nameEn: 'South Hangar, Gantry & Orion Capsule',
     accentHex: '#f59e0b',
   },
   {
     id: 'sw_eva_nbl',
-    minX: -0.4,
-    maxX: 5.8,
-    minY: -8.4,
-    maxY: -2.4,
+    minX: -1.8,
+    maxX: 6.4,
+    minY: -11.8,
+    maxY: -4.0,
     nameEs: 'Piscina NBL y Esclusa EVA (Suroeste)',
     nameEn: 'NBL Pool & EVA Prep Bay (SW)',
     accentHex: '#0ea5e9',
   },
   {
     id: 'ne_compute_centrifuge',
-    minX: 15.6,
-    maxX: 22.0,
-    minY: 9.4,
-    maxY: 15.2,
+    minX: 20.0,
+    maxX: 28.6,
+    minY: 12.0,
+    maxY: 19.8,
     nameEs: 'Cómputo NASA y Centrífuga 4.5G (Noreste)',
     nameEn: 'NASA Compute Lab & 4.5G Centrifuge (NE)',
     accentHex: '#8b5cf6',
   },
   {
     id: 'se_eclss_fire_storage',
-    minX: 15.2,
-    maxX: 21.8,
-    minY: -8.2,
-    maxY: -2.4,
-    nameEs: 'Cámara Incendio 0g y Almacén (Sureste)',
-    nameEn: '0g ECLSS Fire Chamber & Storage (SE)',
+    minX: 19.6,
+    maxX: 28.8,
+    minY: -12.2,
+    maxY: -4.0,
+    nameEs: 'Cámara Incendio 0g y Máquinas ECLSS (Sureste)',
+    nameEn: '0g Fire Chamber & ECLSS Machine Hall (SE)',
     accentHex: '#ef4444',
   },
 ];
 
 export function getRoomZoneAt(x: number, y: number): RoomZoneInfo {
-  if (y > 9.4 && x >= 15.6) return STATION_ZONES[6];
-  if (y < -2.4 && x >= 15.2) return STATION_ZONES[7];
-  if (y < -2.4 && x <= 5.8) return STATION_ZONES[5];
-  if (y >= 8.4 && x < 14.0) return STATION_ZONES[3];
-  if (y <= -1.4 && x > 6.2 && x < 14.0) return STATION_ZONES[4];
-  if (x < 6.2 && y >= 0.0 && y <= 7.0) return STATION_ZONES[0];
-  if (x > 13.8 && y >= 0.0 && y <= 7.0) return STATION_ZONES[2];
+  if (y >= 12.0 && x >= 20.0) return STATION_ZONES[6];
+  if (y <= -4.0 && x >= 19.6) return STATION_ZONES[7];
+  if (y <= -4.0 && x <= 6.4) return STATION_ZONES[5];
+  if (y >= 10.5 && x < 17.5) return STATION_ZONES[3];
+  if (y <= -2.5 && x >= 7.6 && x <= 17.6) return STATION_ZONES[4];
+  if (x <= 6.8 && y >= -0.6 && y <= 8.6) return STATION_ZONES[0];
+  if (x >= 18.4 && y >= -0.6 && y <= 8.6) return STATION_ZONES[2];
   return STATION_ZONES[1];
 }
 
@@ -329,6 +329,8 @@ export interface SpaceRoomState {
   shutterOpen: boolean;
   orionHatchOpen: boolean;
   orionHatchSealed: boolean;
+  orionCryoPurged: boolean;
+  orionGncArmed: boolean;
   orionLevelsChecked: boolean;
   playerInsideOrion: boolean;
   sleeping: boolean;
@@ -396,10 +398,10 @@ export interface RoomLookTarget {
 export const WALL_COLLIDER_COUNT = 60;
 
 export const ROOM_BOUNDS = {
-  minX: -0.4,
-  maxX: 22.0,
-  minY: -8.4,
-  maxY: 15.2,
+  minX: -1.8,
+  maxX: 28.8,
+  minY: -15.4,
+  maxY: 19.8,
   heightM: 3.4,
 } as const;
 
@@ -411,186 +413,207 @@ export const STATION_FLOOR_RECTS: Array<{
   minY: number;
   maxY: number;
 }> = [
-  { id: 'west_hab', zoneId: 'west_hab', minX: 0.0, maxX: 6.2, minY: 0.0, maxY: 7.0 },
-  { id: 'corr_west', zoneId: 'central_corridor', minX: 6.2, maxX: 8.4, minY: 2.4, maxY: 4.6 },
-  { id: 'central_hub', zoneId: 'central_corridor', minX: 8.4, maxX: 11.6, minY: 1.2, maxY: 5.8 },
-  { id: 'corr_east', zoneId: 'central_corridor', minX: 11.6, maxX: 13.8, minY: 2.4, maxY: 4.6 },
-  { id: 'east_lab', zoneId: 'east_lab', minX: 13.8, maxX: 20.6, minY: 0.0, maxY: 7.0 },
-  { id: 'corr_north', zoneId: 'central_corridor', minX: 8.9, maxX: 11.1, minY: 5.8, maxY: 8.4 },
-  { id: 'north_meds', zoneId: 'north_meds', minX: 7.2, maxX: 12.8, minY: 8.4, maxY: 13.4 },
-  { id: 'corr_south', zoneId: 'central_corridor', minX: 8.9, maxX: 11.1, minY: -1.4, maxY: 1.2 },
-  { id: 'south_airlock', zoneId: 'south_airlock', minX: 6.8, maxX: 13.2, minY: -8.2, maxY: -1.4 },
-  // 3 New Training, Buoyancy, Centrifuge & Fire Wings + Corridors
-  { id: 'corr_sw', zoneId: 'central_corridor', minX: 2.0, maxX: 4.2, minY: -2.4, maxY: 0.0 },
-  { id: 'sw_eva_nbl', zoneId: 'sw_eva_nbl', minX: -0.4, maxX: 5.8, minY: -8.4, maxY: -2.4 },
-  { id: 'corr_ne', zoneId: 'central_corridor', minX: 18.2, maxX: 20.4, minY: 7.0, maxY: 9.4 },
-  { id: 'ne_compute_centrifuge', zoneId: 'ne_compute_centrifuge', minX: 15.6, maxX: 22.0, minY: 9.4, maxY: 15.2 },
-  { id: 'corr_se', zoneId: 'central_corridor', minX: 18.2, maxX: 20.4, minY: -2.4, maxY: 0.0 },
-  { id: 'se_eclss_fire_storage', zoneId: 'se_eclss_fire_storage', minX: 15.2, maxX: 21.8, minY: -8.2, maxY: -2.4 },
+  { id: 'west_hab', zoneId: 'west_hab', minX: -1.4, maxX: 6.8, minY: -0.6, maxY: 8.6 },
+  { id: 'corr_west', zoneId: 'central_corridor', minX: 6.8, maxX: 10.2, minY: 2.6, maxY: 5.4 },
+  { id: 'central_hub', zoneId: 'central_corridor', minX: 10.2, maxX: 15.0, minY: 0.9, maxY: 7.1 },
+  { id: 'corr_east', zoneId: 'central_corridor', minX: 15.0, maxX: 18.4, minY: 2.6, maxY: 5.4 },
+  { id: 'east_lab', zoneId: 'east_lab', minX: 18.4, maxX: 27.4, minY: -0.6, maxY: 8.6 },
+  { id: 'corr_north', zoneId: 'central_corridor', minX: 11.2, maxX: 14.0, minY: 7.1, maxY: 10.5 },
+  { id: 'north_meds', zoneId: 'north_meds', minX: 8.6, maxX: 16.6, minY: 10.5, maxY: 16.9 },
+  { id: 'corr_south', zoneId: 'central_corridor', minX: 11.2, maxX: 14.0, minY: -2.5, maxY: 0.9 },
+  { id: 'south_airlock', zoneId: 'south_airlock', minX: 7.6, maxX: 17.6, minY: -15.4, maxY: -2.5 },
+  { id: 'corr_sw', zoneId: 'central_corridor', minX: 1.4, maxX: 4.2, minY: -4.0, maxY: -0.6 },
+  { id: 'sw_eva_nbl', zoneId: 'sw_eva_nbl', minX: -1.8, maxX: 6.4, minY: -11.8, maxY: -4.0 },
+  { id: 'corr_ne', zoneId: 'central_corridor', minX: 23.0, maxX: 25.8, minY: 8.6, maxY: 12.0 },
+  { id: 'ne_compute_centrifuge', zoneId: 'ne_compute_centrifuge', minX: 20.0, maxX: 28.6, minY: 12.0, maxY: 19.8 },
+  { id: 'corr_se', zoneId: 'central_corridor', minX: 23.0, maxX: 25.8, minY: -4.0, maxY: -0.6 },
+  { id: 'se_eclss_fire_storage', zoneId: 'se_eclss_fire_storage', minX: 19.6, maxX: 28.8, minY: -12.2, maxY: -4.0 },
 ];
 
 /**
- * Hermetic non-overlapping 8-room & 7-corridor station envelope (60 walls) + furniture/Orion AABBs.
+ * Hermetic non-overlapping enlarged 8-room & 7-corridor station envelope (60 walls)
+ * + doorway lintels (Z=2.24..3.60) + solid full-height racks & furniture AABBs.
  */
 export const SPACE_ROOM_COLLIDERS: Box2DM[] = [
-  // ---- West Habitation Perimeter (X=0..6.2, Y=0..7.0) [6] ----
-  [-0.25, -0.25, -0.2, 0.0, 7.25, 3.6, 'Wall_WestHab_W'],
-  [0.0, 7.0, -0.2, 6.45, 7.25, 3.6, 'Wall_WestHab_N_Win'],
-  [0.0, -0.25, -0.2, 2.0, 0.0, 3.6, 'Wall_WestHab_S_L'],
-  [4.2, -0.25, -0.2, 6.45, 0.0, 3.6, 'Wall_WestHab_S_R'],
-  [6.2, 0.0, -0.2, 6.45, 2.4, 3.6, 'Wall_WestHab_E_S'],
-  [6.2, 4.6, -0.2, 6.45, 7.0, 3.6, 'Wall_WestHab_E_N'],
+  // ---- West Habitation Perimeter (X=-1.4..6.8, Y=-0.6..8.6) [6] ----
+  [-1.65, -0.85, -0.2, -1.4, 8.85, 3.6, 'Wall_WestHab_W'],
+  [-1.4, 8.6, -0.2, 7.05, 8.85, 3.6, 'Wall_WestHab_N_Win'],
+  [-1.4, -0.85, -0.2, 1.4, -0.6, 3.6, 'Wall_WestHab_S_L'],
+  [4.2, -0.85, -0.2, 7.05, -0.6, 3.6, 'Wall_WestHab_S_R'],
+  [6.8, -0.6, -0.2, 7.05, 2.6, 3.6, 'Wall_WestHab_E_S'],
+  [6.8, 5.4, -0.2, 7.05, 8.6, 3.6, 'Wall_WestHab_E_N'],
 
-  // ---- Elongated West Corridor (X=6.2..8.4, Y=2.4..4.6) [2] ----
-  [6.45, 4.6, -0.2, 8.15, 4.85, 3.6, 'Wall_CorrW_N'],
-  [6.45, 2.15, -0.2, 8.15, 2.4, 3.6, 'Wall_CorrW_S'],
+  // ---- West Corridor (X=6.8..10.2, Y=2.6..5.4) [2] ----
+  [7.05, 5.4, -0.2, 9.95, 5.65, 3.6, 'Wall_CorrW_N'],
+  [7.05, 2.35, -0.2, 9.95, 2.6, 3.6, 'Wall_CorrW_S'],
 
-  // ---- Central Hub (X=8.4..11.6, Y=1.2..5.8) [8] ----
-  [8.15, 0.95, -0.2, 8.4, 2.4, 3.6, 'Wall_Hub_W_S'],
-  [8.15, 4.6, -0.2, 8.4, 6.05, 3.6, 'Wall_Hub_W_N'],
-  [11.6, 0.95, -0.2, 11.85, 2.4, 3.6, 'Wall_Hub_E_S'],
-  [11.6, 4.6, -0.2, 11.85, 6.05, 3.6, 'Wall_Hub_E_N'],
-  [8.4, 5.8, -0.2, 8.9, 6.05, 3.6, 'Wall_Hub_N_L'],
-  [11.1, 5.8, -0.2, 11.6, 6.05, 3.6, 'Wall_Hub_N_R'],
-  [8.4, 0.95, -0.2, 8.9, 1.2, 3.6, 'Wall_Hub_S_L'],
-  [11.1, 0.95, -0.2, 11.6, 1.2, 3.6, 'Wall_Hub_S_R'],
+  // ---- Central Hub (X=10.2..15.0, Y=0.9..7.1) [8] ----
+  [9.95, 0.65, -0.2, 10.2, 2.6, 3.6, 'Wall_Hub_W_S'],
+  [9.95, 5.4, -0.2, 10.2, 7.35, 3.6, 'Wall_Hub_W_N'],
+  [15.0, 0.65, -0.2, 15.25, 2.6, 3.6, 'Wall_Hub_E_S'],
+  [15.0, 5.4, -0.2, 15.25, 7.35, 3.6, 'Wall_Hub_E_N'],
+  [10.2, 7.1, -0.2, 11.2, 7.35, 3.6, 'Wall_Hub_N_L'],
+  [14.0, 7.1, -0.2, 15.0, 7.35, 3.6, 'Wall_Hub_N_R'],
+  [10.2, 0.65, -0.2, 11.2, 0.9, 3.6, 'Wall_Hub_S_L'],
+  [14.0, 0.65, -0.2, 15.0, 0.9, 3.6, 'Wall_Hub_S_R'],
 
-  // ---- Elongated East Corridor (X=11.6..13.8, Y=2.4..4.6) [2] ----
-  [11.85, 4.6, -0.2, 13.55, 4.85, 3.6, 'Wall_CorrE_N'],
-  [11.85, 2.15, -0.2, 13.55, 2.4, 3.6, 'Wall_CorrE_S'],
+  // ---- East Corridor (X=15.0..18.4, Y=2.6..5.4) [2] ----
+  [15.25, 5.4, -0.2, 18.15, 5.65, 3.6, 'Wall_CorrE_N'],
+  [15.25, 2.35, -0.2, 18.15, 2.6, 3.6, 'Wall_CorrE_S'],
 
-  // ---- East Engineering & Botany Lab (X=13.8..20.6, Y=0..7.0) [7] ----
-  [13.55, 0.0, -0.2, 13.8, 2.4, 3.6, 'Wall_EastLab_W_S'],
-  [13.55, 4.6, -0.2, 13.8, 7.0, 3.6, 'Wall_EastLab_W_N'],
-  [20.6, -0.25, -0.2, 20.85, 7.25, 3.6, 'Wall_EastLab_E'],
-  [13.55, 7.0, -0.2, 18.2, 7.25, 3.6, 'Wall_EastLab_N_L'],
-  [20.4, 7.0, -0.2, 20.6, 7.25, 3.6, 'Wall_EastLab_N_R'],
-  [13.55, -0.25, -0.2, 18.2, 0.0, 3.6, 'Wall_EastLab_S_L'],
-  [20.4, -0.25, -0.2, 20.6, 0.0, 3.6, 'Wall_EastLab_S_R'],
+  // ---- East Engineering & Botany Lab (X=18.4..27.4, Y=-0.6..8.6) [7] ----
+  [18.15, -0.6, -0.2, 18.4, 2.6, 3.6, 'Wall_EastLab_W_S'],
+  [18.15, 5.4, -0.2, 18.4, 8.6, 3.6, 'Wall_EastLab_W_N'],
+  [27.4, -0.85, -0.2, 27.65, 8.85, 3.6, 'Wall_EastLab_E'],
+  [18.15, 8.6, -0.2, 23.0, 8.85, 3.6, 'Wall_EastLab_N_L'],
+  [25.8, 8.6, -0.2, 27.4, 8.85, 3.6, 'Wall_EastLab_N_R'],
+  [18.15, -0.85, -0.2, 23.0, -0.6, 3.6, 'Wall_EastLab_S_L'],
+  [25.8, -0.85, -0.2, 27.4, -0.6, 3.6, 'Wall_EastLab_S_R'],
 
-  // ---- Elongated North Corridor (X=8.9..11.1, Y=5.8..8.4) [2] ----
-  [8.65, 6.05, -0.2, 8.9, 8.15, 3.6, 'Wall_CorrN_W'],
-  [11.1, 6.05, -0.2, 11.35, 8.15, 3.6, 'Wall_CorrN_E'],
+  // ---- North Corridor (X=11.2..14.0, Y=7.1..10.5) [2] ----
+  [10.95, 7.35, -0.2, 11.2, 10.25, 3.6, 'Wall_CorrN_W'],
+  [14.0, 7.35, -0.2, 14.25, 10.25, 3.6, 'Wall_CorrN_E'],
 
-  // ---- North MEDS Flight Deck (X=7.2..12.8, Y=8.4..13.4) [5] ----
-  [6.95, 8.15, -0.2, 8.9, 8.4, 3.6, 'Wall_Meds_S_L'],
-  [11.1, 8.15, -0.2, 13.05, 8.4, 3.6, 'Wall_Meds_S_R'],
-  [6.95, 8.4, -0.2, 7.2, 13.4, 3.6, 'Wall_Meds_W'],
-  [12.8, 8.4, -0.2, 13.05, 13.4, 3.6, 'Wall_Meds_E'],
-  [6.95, 13.4, -0.2, 13.05, 13.65, 3.6, 'Wall_Meds_N'],
+  // ---- North MEDS Flight Deck (X=8.6..16.6, Y=10.5..16.9) [5] ----
+  [8.35, 10.25, -0.2, 11.2, 10.5, 3.6, 'Wall_Meds_S_L'],
+  [14.0, 10.25, -0.2, 16.85, 10.5, 3.6, 'Wall_Meds_S_R'],
+  [8.35, 10.5, -0.2, 8.6, 16.9, 3.6, 'Wall_Meds_W'],
+  [16.6, 10.5, -0.2, 16.85, 16.9, 3.6, 'Wall_Meds_E'],
+  [8.35, 16.9, -0.2, 16.85, 17.15, 3.6, 'Wall_Meds_N'],
 
-  // ---- Elongated South Corridor (X=8.9..11.1, Y=-1.4..1.2) [2] ----
-  [8.65, -1.15, -0.2, 8.9, 0.95, 3.6, 'Wall_CorrS_W'],
-  [11.1, -1.15, -0.2, 11.35, 0.95, 3.6, 'Wall_CorrS_E'],
+  // ---- South Corridor (X=11.2..14.0, Y=-2.5..0.9) [2] ----
+  [10.95, -2.25, -0.2, 11.2, 0.65, 3.6, 'Wall_CorrS_W'],
+  [14.0, -2.25, -0.2, 14.25, 0.65, 3.6, 'Wall_CorrS_E'],
 
-  // ---- South Orion Hangar & Boarding Airlock (X=6.8..13.2, Y=-8.2..-1.4) [5] ----
-  [6.55, -1.4, -0.2, 8.9, -1.15, 3.6, 'Wall_Airlock_N_L'],
-  [11.1, -1.4, -0.2, 13.45, -1.15, 3.6, 'Wall_Airlock_N_R'],
-  [6.55, -8.2, -0.2, 6.8, -1.4, 3.6, 'Wall_Airlock_W'],
-  [13.2, -8.2, -0.2, 13.45, -1.4, 3.6, 'Wall_Airlock_E'],
-  [6.55, -8.45, -0.2, 13.45, -8.2, 3.6, 'Wall_Airlock_S'],
+  // ---- South Orion Hangar & Boarding Gantry (X=7.6..17.6, Y=-15.4..-2.5) [5] ----
+  [7.35, -2.5, -0.2, 11.2, -2.25, 3.6, 'Wall_Airlock_N_L'],
+  [14.0, -2.5, -0.2, 17.85, -2.25, 3.6, 'Wall_Airlock_N_R'],
+  [7.35, -15.4, -0.2, 7.6, -2.5, 3.6, 'Wall_Airlock_W'],
+  [17.6, -15.4, -0.2, 17.85, -2.5, 3.6, 'Wall_Airlock_E'],
+  [7.35, -15.65, -0.2, 17.85, -15.4, 3.6, 'Wall_Airlock_S'],
 
-  // ---- Southwest Corridor (X=2.0..4.2, Y=-2.4..0.0) [2] ----
-  [1.75, -2.4, -0.2, 2.0, -0.25, 3.6, 'Wall_CorrSW_W'],
-  [4.2, -2.4, -0.2, 4.45, -0.25, 3.6, 'Wall_CorrSW_E'],
+  // ---- Southwest Corridor (X=1.4..4.2, Y=-4.0..-0.6) [2] ----
+  [1.15, -4.0, -0.2, 1.4, -0.85, 3.6, 'Wall_CorrSW_W'],
+  [4.2, -4.0, -0.2, 4.45, -0.85, 3.6, 'Wall_CorrSW_E'],
 
-  // ---- Southwest NBL Pool & EVA Bay (X=-0.4..5.8, Y=-8.4..-2.4) [5] ----
-  [-0.65, -2.4, -0.2, 1.75, -2.15, 3.6, 'Wall_SW_N_L'],
-  [4.45, -2.4, -0.2, 6.05, -2.15, 3.6, 'Wall_SW_N_R'],
-  [-0.65, -8.4, -0.2, -0.4, -2.4, 3.6, 'Wall_SW_W'],
-  [5.8, -8.4, -0.2, 6.05, -2.4, 3.6, 'Wall_SW_E'],
-  [-0.65, -8.65, -0.2, 6.05, -8.4, 3.6, 'Wall_SW_S'],
+  // ---- Southwest NBL Pool & EVA Bay (X=-1.8..6.4, Y=-11.8..-4.0) [5] ----
+  [-2.05, -4.0, -0.2, 1.15, -3.75, 3.6, 'Wall_SW_N_L'],
+  [4.45, -4.0, -0.2, 6.65, -3.75, 3.6, 'Wall_SW_N_R'],
+  [-2.05, -11.8, -0.2, -1.8, -4.0, 3.6, 'Wall_SW_W'],
+  [6.4, -11.8, -0.2, 6.65, -4.0, 3.6, 'Wall_SW_E'],
+  [-2.05, -12.05, -0.2, 6.65, -11.8, 3.6, 'Wall_SW_S'],
 
-  // ---- Northeast Corridor (X=18.2..20.4, Y=7.0..9.4) [2] ----
-  [17.95, 7.25, -0.2, 18.2, 9.4, 3.6, 'Wall_CorrNE_W'],
-  [20.4, 7.25, -0.2, 20.65, 9.4, 3.6, 'Wall_CorrNE_E'],
+  // ---- Northeast Corridor (X=23.0..25.8, Y=8.6..12.0) [2] ----
+  [22.75, 8.85, -0.2, 23.0, 12.0, 3.6, 'Wall_CorrNE_W'],
+  [25.8, 8.85, -0.2, 26.05, 12.0, 3.6, 'Wall_CorrNE_E'],
 
-  // ---- Northeast Compute & Centrifuge Hall (X=15.6..22.0, Y=9.4..15.2) [5] ----
-  [15.35, 9.15, -0.2, 17.95, 9.4, 3.6, 'Wall_NE_S_L'],
-  [20.65, 9.15, -0.2, 22.25, 9.4, 3.6, 'Wall_NE_S_R'],
-  [15.35, 9.4, -0.2, 15.6, 15.2, 3.6, 'Wall_NE_W'],
-  [22.0, 9.4, -0.2, 22.25, 15.2, 3.6, 'Wall_NE_E'],
-  [15.35, 15.2, -0.2, 22.25, 15.45, 3.6, 'Wall_NE_N'],
+  // ---- Northeast Compute & Centrifuge Hall (X=20.0..28.6, Y=12.0..19.8) [5] ----
+  [19.75, 11.75, -0.2, 22.75, 12.0, 3.6, 'Wall_NE_S_L'],
+  [26.05, 11.75, -0.2, 28.85, 12.0, 3.6, 'Wall_NE_S_R'],
+  [19.75, 12.0, -0.2, 20.0, 19.8, 3.6, 'Wall_NE_W'],
+  [28.6, 12.0, -0.2, 28.85, 19.8, 3.6, 'Wall_NE_E'],
+  [19.75, 19.8, -0.2, 28.85, 20.05, 3.6, 'Wall_NE_N'],
 
-  // ---- Southeast Corridor (X=18.2..20.4, Y=-2.4..0.0) [2] ----
-  [17.95, -2.4, -0.2, 18.2, -0.25, 3.6, 'Wall_CorrSE_W'],
-  [20.4, -2.4, -0.2, 20.65, -0.25, 3.6, 'Wall_CorrSE_E'],
+  // ---- Southeast Corridor (X=23.0..25.8, Y=-4.0..-0.6) [2] ----
+  [22.75, -4.0, -0.2, 23.0, -0.85, 3.6, 'Wall_CorrSE_W'],
+  [25.8, -4.0, -0.2, 26.05, -0.85, 3.6, 'Wall_CorrSE_E'],
 
-  // ---- Southeast 0g Fire Chamber & Storage (X=15.2..21.8, Y=-8.2..-2.4) [5] ----
-  [14.95, -2.4, -0.2, 17.95, -2.15, 3.6, 'Wall_SE_N_L'],
-  [20.65, -2.4, -0.2, 22.05, -2.15, 3.6, 'Wall_SE_N_R'],
-  [14.95, -8.2, -0.2, 15.2, -2.4, 3.6, 'Wall_SE_W'],
-  [21.8, -8.2, -0.2, 22.05, -2.4, 3.6, 'Wall_SE_E'],
-  [14.95, -8.45, -0.2, 22.05, -8.2, 3.6, 'Wall_SE_S'],
+  // ---- Southeast 0g Fire Chamber & ECLSS Machine Hall (X=19.6..28.8, Y=-12.2..-4.0) [5] ----
+  [19.35, -4.0, -0.2, 22.75, -3.75, 3.6, 'Wall_SE_N_L'],
+  [26.05, -4.0, -0.2, 29.05, -3.75, 3.6, 'Wall_SE_N_R'],
+  [19.35, -12.2, -0.2, 19.6, -4.0, 3.6, 'Wall_SE_W'],
+  [28.8, -12.2, -0.2, 29.05, -4.0, 3.6, 'Wall_SE_E'],
+  [19.35, -12.45, -0.2, 29.05, -12.2, 3.6, 'Wall_SE_S'],
 
-  // ---- Interior Furniture & Equipment Racks ----
-  // West Hab: Crew Bunk, Galley, North Viewport Desk, WHC Booth, Mirror Pad
-  [0.02, 3.75, 0.0, 1.32, 5.95, 1.05, 'Furn_CrewBunk'],
-  [0.02, 1.05, 0.0, 1.02, 2.85, 1.15, 'Furn_Galley'],
-  [2.15, 6.28, 0.0, 4.25, 6.96, 0.95, 'Furn_WestNorthDesk'],
-  [4.80, 6.20, 0.0, 5.95, 6.96, 2.2, 'Furn_WHC_Booth'],
-  [5.30, 0.28, 0.0, 6.12, 2.05, 0.35, 'Furn_SuitMirrorPad'],
+  // ---- Doorway Upper Frame Lintels (solid Z=2.24..3.60 so upper frames cannot be clipped/jumped) ----
+  [8.25, 2.55, 2.24, 8.75, 5.45, 3.6, 'Lintel_West'],
+  [16.45, 2.55, 2.24, 16.95, 5.45, 3.6, 'Lintel_East'],
+  [11.15, 8.55, 2.24, 14.05, 9.05, 3.6, 'Lintel_North'],
+  [11.15, -1.05, 2.24, 14.05, -0.55, 3.6, 'Lintel_South'],
+  [1.35, -2.55, 2.24, 4.25, -2.05, 3.6, 'Lintel_SW'],
+  [22.95, 10.05, 2.24, 25.85, 10.55, 3.6, 'Lintel_NE'],
+  [22.95, -2.55, 2.24, 25.85, -2.05, 3.6, 'Lintel_SE'],
+  [10.20, -9.80, 2.24, 15.00, -9.40, 3.6, 'Lintel_OrionHatch'],
+
+  // ---- Interior Furniture & Full-Height Solid Equipment Racks ----
+  // West Hab: Crew Bunk, Galley, North Viewport Desk, Treadmill, WHC Booth, Mirror Pad
+  [-1.38, 4.40, 0.0, 0.28, 7.00, 2.40, 'Furn_CrewBunk'],
+  [-1.38, 0.80, 0.0, 0.00, 3.20, 2.40, 'Furn_Galley'],
+  [1.45, 7.65, 0.0, 4.15, 8.56, 2.40, 'Furn_WestNorthDesk'],
+  [1.80, 5.10, 0.0, 2.85, 6.75, 1.35, 'Furn_Treadmill'],
+  [5.20, 7.35, 0.0, 6.76, 8.56, 2.45, 'Furn_WHC_Booth'],
+  [5.65, 0.25, 0.0, 6.78, 2.25, 2.45, 'Furn_SuitMirrorPad'],
 
   // Central Hub: Side Tool Bench
-  [8.42, 4.72, 0.0, 8.88, 5.76, 0.92, 'Furn_CorridorToolBench'],
+  [10.22, 5.15, 0.0, 10.85, 6.75, 2.40, 'Furn_CorridorToolBench'],
 
-  // East Engineering & Botany Lab (shifted West cleanly clear of NE & SE portals!)
-  [19.70, 3.90, 0.0, 20.58, 5.95, 2.15, 'Furn_EastPowerRack'],
-  [19.70, 1.05, 0.0, 20.58, 3.55, 2.15, 'Furn_EastThermalRack'],
-  [14.30, 0.12, 0.0, 17.90, 0.85, 2.15, 'Furn_EastECLSSRack'],
-  [14.25, 6.18, 0.0, 17.85, 6.88, 2.15, 'Furn_EastBotanyKRUSTYRack'],
-  [16.55, 3.05, 0.0, 18.15, 4.05, 0.92, 'Furn_EastWorkbench'],
+  // East Engineering & Botany Lab
+  [26.35, 4.55, 0.0, 27.38, 7.35, 2.45, 'Furn_EastPowerRack'],
+  [26.35, 0.65, 0.0, 27.38, 3.85, 2.45, 'Furn_EastThermalRack'],
+  [18.60, -0.58, 0.0, 22.30, 0.45, 2.45, 'Furn_EastECLSSRack'],
+  [18.60, 7.55, 0.0, 22.30, 8.58, 2.45, 'Furn_EastBotanyKRUSTYRack'],
+  [21.10, 3.30, 0.0, 23.30, 4.70, 1.35, 'Furn_EastWorkbench'],
 
-  // North MEDS Command Deck (X=7.2..12.8, Y=8.4..13.4)
-  [8.25, 12.60, 0.0, 11.75, 13.35, 0.95, 'Furn_MedsDeckConsole'],
-  [8.85, 10.35, 0.0, 11.15, 11.25, 0.92, 'Furn_MedsManifestTable'],
+  // North MEDS Command Deck (X=8.6..16.6, Y=10.5..16.9)
+  [10.10, 15.65, 0.0, 15.10, 16.88, 2.45, 'Furn_MedsDeckConsole'],
+  [10.80, 12.60, 0.0, 14.40, 13.70, 1.35, 'Furn_MedsManifestTable'],
 
-  // South Hangar Walkable Orion Crew Module (aisle X=8.78..11.22, Y=-7.25..-4.55)
-  [6.82, -8.18, 0.0, 8.25, -4.55, 2.6, 'Furn_OrionHull_W'],
-  [11.75, -8.18, 0.0, 13.18, -4.55, 2.6, 'Furn_OrionHull_E'],
-  [9.45, -7.90, 0.0, 10.55, -7.25, 1.1, 'Furn_OrionPilotSeat'],
-  [8.25, -7.05, 0.0, 8.78, -5.25, 1.2, 'Furn_OrionConsole_L'],
-  [11.22, -7.05, 0.0, 11.75, -5.25, 1.2, 'Furn_OrionConsole_R'],
+  // South Hangar: Gantry Guard Rails, Alcove Racks (Quest/A13/STS120) & Walkable Orion Capsule
+  [7.62, -6.00, 0.0, 11.15, -5.55, 1.35, 'Furn_HangarRail_W'],
+  [14.05, -6.00, 0.0, 17.58, -5.55, 1.35, 'Furn_HangarRail_E'],
+  [16.65, -4.85, 0.0, 17.58, -3.15, 2.45, 'Furn_QuestAirlockRack'],
+  [7.62, -5.10, 0.0, 8.65, -3.50, 2.45, 'Furn_STS120_OBSS_Rack'],
+  [7.62, -15.38, 0.0, 9.75, -9.60, 2.85, 'Furn_OrionHull_W'],
+  [15.45, -15.38, 0.0, 17.58, -9.60, 2.85, 'Furn_OrionHull_E'],
+  [11.85, -14.95, 0.0, 13.35, -13.85, 1.75, 'Furn_OrionPilotSeat'],
+  [9.75, -13.20, 0.0, 10.55, -10.80, 2.45, 'Furn_OrionConsole_L'],
+  [14.65, -13.20, 0.0, 15.45, -10.80, 2.45, 'Furn_OrionConsole_R'],
 
-  // Southwest Wing: NBL Immersion Pool Basin & EVA Prep Bench
-  [0.15, -7.85, 0.0, 3.65, -4.35, 0.85, 'Furn_NBL_PoolBasin'],
-  [4.95, -7.45, 0.0, 5.75, -5.20, 0.92, 'Furn_SW_ToolBench'],
+  // Southwest Wing: NBL Immersion Pool Basin, Podium & EVA Prep Bench
+  [-0.85, -10.60, 0.0, 3.25, -6.50, 1.35, 'Furn_NBL_PoolBasin'],
+  [3.50, -6.95, 0.0, 4.45, -5.90, 1.65, 'Furn_NBL_DiverPodium'],
+  [5.35, -10.30, 0.0, 6.38, -7.40, 2.40, 'Furn_SW_ToolBench'],
 
   // Northeast Wing: NASA Formula Desk, 4.5G Centrifuge Rotor Pedestal & Supply Rack
-  [15.65, 11.40, 0.0, 16.45, 14.30, 0.95, 'Furn_NE_FormulaDesk'],
-  [18.60, 11.80, 0.0, 20.90, 14.10, 1.35, 'Furn_NE_CentrifugePedestal'],
-  [21.15, 9.65, 0.0, 21.95, 11.45, 0.92, 'Furn_NE_SupplyRack'],
+  [20.02, 13.80, 0.0, 21.02, 17.60, 2.40, 'Furn_NE_FormulaDesk'],
+  [23.40, 14.30, 0.0, 26.20, 17.10, 1.85, 'Furn_NE_CentrifugePedestal'],
+  [27.40, 12.20, 0.0, 28.58, 14.40, 2.40, 'Furn_NE_SupplyRack'],
 
-  // Southeast Wing: ISS 0g Fire Rack #2 & Storage Benches
-  [17.65, -7.95, 0.0, 20.15, -6.95, 2.15, 'Furn_SE_FireRack2'],
-  [15.25, -7.20, 0.0, 16.05, -4.30, 0.92, 'Furn_SE_StorageRackW'],
-  [20.95, -5.60, 0.0, 21.75, -3.40, 0.92, 'Furn_SE_StorageRackE'],
+  // Southeast Wing: All 6 Machine Racks & Storage Benches with Full-Height Solid AABBs
+  [19.62, -7.20, 0.0, 20.58, -5.50, 2.45, 'Furn_SE_OGA_Rack'],
+  [19.62, -10.80, 0.0, 20.58, -9.10, 2.45, 'Furn_SE_WRS_Rack'],
+  [21.20, -12.18, 0.0, 23.10, -11.15, 2.45, 'Furn_SE_CDRA_Rack'],
+  [24.10, -12.18, 0.0, 27.10, -10.95, 2.45, 'Furn_SE_FireRack2'],
+  [27.80, -10.30, 0.0, 28.78, -8.30, 2.45, 'Furn_SE_MBSU_Rack'],
+  [27.80, -7.00, 0.0, 28.78, -5.00, 2.45, 'Furn_SE_ATCS_Rack'],
+  [20.20, -4.92, 0.0, 22.35, -4.02, 1.35, 'Furn_SE_StorageBenchW'],
+  [26.35, -4.92, 0.0, 28.55, -4.02, 1.35, 'Furn_SE_StorageBenchE'],
 ];
 
 const SURFACE_BOXES = [
-  { minX: 0.0, maxX: 1.05, minY: 1.0, maxY: 2.9, topZ: 0.95 },
-  { minX: 2.1, maxX: 4.3, minY: 6.22, maxY: 6.98, topZ: 0.95 },
-  { minX: 8.4, maxX: 8.95, minY: 4.68, maxY: 5.8, topZ: 0.92 },
-  { minX: 16.5, maxX: 18.2, minY: 3.0, maxY: 4.1, topZ: 0.92 },
-  { minX: 8.8, maxX: 11.2, minY: 10.3, maxY: 11.3, topZ: 0.92 },
-  { minX: 8.2, maxX: 11.8, minY: 12.55, maxY: 13.4, topZ: 0.95 },
-  { minX: 4.9, maxX: 5.78, minY: -7.5, maxY: -5.15, topZ: 0.92 },
-  { minX: 21.1, maxX: 21.98, minY: 9.6, maxY: 11.5, topZ: 0.92 },
-  { minX: 15.2, maxX: 16.1, minY: -7.25, maxY: -4.25, topZ: 0.92 },
-  { minX: 20.9, maxX: 21.78, minY: -5.65, maxY: -3.35, topZ: 0.92 },
-  { minX: 15.6, maxX: 16.5, minY: 11.35, maxY: 14.35, topZ: 0.95 },
+  { minX: -1.38, maxX: 0.05, minY: 0.78, maxY: 3.22, topZ: 0.95 }, // Galley
+  { minX: 1.42, maxX: 4.18, minY: 7.62, maxY: 8.58, topZ: 0.95 }, // West North Desk
+  { minX: 10.20, maxX: 10.88, minY: 5.12, maxY: 6.78, topZ: 0.92 }, // Central Hub Tool Bench
+  { minX: 21.08, maxX: 23.32, minY: 3.28, maxY: 4.72, topZ: 0.92 }, // East Lab Workbench
+  { minX: 10.78, maxX: 14.42, minY: 12.58, maxY: 13.72, topZ: 0.92 }, // MEDS Manifest Table
+  { minX: 10.08, maxX: 15.12, minY: 15.62, maxY: 16.90, topZ: 0.95 }, // MEDS Console
+  { minX: 5.32, maxX: 6.40, minY: -10.32, maxY: -7.38, topZ: 0.92 }, // SW EVA Prep Bench
+  { minX: 27.38, maxX: 28.60, minY: 12.18, maxY: 14.42, topZ: 0.92 }, // NE Supply Rack
+  { minX: 20.18, maxX: 22.38, minY: -4.95, maxY: -4.00, topZ: 0.92 }, // SE Storage Bench W
+  { minX: 26.32, maxX: 28.58, minY: -4.95, maxY: -4.00, topZ: 0.92 }, // SE Storage Bench E
+  { minX: 20.00, maxX: 21.05, minY: 13.78, maxY: 17.62, topZ: 0.95 }, // NE Formula Desk
 ];
 
 export function createDefaultAutoDoors(): AutoDoorState[] {
   return [
-    { id: 'door_west', x: 7.3, y: 3.5, axis: 'x', openProgress: 0, labelEs: 'Compuerta Corredor Oeste', labelEn: 'West Airlock Door' },
-    { id: 'door_east', x: 12.7, y: 3.5, axis: 'x', openProgress: 0, labelEs: 'Compuerta Lab Este', labelEn: 'East Lab Airlock Door' },
-    { id: 'door_north', x: 10.0, y: 7.1, axis: 'y', openProgress: 0, labelEs: 'Compuerta Puente MEDS', labelEn: 'North MEDS Door' },
-    { id: 'door_south', x: 10.0, y: -0.1, axis: 'y', openProgress: 0, labelEs: 'Compuerta Hangar Orion', labelEn: 'South Orion Hangar Door' },
-    { id: 'door_sw', x: 3.1, y: -1.2, axis: 'y', openProgress: 0, labelEs: 'Compuerta Piscina NBL', labelEn: 'SW NBL Pool Door' },
-    { id: 'door_ne', x: 19.3, y: 8.2, axis: 'y', openProgress: 0, labelEs: 'Compuerta Centrífuga 4.5G', labelEn: 'NE Centrifuge Lab Door' },
-    { id: 'door_se', x: 19.3, y: -1.2, axis: 'y', openProgress: 0, labelEs: 'Compuerta Cámara Incendio', labelEn: 'SE Fire Chamber Door' },
-    { id: 'door_orion_hatch', x: 10.0, y: -4.55, axis: 'y', openProgress: 1, labelEs: 'Escotilla Cápsula Orion', labelEn: 'Orion Capsule Pressure Hatch' },
+    { id: 'door_west', x: 8.5, y: 4.0, axis: 'x', openProgress: 0, labelEs: 'Compuerta Corredor Oeste', labelEn: 'West Airlock Door' },
+    { id: 'door_east', x: 16.7, y: 4.0, axis: 'x', openProgress: 0, labelEs: 'Compuerta Lab Este', labelEn: 'East Lab Airlock Door' },
+    { id: 'door_north', x: 12.6, y: 8.8, axis: 'y', openProgress: 0, labelEs: 'Compuerta Puente MEDS', labelEn: 'North MEDS Door' },
+    { id: 'door_south', x: 12.6, y: -0.8, axis: 'y', openProgress: 0, labelEs: 'Compuerta Hangar Orion', labelEn: 'South Orion Hangar Door' },
+    { id: 'door_sw', x: 2.8, y: -2.3, axis: 'y', openProgress: 0, labelEs: 'Compuerta Piscina NBL', labelEn: 'SW NBL Pool Door' },
+    { id: 'door_ne', x: 24.4, y: 10.3, axis: 'y', openProgress: 0, labelEs: 'Compuerta Centrífuga 4.5G', labelEn: 'NE Centrifuge Lab Door' },
+    { id: 'door_se', x: 24.4, y: -2.3, axis: 'y', openProgress: 0, labelEs: 'Compuerta Cámara Incendio', labelEn: 'SE Fire Chamber Door' },
+    { id: 'door_orion_hatch', x: 12.6, y: -9.6, axis: 'y', openProgress: 1, labelEs: 'Escotilla Cápsula Orion', labelEn: 'Orion Capsule Pressure Hatch' },
   ];
 }
 
@@ -605,40 +628,42 @@ export function clampToWalkableStation(
   let px = x;
   let py = y;
 
-  // Enforce closed automatic door barriers cleanly
+  // Enforce strict closed automatic door barriers (must reach >= 85% open to pass)
   if (doors) {
     for (const d of doors) {
-      if (d.openProgress >= 0.45) continue;
-      if (d.axis === 'x' && Math.abs(py - d.y) < 1.25) {
-        const minBlock = d.x - 0.14 - radius;
-        const maxBlock = d.x + 0.14 + radius;
+      if (d.openProgress >= 0.85) continue;
+      if (d.axis === 'x' && Math.abs(py - d.y) < 1.55) {
+        const minBlock = d.x - 0.22 - radius;
+        const maxBlock = d.x + 0.22 + radius;
         if (prevX <= d.x && px > minBlock) px = minBlock;
         else if (prevX >= d.x && px < maxBlock) px = maxBlock;
-      } else if (d.axis === 'y' && Math.abs(px - d.x) < 1.25) {
-        const minBlock = d.y - 0.14 - radius;
-        const maxBlock = d.y + 0.14 + radius;
+      } else if (d.axis === 'y' && Math.abs(px - d.x) < 1.55) {
+        const minBlock = d.y - 0.22 - radius;
+        const maxBlock = d.y + 0.22 + radius;
         if (prevY <= d.y && py > minBlock) py = minBlock;
         else if (prevY >= d.y && py < maxBlock) py = maxBlock;
       }
     }
   }
 
-  // Exact seam-free shrunk union of all 8 rooms & 7 elongated corridors
+  // Exact seam-free shrunk union of all enlarged 8 rooms, 7 corridors & Launch Bay Gantry Bridge
   const r = radius;
   const cores: Array<[number, number, number, number]> = [
-    [r, r, 6.2 - r, 7.0 - r], // west_hab
-    [r, 2.4 + r, 20.6 - r, 4.6 - r], // West-Central-East spine
-    [8.4 + r, 1.2 + r, 11.6 - r, 5.8 - r], // central_hub
-    [8.9 + r, -4.6 + r, 11.1 - r, 13.4 - r], // South-Central-North spine
-    [13.8 + r, r, 20.6 - r, 7.0 - r], // east_lab
-    [7.2 + r, 8.4 + r, 12.8 - r, 13.4 - r], // north_meds
-    [6.8 + r, -8.2 + r, 13.2 - r, -1.4 - r], // south_airlock (+ Orion capsule)
-    [2.0 + r, -2.4 - r, 4.2 - r, r], // corr_sw bridge
-    [-0.4 + r, -8.4 + r, 5.8 - r, -2.4 - r], // sw_eva_nbl
-    [18.2 + r, 7.0 - r, 20.4 - r, 9.4 + r], // corr_ne bridge
-    [15.6 + r, 9.4 + r, 22.0 - r, 15.2 - r], // ne_compute_centrifuge
-    [18.2 + r, -2.4 - r, 20.4 - r, r], // corr_se bridge
-    [15.2 + r, -8.2 + r, 21.8 - r, -2.4 - r], // se_eclss_fire_storage
+    [-1.4 + r, -0.6 + r, 6.8 - r, 8.6 - r], // west_hab
+    [-1.4 + r, 2.6 + r, 27.4 - r, 5.4 - r], // West-Central-East spine
+    [10.2 + r, 0.9 + r, 15.0 - r, 7.1 - r], // central_hub
+    [11.2 + r, -9.6 - r, 14.0 - r, 16.9 - r], // South Gantry-Central-North spine (+ Orion entry)
+    [18.4 + r, -0.6 + r, 27.4 - r, 8.6 - r], // east_lab
+    [8.6 + r, 10.5 + r, 16.6 - r, 16.9 - r], // north_meds
+    [7.6 + r, -5.6 + r, 17.6 - r, -2.5 - r], // south_airlock Hangar North Deck
+    [11.2 + r, -9.6 - r, 14.0 - r, -5.4 + r], // LC-39B Boarding Gantry Bridge
+    [9.75 + r, -15.4 + r, 15.45 - r, -9.6 + r], // Orion Cabin Interior
+    [1.4 + r, -4.0 - r, 4.2 - r, -0.6 + r], // corr_sw bridge
+    [-1.8 + r, -11.8 + r, 6.4 - r, -4.0 - r], // sw_eva_nbl
+    [23.0 + r, 8.6 - r, 25.8 - r, 12.0 + r], // corr_ne bridge
+    [20.0 + r, 12.0 + r, 28.6 - r, 19.8 - r], // ne_compute_centrifuge
+    [23.0 + r, -4.0 - r, 25.8 - r, -0.6 + r], // corr_se bridge
+    [19.6 + r, -12.2 + r, 28.8 - r, -4.0 - r], // se_eclss_fire_storage
   ];
 
   let inside = false;
@@ -681,40 +706,40 @@ export function computeStationPathWaypoints(
     return [{ x: fromX, y: fromY }, { x: toX, y: toY }];
   }
 
-  // Tree from each room outward to Central Hub (10.0, 3.5)
+  // Tree from each room outward to Central Hub (12.6, 4.0)
   const routeToHub = (z: RoomZoneId): Array<{ key: string; x: number; y: number }> => {
     switch (z) {
       case 'west_hab':
-        return [{ key: 'wh_door', x: 6.2, y: 3.5 }, { key: 'hub', x: 10.0, y: 3.5 }];
+        return [{ key: 'wh_door', x: 6.8, y: 4.0 }, { key: 'hub', x: 12.6, y: 4.0 }];
       case 'sw_eva_nbl':
         return [
-          { key: 'sw_deck', x: 3.1, y: -2.4 },
-          { key: 'wh_sw', x: 3.1, y: 0.8 },
-          { key: 'wh_door', x: 6.2, y: 3.5 },
-          { key: 'hub', x: 10.0, y: 3.5 },
+          { key: 'sw_deck', x: 2.8, y: -4.0 },
+          { key: 'wh_sw', x: 2.8, y: 0.6 },
+          { key: 'wh_door', x: 6.8, y: 4.0 },
+          { key: 'hub', x: 12.6, y: 4.0 },
         ];
       case 'east_lab':
-        return [{ key: 'el_door', x: 13.8, y: 3.5 }, { key: 'hub', x: 10.0, y: 3.5 }];
+        return [{ key: 'el_door', x: 18.4, y: 4.0 }, { key: 'hub', x: 12.6, y: 4.0 }];
       case 'ne_compute_centrifuge':
         return [
-          { key: 'ne_door', x: 19.3, y: 9.4 },
-          { key: 'el_ne', x: 19.3, y: 5.8 },
-          { key: 'el_door', x: 13.8, y: 3.5 },
-          { key: 'hub', x: 10.0, y: 3.5 },
+          { key: 'ne_door', x: 24.4, y: 12.0 },
+          { key: 'el_ne', x: 24.4, y: 6.6 },
+          { key: 'el_door', x: 18.4, y: 4.0 },
+          { key: 'hub', x: 12.6, y: 4.0 },
         ];
       case 'se_eclss_fire_storage':
         return [
-          { key: 'se_door', x: 19.3, y: -2.4 },
-          { key: 'el_se', x: 19.3, y: 1.5 },
-          { key: 'el_door', x: 13.8, y: 3.5 },
-          { key: 'hub', x: 10.0, y: 3.5 },
+          { key: 'se_door', x: 24.4, y: -4.0 },
+          { key: 'el_se', x: 24.4, y: 1.6 },
+          { key: 'el_door', x: 18.4, y: 4.0 },
+          { key: 'hub', x: 12.6, y: 4.0 },
         ];
       case 'north_meds':
-        return [{ key: 'nm_door', x: 10.0, y: 8.4 }, { key: 'hub', x: 10.0, y: 3.5 }];
+        return [{ key: 'nm_door', x: 12.6, y: 10.5 }, { key: 'hub', x: 12.6, y: 4.0 }];
       case 'south_airlock':
-        return [{ key: 'sa_door', x: 10.0, y: -1.4 }, { key: 'hub', x: 10.0, y: 3.5 }];
+        return [{ key: 'sa_door', x: 12.6, y: -2.5 }, { key: 'hub', x: 12.6, y: 4.0 }];
       default:
-        return [{ key: 'hub', x: 10.0, y: 3.5 }];
+        return [{ key: 'hub', x: 12.6, y: 4.0 }];
     }
   };
 
@@ -1155,7 +1180,7 @@ export function getStationTrainingBrief(kind: RoomStationKind): StationTrainingB
 
 export function createRoomSpawnPlayer(): PlayerPhysicsState {
   // Spawn inside West Crew Habitation facing East toward Dra. Whitson & West Corridor
-  return createInitialPlayerState(3.15, 3.2, 0.0, 20, 'station');
+  return createInitialPlayerState(3.40, 4.00, 0.0, 18, 'station');
 }
 
 export interface RoomCarryState {
@@ -1190,8 +1215,8 @@ export function createInitialSpaceRoomState(
     {
       id: 'bunk_light_switch',
       kind: 'bunk_light_switch',
-      x: 0.14,
-      y: 3.45,
+      x: -1.26,
+      y: 4.10,
       z: 1.32,
       yawDeg: 0,
       labelEs: 'Control Espectral SSLA / Alerta',
@@ -1203,8 +1228,8 @@ export function createInitialSpaceRoomState(
     {
       id: 'window_shutter_button',
       kind: 'window_shutter_button',
-      x: 1.95,
-      y: 6.86,
+      x: 1.10,
+      y: 8.46,
       z: 1.32,
       yawDeg: -90,
       labelEs: 'Escudo Ventanal Exterior',
@@ -1216,7 +1241,7 @@ export function createInitialSpaceRoomState(
     {
       id: 'suit_mirror_station',
       kind: 'suit_mirror_station',
-      x: 5.50,
+      x: 5.45,
       y: 1.45,
       z: 1.25,
       yawDeg: 180,
@@ -1229,8 +1254,8 @@ export function createInitialSpaceRoomState(
     {
       id: 'npc_whitson',
       kind: 'npc_crew',
-      x: 2.05,
-      y: 2.20,
+      x: 2.20,
+      y: 2.15,
       z: 0.85,
       yawDeg: 25,
       labelEs: 'Dra. Whitson',
@@ -1243,8 +1268,8 @@ export function createInitialSpaceRoomState(
     {
       id: 'npc_conrad',
       kind: 'npc_crew',
-      x: 11.15,
-      y: 1.80,
+      x: 14.10,
+      y: 2.10,
       z: 0.85,
       yawDeg: 145,
       labelEs: 'Ing. Conrad',
@@ -1257,8 +1282,8 @@ export function createInitialSpaceRoomState(
     {
       id: 'npc_lovell',
       kind: 'npc_crew',
-      x: 8.15,
-      y: -3.20,
+      x: 9.40,
+      y: -4.15,
       z: 0.85,
       yawDeg: 40,
       labelEs: 'Cmdr. Lovell',
@@ -1271,8 +1296,8 @@ export function createInitialSpaceRoomState(
     {
       id: 'oga_o2_station',
       kind: 'oga_o2_station',
-      x: 16.08,
-      y: -4.20,
+      x: 20.90,
+      y: -6.35,
       z: 1.25,
       yawDeg: 0,
       labelEs: 'Rack OGA O₂ (2H₂O→2H₂+O₂ · Recarga Traje 29.6 kPa)',
@@ -1284,8 +1309,8 @@ export function createInitialSpaceRoomState(
     {
       id: 'wrs_water_station',
       kind: 'wrs_water_station',
-      x: 16.08,
-      y: -7.10,
+      x: 20.90,
+      y: -9.95,
       z: 1.18,
       yawDeg: 0,
       labelEs: 'Toma Potable WRS (WPA+UPA 98% · Beber H₂O BVAD)',
@@ -1297,8 +1322,8 @@ export function createInitialSpaceRoomState(
     {
       id: 'cdra_sabatier_station',
       kind: 'cdra_sabatier_station',
-      x: 17.35,
-      y: -7.10,
+      x: 22.15,
+      y: -10.80,
       z: 1.28,
       yawDeg: 90,
       labelEs: 'Rack CDRA + Sabatier 400 °C (CO₂ + 4H₂ → CH₄ + 2H₂O)',
@@ -1310,8 +1335,8 @@ export function createInitialSpaceRoomState(
     {
       id: 'rpcm_breaker_station',
       kind: 'rpcm_breaker_station',
-      x: 20.92,
-      y: -6.20,
+      x: 27.45,
+      y: -9.30,
       z: 1.28,
       yawDeg: 180,
       labelEs: 'Panel MBSU / RPCM 120V DC (Rearmar Disyuntores)',
@@ -1323,8 +1348,8 @@ export function createInitialSpaceRoomState(
     {
       id: 'atcs_radiator_station',
       kind: 'atcs_radiator_station',
-      x: 20.92,
-      y: -3.50,
+      x: 27.45,
+      y: -6.00,
       z: 1.22,
       yawDeg: 180,
       labelEs: 'Válvula Térmica ATCS (Amoníaco Radiadores 420→277 K)',
@@ -1336,8 +1361,8 @@ export function createInitialSpaceRoomState(
     {
       id: 'quest_airlock_console',
       kind: 'quest_airlock_console',
-      x: 12.68,
-      y: -2.55,
+      x: 16.25,
+      y: -3.95,
       z: 1.25,
       yawDeg: 180,
       labelEs: 'Consola Esclusa Quest Airlock (Secuencia MPEV kPa)',
@@ -1379,8 +1404,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'bunk_bed',
         kind: 'bunk_bed',
-        x: 0.72,
-        y: 4.85,
+        x: 0.65,
+        y: 5.70,
         z: 0.65,
         yawDeg: 0,
         labelEs: 'Litera Tripulante (Ciclo 8.5 h)',
@@ -1392,8 +1417,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'cabin_terminal',
         kind: 'cabin_terminal',
-        x: 3.20,
-        y: 6.24,
+        x: 2.80,
+        y: 7.35,
         z: 1.18,
         yawDeg: -90,
         labelEs: 'Terminal Diagnóstico NASA (Oeste)',
@@ -1405,8 +1430,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'treadmill_station',
         kind: 'treadmill_station',
-        x: 2.25,
-        y: 5.05,
+        x: 2.32,
+        y: 5.92,
         z: 0.68,
         yawDeg: 0,
         labelEs: 'Caminadora ASCAN (2.0 h/día · 82 kg)',
@@ -1418,8 +1443,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'whc_hygiene_station',
         kind: 'whc_hygiene_station',
-        x: 5.30,
-        y: 6.16,
+        x: 5.96,
+        y: 7.05,
         z: 1.25,
         yawDeg: -90,
         labelEs: 'Compartimento Higiene WHC (STS-126)',
@@ -1431,8 +1456,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'eva_locker_station',
         kind: 'eva_locker_station',
-        x: 5.50,
-        y: 0.78,
+        x: 5.45,
+        y: 0.72,
         z: 1.35,
         yawDeg: 180,
         labelEs: 'Vestidor EVA NBL (Regla del 8: 8h · 1L)',
@@ -1444,8 +1469,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'crisis_quiz_station',
         kind: 'crisis_quiz_station',
-        x: 8.92,
-        y: 5.15,
+        x: 11.15,
+        y: 5.95,
         z: 1.05,
         yawDeg: 0,
         labelEs: 'Simulador Crisis Fuga Agua (Núcleo Central)',
@@ -1457,8 +1482,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'legacy_tablet_station',
         kind: 'legacy_tablet_station',
-        x: 10.00,
-        y: 12.58,
+        x: 14.40,
+        y: 15.20,
         z: 1.05,
         yawDeg: -90,
         labelEs: 'Nota de Legado #1 (Puente Norte)',
@@ -1471,8 +1496,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'power_charger',
         kind: 'power_charger',
-        x: 19.68,
-        y: 5.45,
+        x: 25.95,
+        y: 6.65,
         z: 1.08,
         yawDeg: 180,
         labelEs: 'Cargador Batería Litio (Lab Este)',
@@ -1485,8 +1510,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'power_box',
         kind: 'power_box',
-        x: 19.68,
-        y: 4.85,
+        x: 25.95,
+        y: 5.95,
         z: 1.35,
         yawDeg: 180,
         labelEs: 'Caja Distribución FSP (Batería+Fusible)',
@@ -1500,8 +1525,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'power_lever',
         kind: 'power_lever',
-        x: 19.68,
-        y: 4.22,
+        x: 25.95,
+        y: 5.05,
         z: 1.32,
         yawDeg: 180,
         labelEs: 'Palanca de Potencia Cabina (Lab Este)',
@@ -1513,8 +1538,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'eclss_vent',
         kind: 'eclss_vent',
-        x: 15.60,
-        y: 0.86,
+        x: 19.65,
+        y: 0.75,
         z: 1.35,
         yawDeg: 90,
         labelEs: 'Conducto CO₂ (4 tornillos · Lab Este)',
@@ -1529,8 +1554,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'filter_regenerator',
         kind: 'filter_regenerator',
-        x: 16.95,
-        y: 0.86,
+        x: 21.35,
+        y: 0.75,
         z: 1.15,
         yawDeg: 90,
         labelEs: 'Regenerador Filtro LiOH (7.0 kg)',
@@ -1542,8 +1567,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'nbl_pool_station',
         kind: 'nbl_pool_station',
-        x: 3.85,
-        y: -4.25,
+        x: 4.70,
+        y: -6.40,
         z: 1.12,
         yawDeg: -135,
         labelEs: 'Consola Piscina NBL 61.5 m y Traje xEMU',
@@ -1555,8 +1580,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'computer_formulas_station',
         kind: 'computer_formulas_station',
-        x: 16.52,
-        y: 12.85,
+        x: 21.35,
+        y: 16.30,
         z: 1.18,
         yawDeg: 0,
         labelEs: 'Pizarra Fórmulas NASA y Lab Cómputo (I=I₀/r² · Δv)',
@@ -1568,8 +1593,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'centrifuge_station',
         kind: 'centrifuge_station',
-        x: 18.60,
-        y: 11.45,
+        x: 23.00,
+        y: 15.70,
         z: 1.12,
         yawDeg: 90,
         labelEs: 'Centrífuga Humana 4.5 G + Maniobra AGSM',
@@ -1581,8 +1606,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'eclss_fire_station',
         kind: 'eclss_fire_station',
-        x: 18.90,
-        y: -6.88,
+        x: 25.60,
+        y: -10.60,
         z: 1.28,
         yawDeg: 90,
         labelEs: 'Cámara Incendio 0g ISS (Rack #2 · PBA/IMV/PFE)',
@@ -1594,8 +1619,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'wall_manual_station',
         kind: 'wall_manual_station',
-        x: 16.52,
-        y: 11.75,
+        x: 21.35,
+        y: 14.90,
         z: 1.38,
         yawDeg: 0,
         labelEs: 'Manual Técnico NASA en Pizarra (NBL/Física/Fuego)',
@@ -1608,8 +1633,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'ration_dispenser',
         kind: 'ration_dispenser',
-        x: 0.52,
-        y: 2.52,
+        x: 0.35,
+        y: 2.75,
         z: 1.12,
         yawDeg: 0,
         labelEs: 'Dispensador Ración Deshidratada',
@@ -1621,8 +1646,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'water_rehydrator',
         kind: 'water_rehydrator',
-        x: 0.52,
-        y: 1.95,
+        x: 0.35,
+        y: 2.00,
         z: 1.12,
         yawDeg: 0,
         labelEs: 'Inyector Agua Potable (0.50 L)',
@@ -1634,8 +1659,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'food_heater',
         kind: 'food_heater',
-        x: 0.52,
-        y: 1.38,
+        x: 0.35,
+        y: 1.25,
         z: 1.12,
         yawDeg: 0,
         labelEs: 'Calentador Galley BVAD',
@@ -1650,8 +1675,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'hatch_next_mission',
         kind: 'hatch_next_mission',
-        x: 10.00,
-        y: -7.12,
+        x: 12.60,
+        y: -13.45,
         z: 1.25,
         yawDeg: 90,
         labelEs: 'Cápsula Orion Sur: Abordar y Despegar a Fase 1',
@@ -1664,41 +1689,41 @@ export function createInitialSpaceRoomState(
     ];
 
     worldItems = [
-      // Central Hub Bench (X=8.42..8.88, topZ=0.92 -> restZ=0.97)
-      { uid: 'room_screwdriver_1', itemKey: 'DA_ScrewDriver', category: 'melee', x: 8.65, y: 5.05, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 25, thrownByPlayer: false, charge: 100 },
-      { uid: 'room_battery_1', itemKey: 'DA_Battery', category: 'task', x: 8.65, y: 5.55, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 25 },
-      { uid: 'room_fuse_1', itemKey: 'DA_Fuse', category: 'task', x: 8.65, y: 4.82, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 45, thrownByPlayer: false, charge: 100 },
-      // East Lab Workbench (topZ=0.92 -> restZ=0.97)
-      { uid: 'room_sample_1', itemKey: 'DA_Sample', category: 'task', x: 17.15, y: 3.55, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
-      { uid: 'room_tablet_1', itemKey: 'DA_LegacyTablet', category: 'utility', x: 17.65, y: 3.65, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -20, thrownByPlayer: false, charge: 100 },
+      // Central Hub Tool Bench (X=10.20..10.88, Y=5.12..6.78, topZ=0.92 -> restZ=0.97)
+      { uid: 'room_screwdriver_1', itemKey: 'DA_ScrewDriver', category: 'melee', x: 10.52, y: 5.50, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 25, thrownByPlayer: false, charge: 100 },
+      { uid: 'room_battery_1', itemKey: 'DA_Battery', category: 'task', x: 10.52, y: 6.25, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 25 },
+      { uid: 'room_fuse_1', itemKey: 'DA_Fuse', category: 'task', x: 10.52, y: 5.88, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 45, thrownByPlayer: false, charge: 100 },
+      // East Lab Workbench (X=21.08..23.32, Y=3.28..4.72, topZ=0.92 -> restZ=0.97)
+      { uid: 'room_sample_1', itemKey: 'DA_Sample', category: 'task', x: 21.75, y: 3.85, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
+      { uid: 'room_tablet_1', itemKey: 'DA_LegacyTablet', category: 'utility', x: 22.60, y: 4.10, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -20, thrownByPlayer: false, charge: 100 },
       // West Desk & Galley (topZ=0.95 -> restZ=1.00)
-      { uid: 'room_card_1', itemKey: 'DA_AccessCard', category: 'utility', x: 2.65, y: 6.48, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: -15, thrownByPlayer: false, charge: 100 },
-      { uid: 'room_pouch_west', itemKey: 'DA_WaterPouch', category: 'utility', x: 0.65, y: 1.65, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 10, thrownByPlayer: false, charge: 100 },
+      { uid: 'room_card_1', itemKey: 'DA_AccessCard', category: 'utility', x: 2.35, y: 8.05, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: -15, thrownByPlayer: false, charge: 100 },
+      { uid: 'room_pouch_west', itemKey: 'DA_WaterPouch', category: 'utility', x: -0.45, y: 1.85, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 10, thrownByPlayer: false, charge: 100 },
       // SW NBL EVA Prep Bench
-      { uid: 'room_wrench_sw', itemKey: 'DA_TorqueWrench', category: 'melee', x: 5.35, y: -5.80, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 12, thrownByPlayer: false, charge: 100 },
-      { uid: 'room_cryo_sw', itemKey: 'DA_CryoValve', category: 'task', x: 5.35, y: -6.70, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -10, thrownByPlayer: false, charge: 100 },
+      { uid: 'room_wrench_sw', itemKey: 'DA_TorqueWrench', category: 'melee', x: 5.85, y: -8.30, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 12, thrownByPlayer: false, charge: 100 },
+      { uid: 'room_cryo_sw', itemKey: 'DA_CryoValve', category: 'task', x: 5.85, y: -9.40, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -10, thrownByPlayer: false, charge: 100 },
       // NE Supply Rack
-      { uid: 'room_bat_ne', itemKey: 'DA_Battery', category: 'task', x: 21.55, y: 10.45, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
-      // SE Fire & Storage Racks
-      { uid: 'room_pba_se', itemKey: 'DA_PbaMask', category: 'utility', x: 15.65, y: -5.20, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 18, thrownByPlayer: false, charge: 100 },
-      { uid: 'room_pfe_se', itemKey: 'DA_FireExtinguisher', category: 'task', x: 15.65, y: -6.20, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -25, thrownByPlayer: false, charge: 100 },
-      { uid: 'room_tape_se', itemKey: 'DA_DuctTapeKit', category: 'task', x: 21.35, y: -4.40, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 5, thrownByPlayer: false, charge: 100 },
+      { uid: 'room_bat_ne', itemKey: 'DA_Battery', category: 'task', x: 27.95, y: 13.30, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
+      // SE Storage Benches
+      { uid: 'room_pba_se', itemKey: 'DA_PbaMask', category: 'utility', x: 20.85, y: -4.48, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 18, thrownByPlayer: false, charge: 100 },
+      { uid: 'room_pfe_se', itemKey: 'DA_FireExtinguisher', category: 'task', x: 21.75, y: -4.48, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -25, thrownByPlayer: false, charge: 100 },
+      { uid: 'room_tape_se', itemKey: 'DA_DuctTapeKit', category: 'task', x: 27.45, y: -4.48, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 5, thrownByPlayer: false, charge: 100 },
     ];
   } else if (missionId === 'manifest_launch') {
     lightingMode = 'blueprint_launch';
     radioSpeaker = 'KATHERINE';
     radioEs =
-      'FASE 1 · PRE-VUELO Y ORION (LC-39B): Configura Manifiesto en Puente MEDS, recoge Llave EVA + Válvula Crio + Fusible, aborda la Cápsula Orion Sur, repara la falla RS-25, enciende los 5 sistemas y siéntate para despegar en 3D.';
+      'FASE 1 · ORION LC-39B: 1) Configura Manifiesto en Puente MEDS Norte. 2) Camina por la pasarela de abordaje hasta la Cápsula Orion Sur. 3) Abre y sella la escotilla girando el volante (101.3 kPa), jala la palanca de Purga Crio LOX/LH₂, activa el interruptor GNC 28V y siéntate para despegar.';
     radioEn =
-      'PHASE 1 · ORION PRE-FLIGHT (LC-39B): Configure MEDS Manifest, collect EVA Wrench + Cryo Valve + Emergency Fuse, board South Orion Capsule, repair RS-25 fault, power on all 5 overhead switches & strap in for 3D launch.';
+      'PHASE 1 · ORION LC-39B: 1) Configure MEDS Payload Manifest at North Deck. 2) Walk the boarding gantry to South Orion Capsule. 3) Open & seal hatch behind you (101.3 kPa), pull Cryo Purge LOX/LH₂ lever, arm GNC 28V switch & strap into seat for 3D liftoff.';
 
     stations = [
       ...coreSharedStations,
       {
         id: 'cabin_terminal',
         kind: 'cabin_terminal',
-        x: 9.00,
-        y: 12.58,
+        x: 11.10,
+        y: 15.20,
         z: 1.18,
         yawDeg: -90,
         labelEs: 'Telemetría MEDS 11-LCD',
@@ -1710,8 +1735,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'manifest_eclss',
         kind: 'manifest_eclss',
-        x: 9.25,
-        y: 10.80,
+        x: 11.65,
+        y: 13.15,
         z: 1.05,
         yawDeg: 0,
         labelEs: eclssChoice === 'closed_regen' ? 'Carga ECLSS: Reciclaje ISS (730 kg)' : 'Carga ECLSS: LiOH Abierto (9.3 kg/d)',
@@ -1724,8 +1749,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'manifest_power',
         kind: 'manifest_power',
-        x: 10.00,
-        y: 10.80,
+        x: 12.60,
+        y: 13.15,
         z: 1.05,
         yawDeg: 0,
         labelEs: powerChoice === 'fsp_40kw' ? 'Planta: FSP KRUSTY 40 kWe (5.8 t)' : 'Planta: Solar 20 kWe (Vulnerable 354h)',
@@ -1738,8 +1763,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'manifest_rover',
         kind: 'manifest_rover',
-        x: 10.75,
-        y: 10.80,
+        x: 13.55,
+        y: 13.15,
         z: 1.05,
         yawDeg: 0,
         labelEs: roverChoice === 'kilopower_rover' ? 'Movilidad: Rover FSP (17 h)' : 'Movilidad: Rover Solar/RTG (1 h)',
@@ -1752,12 +1777,12 @@ export function createInitialSpaceRoomState(
       {
         id: 'orion_hatch',
         kind: 'orion_hatch',
-        x: 10.00,
-        y: -4.55,
+        x: 12.60,
+        y: -9.60,
         z: 1.25,
         yawDeg: 0,
-        labelEs: 'Escotilla Orion · Abrir / Sellar Presión',
-        labelEn: 'Orion Side Hatch · Open / Seal Pressure',
+        labelEs: 'Escotilla Orion · Abrir / Sellar Volante Presión',
+        labelEn: 'Orion Side Hatch · Open / Seal Pressure Wheel',
         progress: 0,
         active: true,
         done: false,
@@ -1765,12 +1790,12 @@ export function createInitialSpaceRoomState(
       {
         id: 'orion_fault_panel',
         kind: 'orion_fault_panel',
-        x: 8.82,
-        y: -6.10,
+        x: 10.78,
+        y: -12.00,
         z: 1.18,
         yawDeg: 0,
-        labelEs: 'Bahía Orion Izq: Reparar Falla Crio / Fusible RS-25',
-        labelEn: 'Orion Port Bay: Repair Cryo / RS-25 Fuse Fault',
+        labelEs: 'Palanca 3D Purga Crio LOX/LH₂ (Preacondicionamiento RS-25)',
+        labelEn: '3D Cryo Purge Lever LOX/LH₂ (RS-25 Thermal Conditioning)',
         progress: 0,
         active: true,
         done: false,
@@ -1778,12 +1803,12 @@ export function createInitialSpaceRoomState(
       {
         id: 'orion_power_panel',
         kind: 'orion_power_panel',
-        x: 11.18,
-        y: -6.10,
+        x: 14.42,
+        y: -12.00,
         z: 1.18,
         yawDeg: 180,
-        labelEs: 'Tablero Orion Der: Encender 5 Sistemas y Checklist',
-        labelEn: 'Orion Stbd Panel: Power 5 Systems & Checklist',
+        labelEs: 'Interruptor 3D GNC (Guía, Navegación y Control 28V)',
+        labelEn: '3D GNC Switch (Guidance, Navigation & Control 28V)',
         progress: 0,
         active: true,
         done: false,
@@ -1791,8 +1816,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'orion_pilot_seat',
         kind: 'orion_pilot_seat',
-        x: 10.00,
-        y: -7.12,
+        x: 12.60,
+        y: -13.45,
         z: 1.05,
         yawDeg: -90,
         labelEs: 'Asiento Comandante Orion: Sentarse y Despegar en 3D',
@@ -1805,8 +1830,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'meds_stage_button',
         kind: 'meds_stage_button',
-        x: 10.00,
-        y: 12.58,
+        x: 12.60,
+        y: 15.20,
         z: 1.18,
         yawDeg: -90,
         labelEs: 'Simulador MEDS Norte (Referencia Etapas 1-5)',
@@ -1818,8 +1843,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'legacy_tablet_station',
         kind: 'legacy_tablet_station',
-        x: 11.45,
-        y: 12.58,
+        x: 14.40,
+        y: 15.20,
         z: 1.05,
         yawDeg: -90,
         labelEs: 'Nota de Legado #2 (Apollo 13 & ISS)',
@@ -1832,8 +1857,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'hatch_next_mission',
         kind: 'hatch_next_mission',
-        x: 8.65,
-        y: -4.20,
+        x: 9.20,
+        y: -4.80,
         z: 1.25,
         yawDeg: 0,
         labelEs: 'Esclusa Hangar Sur: Descender a Base Superficie (Fase 2)',
@@ -1846,13 +1871,13 @@ export function createInitialSpaceRoomState(
     ];
 
     worldItems = [
-      { uid: 'f1_card', itemKey: 'DA_AccessCard', category: 'utility', x: 8.65, y: 5.05, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
-      { uid: 'f1_efuse', itemKey: 'DA_EmergencyFuse', category: 'task', x: 8.65, y: 5.45, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 18, thrownByPlayer: false, charge: 100 },
-      { uid: 'f1_cryo', itemKey: 'DA_CryoValve', category: 'task', x: 5.35, y: -6.20, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -12, thrownByPlayer: false, charge: 100 },
-      { uid: 'f1_wrench', itemKey: 'DA_TorqueWrench', category: 'melee', x: 15.65, y: -5.60, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 25, thrownByPlayer: false, charge: 100 },
-      { uid: 'f1_pfe', itemKey: 'DA_FireExtinguisher', category: 'task', x: 21.35, y: -4.50, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
-      { uid: 'f1_bat', itemKey: 'DA_Battery', category: 'task', x: 21.55, y: 10.50, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
-      { uid: 'f1_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: 0.65, y: 1.65, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 12, thrownByPlayer: false, charge: 100 },
+      { uid: 'f1_card', itemKey: 'DA_AccessCard', category: 'utility', x: 10.52, y: 5.50, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
+      { uid: 'f1_efuse', itemKey: 'DA_EmergencyFuse', category: 'task', x: 10.52, y: 6.10, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 18, thrownByPlayer: false, charge: 100 },
+      { uid: 'f1_cryo', itemKey: 'DA_CryoValve', category: 'task', x: 5.85, y: -8.60, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -12, thrownByPlayer: false, charge: 100 },
+      { uid: 'f1_wrench', itemKey: 'DA_TorqueWrench', category: 'melee', x: 20.85, y: -4.48, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 25, thrownByPlayer: false, charge: 100 },
+      { uid: 'f1_pfe', itemKey: 'DA_FireExtinguisher', category: 'task', x: 27.45, y: -4.48, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
+      { uid: 'f1_bat', itemKey: 'DA_Battery', category: 'task', x: 27.95, y: 13.30, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
+      { uid: 'f1_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: -0.45, y: 1.85, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 12, thrownByPlayer: false, charge: 100 },
     ];
   } else if (missionId === 'act1_2_surface') {
     lightingMode = 'alert';
@@ -1872,8 +1897,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'cabin_terminal',
         kind: 'cabin_terminal',
-        x: 9.00,
-        y: 12.58,
+        x: 11.10,
+        y: 15.20,
         z: 1.18,
         yawDeg: -90,
         labelEs: 'Monitor Térmico y Radiación (Norte)',
@@ -1885,8 +1910,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'skylab_thermal_station',
         kind: 'skylab_thermal_station',
-        x: 19.68,
-        y: 2.05,
+        x: 25.95,
+        y: 2.25,
         z: 1.35,
         yawDeg: 180,
         labelEs: 'Panel Térmico Skylab / Apollo 13 (163 W/m² · Este)',
@@ -1898,8 +1923,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'power_charger',
         kind: 'power_charger',
-        x: 19.68,
-        y: 5.45,
+        x: 25.95,
+        y: 6.65,
         z: 1.08,
         yawDeg: 180,
         labelEs: 'Cargador Batería Auxiliar (Este)',
@@ -1912,8 +1937,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'spe_electrolyzer_station',
         kind: 'spe_electrolyzer_station',
-        x: 14.85,
-        y: 0.86,
+        x: 19.65,
+        y: 0.75,
         z: 1.35,
         yawDeg: 90,
         labelEs: 'Electrolizador SPE (2H₂O → 2H₂ + O₂ · 66.7% Pot.)',
@@ -1925,8 +1950,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'krusty_reactor_station',
         kind: 'krusty_reactor_station',
-        x: 16.25,
-        y: 6.16,
+        x: 20.65,
+        y: 7.25,
         z: 1.18,
         yawDeg: -90,
         labelEs: 'Reactor KRUSTY 40 kWe & Radiador 133.4 m²',
@@ -1938,8 +1963,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'legacy_tablet_station',
         kind: 'legacy_tablet_station',
-        x: 11.45,
-        y: 12.58,
+        x: 14.40,
+        y: 15.20,
         z: 1.05,
         yawDeg: -90,
         labelEs: 'Nota de Legado #3 & #4 (Skylab / KRUSTY)',
@@ -1952,8 +1977,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'hatch_next_mission',
         kind: 'hatch_next_mission',
-        x: 10.00,
-        y: -7.12,
+        x: 12.60,
+        y: -13.45,
         z: 1.25,
         yawDeg: 90,
         labelEs: 'Cápsula Orion Sur: Misión Invernadero APH/BIOS-3 (Acto 3)',
@@ -1966,13 +1991,13 @@ export function createInitialSpaceRoomState(
     ];
 
     worldItems = [
-      { uid: 'a1_tape', itemKey: 'DA_DuctTapeKit', category: 'task', x: 17.05, y: 3.55, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 10, thrownByPlayer: false, charge: 100 },
-      { uid: 'a1_screw', itemKey: 'DA_ScrewDriver', category: 'melee', x: 17.65, y: 3.45, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 35, thrownByPlayer: false, charge: 100 },
-      { uid: 'a1_efuse', itemKey: 'DA_EmergencyFuse', category: 'task', x: 8.65, y: 5.05, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -20, thrownByPlayer: false, charge: 100 },
-      { uid: 'a1_bat', itemKey: 'DA_Battery', category: 'task', x: 21.55, y: 10.45, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 45 },
-      { uid: 'a1_wrench', itemKey: 'DA_TorqueWrench', category: 'melee', x: 5.35, y: -5.90, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 14, thrownByPlayer: false, charge: 100 },
-      { uid: 'a1_pfe', itemKey: 'DA_FireExtinguisher', category: 'task', x: 15.65, y: -5.50, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -10, thrownByPlayer: false, charge: 100 },
-      { uid: 'a1_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: 0.65, y: 1.65, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 8, thrownByPlayer: false, charge: 100 },
+      { uid: 'a1_tape', itemKey: 'DA_DuctTapeKit', category: 'task', x: 21.75, y: 3.85, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 10, thrownByPlayer: false, charge: 100 },
+      { uid: 'a1_screw', itemKey: 'DA_ScrewDriver', category: 'melee', x: 22.55, y: 4.15, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 35, thrownByPlayer: false, charge: 100 },
+      { uid: 'a1_efuse', itemKey: 'DA_EmergencyFuse', category: 'task', x: 10.52, y: 5.50, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -20, thrownByPlayer: false, charge: 100 },
+      { uid: 'a1_bat', itemKey: 'DA_Battery', category: 'task', x: 27.95, y: 13.30, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 45 },
+      { uid: 'a1_wrench', itemKey: 'DA_TorqueWrench', category: 'melee', x: 5.85, y: -8.30, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 14, thrownByPlayer: false, charge: 100 },
+      { uid: 'a1_pfe', itemKey: 'DA_FireExtinguisher', category: 'task', x: 20.85, y: -4.48, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -10, thrownByPlayer: false, charge: 100 },
+      { uid: 'a1_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: -0.45, y: 1.85, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 8, thrownByPlayer: false, charge: 100 },
     ];
   } else if (missionId === 'act3_greenhouse') {
     lightingMode = 'spectral_magenta';
@@ -1991,8 +2016,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'cabin_terminal',
         kind: 'cabin_terminal',
-        x: 9.00,
-        y: 12.58,
+        x: 11.10,
+        y: 15.20,
         z: 1.18,
         yawDeg: -90,
         labelEs: 'Control GLA APH (180 Sensores)',
@@ -2004,8 +2029,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'aph_chamber_station',
         kind: 'aph_chamber_station',
-        x: 17.35,
-        y: 6.16,
+        x: 21.55,
+        y: 7.25,
         z: 1.28,
         yawDeg: -90,
         labelEs: 'Cámara Botánica APH / Veggie (VEG-05 · Este)',
@@ -2017,8 +2042,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'compost_valve_station',
         kind: 'compost_valve_station',
-        x: 14.85,
-        y: 6.16,
+        x: 19.45,
+        y: 7.25,
         z: 1.35,
         yawDeg: -90,
         labelEs: 'Válvula Compostaje Microbiano (Drenaje O₂)',
@@ -2030,7 +2055,7 @@ export function createInitialSpaceRoomState(
       {
         id: 'bios3_buffer_station',
         kind: 'bios3_buffer_station',
-        x: 19.68,
+        x: 25.95,
         y: 1.35,
         z: 1.15,
         yawDeg: 180,
@@ -2043,8 +2068,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'legacy_tablet_station',
         kind: 'legacy_tablet_station',
-        x: 11.45,
-        y: 12.58,
+        x: 14.40,
+        y: 15.20,
         z: 1.05,
         yawDeg: -90,
         labelEs: 'Nota de Legado #5 (Biosphere 2 vs BIOS-3)',
@@ -2057,8 +2082,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'hatch_next_mission',
         kind: 'hatch_next_mission',
-        x: 10.00,
-        y: -7.12,
+        x: 12.60,
+        y: -13.45,
         z: 1.25,
         yawDeg: 90,
         labelEs: 'Cápsula Orion Sur: Despliegue Rover & Tormenta Solar (Acto 4)',
@@ -2071,11 +2096,11 @@ export function createInitialSpaceRoomState(
     ];
 
     worldItems = [
-      { uid: 'a3_clay', itemKey: 'DA_ClayPillow', category: 'task', x: 17.00, y: 3.55, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
-      { uid: 'a3_jar', itemKey: 'DA_WaterJar', category: 'task', x: 5.35, y: -6.10, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 15, thrownByPlayer: false, charge: 100 },
-      { uid: 'a3_screw', itemKey: 'DA_ScrewDriver', category: 'melee', x: 8.65, y: 5.20, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 40, thrownByPlayer: false, charge: 100 },
-      { uid: 'a3_sample', itemKey: 'DA_Sample', category: 'task', x: 21.55, y: 10.45, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -15, thrownByPlayer: false, charge: 100 },
-      { uid: 'a3_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: 0.65, y: 1.65, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 5, thrownByPlayer: false, charge: 100 },
+      { uid: 'a3_clay', itemKey: 'DA_ClayPillow', category: 'task', x: 21.75, y: 3.85, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
+      { uid: 'a3_jar', itemKey: 'DA_WaterJar', category: 'task', x: 5.85, y: -8.60, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 15, thrownByPlayer: false, charge: 100 },
+      { uid: 'a3_screw', itemKey: 'DA_ScrewDriver', category: 'melee', x: 10.52, y: 5.85, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 40, thrownByPlayer: false, charge: 100 },
+      { uid: 'a3_sample', itemKey: 'DA_Sample', category: 'task', x: 27.95, y: 13.30, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -15, thrownByPlayer: false, charge: 100 },
+      { uid: 'a3_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: -0.45, y: 1.85, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 5, thrownByPlayer: false, charge: 100 },
     ];
   } else if (missionId === 'act4_storm_rover') {
     lightingMode = 'alert';
@@ -2091,8 +2116,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'cabin_terminal',
         kind: 'cabin_terminal',
-        x: 9.00,
-        y: 12.58,
+        x: 11.10,
+        y: 15.20,
         z: 1.18,
         yawDeg: -90,
         labelEs: 'Monitor Radiación SPE (Límite 250 mSv / 30d)',
@@ -2104,8 +2129,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'rover_cockpit_station',
         kind: 'rover_cockpit_station',
-        x: 10.85,
-        y: 12.58,
+        x: 13.60,
+        y: 15.20,
         z: 1.18,
         yawDeg: -90,
         labelEs: 'Consola Rover Presurizado 6,000 kg (Puente Norte)',
@@ -2117,8 +2142,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'regolith_shield_station',
         kind: 'regolith_shield_station',
-        x: 19.68,
-        y: 2.65,
+        x: 25.95,
+        y: 2.95,
         z: 1.35,
         yawDeg: 180,
         labelEs: 'Blindaje Regolito Compacto (2.0 m · 300 g/cm² · Este)',
@@ -2130,8 +2155,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'mission_ending_station',
         kind: 'mission_ending_station',
-        x: 10.00,
-        y: 10.80,
+        x: 12.60,
+        y: 13.15,
         z: 1.06,
         yawDeg: 0,
         labelEs: 'Consola Puente MEDS: Veredicto Final AETHER-4',
@@ -2143,8 +2168,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'legacy_tablet_station',
         kind: 'legacy_tablet_station',
-        x: 11.45,
-        y: 12.58,
+        x: 14.40,
+        y: 15.20,
         z: 1.05,
         yawDeg: -90,
         labelEs: 'Nota de Legado #6 (Tormenta Agosto 1972)',
@@ -2157,8 +2182,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'hatch_next_mission',
         kind: 'hatch_next_mission',
-        x: 10.00,
-        y: -7.12,
+        x: 12.60,
+        y: -13.45,
         z: 1.25,
         yawDeg: 90,
         labelEs: 'Cápsula Orion Sur: Emergencia Apollo 13 · Aquarius (Histórica 1)',
@@ -2171,10 +2196,10 @@ export function createInitialSpaceRoomState(
     ];
 
     worldItems = [
-      { uid: 'a4_regolith', itemKey: 'DA_RegolithSample', category: 'task', x: 8.65, y: 5.30, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
-      { uid: 'a4_card', itemKey: 'DA_AccessCard', category: 'utility', x: 17.25, y: 3.55, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 15, thrownByPlayer: false, charge: 100 },
-      { uid: 'a4_regolith2', itemKey: 'DA_RegolithSample', category: 'task', x: 15.65, y: -5.40, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 10, thrownByPlayer: false, charge: 100 },
-      { uid: 'a4_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: 0.65, y: 1.65, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 6, thrownByPlayer: false, charge: 100 },
+      { uid: 'a4_regolith', itemKey: 'DA_RegolithSample', category: 'task', x: 10.52, y: 5.85, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 0, thrownByPlayer: false, charge: 100 },
+      { uid: 'a4_card', itemKey: 'DA_AccessCard', category: 'utility', x: 22.20, y: 4.00, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 15, thrownByPlayer: false, charge: 100 },
+      { uid: 'a4_regolith2', itemKey: 'DA_RegolithSample', category: 'task', x: 20.85, y: -4.48, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 10, thrownByPlayer: false, charge: 100 },
+      { uid: 'a4_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: -0.45, y: 1.85, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 6, thrownByPlayer: false, charge: 100 },
     ];
   } else if (missionId === 'apollo13_aquarius') {
     lightingMode = 'circadian';
@@ -2196,8 +2221,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'a13_cryo_stir_panel',
         kind: 'a13_cryo_stir_panel',
-        x: 11.45,
-        y: -5.80,
+        x: 16.25,
+        y: -4.55,
         z: 1.18,
         yawDeg: 180,
         labelEs: 'Panel SM Cryo O₂: Agitar Tanque #2 / Medir Buses A-B',
@@ -2209,8 +2234,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'a13_aquarius_transfer',
         kind: 'a13_aquarius_transfer',
-        x: 10.00,
-        y: 12.60,
+        x: 12.60,
+        y: 15.20,
         z: 1.18,
         yawDeg: -90,
         labelEs: 'Consola LM Aquarius: Migrar a 12 A (336 W) y Ración 0.2 L/d',
@@ -2222,8 +2247,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'a13_mailbox_bench',
         kind: 'a13_mailbox_bench',
-        x: 17.35,
-        y: 3.55,
+        x: 22.20,
+        y: 4.00,
         z: 1.05,
         yawDeg: 0,
         labelEs: 'Banco CO₂ "Mailbox": Plan de Vuelo + Manguera + Cinta',
@@ -2235,8 +2260,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'wall_manual_station',
         kind: 'wall_manual_station',
-        x: 16.52,
-        y: 6.80,
+        x: 20.45,
+        y: 7.25,
         z: 1.38,
         yawDeg: -90,
         labelEs: 'Manual Técnico Apollo 13 (LM-7 Aquarius)',
@@ -2249,8 +2274,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'hatch_next_mission',
         kind: 'hatch_next_mission',
-        x: 10.00,
-        y: -7.12,
+        x: 12.60,
+        y: -13.45,
         z: 1.25,
         yawDeg: 90,
         labelEs: 'Cápsula Orion Sur: Reentrada Pacífico → STS-120 EVA-4',
@@ -2263,12 +2288,12 @@ export function createInitialSpaceRoomState(
     ];
 
     worldItems = [
-      { uid: 'a13_plan', itemKey: 'DA_FlightPlanCard', category: 'task', x: 2.85, y: 6.55, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 5, thrownByPlayer: false, charge: 100 },
-      { uid: 'a13_hose', itemKey: 'DA_SuitHose', category: 'task', x: 5.35, y: -6.10, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 18, thrownByPlayer: false, charge: 100 },
-      { uid: 'a13_tape', itemKey: 'DA_DuctTapeKit', category: 'task', x: 8.65, y: 5.10, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -10, thrownByPlayer: false, charge: 100 },
-      { uid: 'a13_screw', itemKey: 'DA_ScrewDriver', category: 'melee', x: 17.55, y: 3.45, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 28, thrownByPlayer: false, charge: 100 },
-      { uid: 'a13_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: 0.65, y: 1.65, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 10, thrownByPlayer: false, charge: 100 },
-      { uid: 'a13_card', itemKey: 'DA_AccessCard', category: 'utility', x: 21.55, y: 10.45, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -15, thrownByPlayer: false, charge: 100 },
+      { uid: 'a13_plan', itemKey: 'DA_FlightPlanCard', category: 'task', x: 2.35, y: 8.05, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 5, thrownByPlayer: false, charge: 100 },
+      { uid: 'a13_hose', itemKey: 'DA_SuitHose', category: 'task', x: 5.85, y: -8.60, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 18, thrownByPlayer: false, charge: 100 },
+      { uid: 'a13_tape', itemKey: 'DA_DuctTapeKit', category: 'task', x: 10.52, y: 5.50, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -10, thrownByPlayer: false, charge: 100 },
+      { uid: 'a13_screw', itemKey: 'DA_ScrewDriver', category: 'melee', x: 22.55, y: 4.10, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 28, thrownByPlayer: false, charge: 100 },
+      { uid: 'a13_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: -0.45, y: 1.85, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 10, thrownByPlayer: false, charge: 100 },
+      { uid: 'a13_card', itemKey: 'DA_AccessCard', category: 'utility', x: 27.95, y: 13.30, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -15, thrownByPlayer: false, charge: 100 },
     ];
   } else {
     // sts120_p6_solar
@@ -2287,8 +2312,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'sts120_array_console',
         kind: 'sts120_array_console',
-        x: 9.50,
-        y: 12.58,
+        x: 11.80,
+        y: 15.20,
         z: 1.18,
         yawDeg: -90,
         labelEs: 'Consola P6-4B (MEDS): Diagnosticar Desgarro 2.5 ft · 160V DC',
@@ -2300,8 +2325,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'sts120_cufflink_bench',
         kind: 'sts120_cufflink_bench',
-        x: 17.35,
-        y: 3.55,
+        x: 22.20,
+        y: 4.00,
         z: 1.05,
         yawDeg: 0,
         labelEs: 'Banco Fabricación Truss: Armar 5 Cufflinks Aluminio',
@@ -2313,8 +2338,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'sts120_obss_repair',
         kind: 'sts120_obss_repair',
-        x: 12.35,
-        y: -3.55,
+        x: 9.10,
+        y: -4.30,
         z: 1.22,
         yawDeg: 180,
         labelEs: 'Sitio Canadarm2 + OBSS (90 ft): Cortar Cable, Instalar Cufflinks y Desplegar Ala',
@@ -2326,8 +2351,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'wall_manual_station',
         kind: 'wall_manual_station',
-        x: 16.52,
-        y: 6.80,
+        x: 20.45,
+        y: 7.25,
         z: 1.38,
         yawDeg: -90,
         labelEs: 'Manual EVA-4 STS-120 (P6-4B / 160V DC)',
@@ -2340,8 +2365,8 @@ export function createInitialSpaceRoomState(
       {
         id: 'hatch_next_mission',
         kind: 'hatch_next_mission',
-        x: 10.00,
-        y: -7.12,
+        x: 12.60,
+        y: -13.45,
         z: 1.25,
         yawDeg: 90,
         labelEs: 'Cápsula Orion Sur: Regresar a Tierra (Entrenamiento JSC)',
@@ -2354,11 +2379,11 @@ export function createInitialSpaceRoomState(
     ];
 
     worldItems = [
-      { uid: 'sts_cutter', itemKey: 'DA_InsulatedCutter', category: 'task', x: 5.35, y: -6.20, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 14, thrownByPlayer: false, charge: 100 },
-      { uid: 'sts_tape', itemKey: 'DA_DuctTapeKit', category: 'task', x: 8.65, y: 5.20, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -8, thrownByPlayer: false, charge: 100 },
-      { uid: 'sts_screw', itemKey: 'DA_ScrewDriver', category: 'melee', x: 17.55, y: 3.45, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 25, thrownByPlayer: false, charge: 100 },
-      { uid: 'sts_wrench', itemKey: 'DA_TorqueWrench', category: 'melee', x: 15.65, y: -5.60, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -16, thrownByPlayer: false, charge: 100 },
-      { uid: 'sts_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: 0.65, y: 1.65, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 4, thrownByPlayer: false, charge: 100 },
+      { uid: 'sts_cutter', itemKey: 'DA_InsulatedCutter', category: 'task', x: 5.85, y: -8.60, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 14, thrownByPlayer: false, charge: 100 },
+      { uid: 'sts_tape', itemKey: 'DA_DuctTapeKit', category: 'task', x: 10.52, y: 5.50, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -8, thrownByPlayer: false, charge: 100 },
+      { uid: 'sts_screw', itemKey: 'DA_ScrewDriver', category: 'melee', x: 22.55, y: 4.10, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: 25, thrownByPlayer: false, charge: 100 },
+      { uid: 'sts_wrench', itemKey: 'DA_TorqueWrench', category: 'melee', x: 20.85, y: -4.48, z: 0.97, vx: 0, vy: 0, vz: 0, yawDeg: -16, thrownByPlayer: false, charge: 100 },
+      { uid: 'sts_pouch', itemKey: 'DA_WaterPouch', category: 'utility', x: -0.45, y: 1.85, z: 1.00, vx: 0, vy: 0, vz: 0, yawDeg: 4, thrownByPlayer: false, charge: 100 },
     ];
   }
 
@@ -2370,6 +2395,8 @@ export function createInitialSpaceRoomState(
     shutterOpen,
     orionHatchOpen: missionId !== 'manifest_launch',
     orionHatchSealed: missionId !== 'manifest_launch',
+    orionCryoPurged: missionId !== 'manifest_launch',
+    orionGncArmed: missionId !== 'manifest_launch',
     orionLevelsChecked: missionId !== 'manifest_launch',
     playerInsideOrion: false,
     sleeping: false,
@@ -2559,8 +2586,8 @@ export function stepSpaceRoomPlayer(
     if (!next.grounded || next.vz > 0) {
       next.vz -= Math.max(1.62, gravityMs2) * h;
       next.z += next.vz * h;
-      if (next.z > 1.85) {
-        next.z = 1.85;
+      if (next.z > 0.66) {
+        next.z = 0.66;
         if (next.vz > 0) next.vz = 0;
       }
       if (next.z <= 0) {
@@ -2744,7 +2771,7 @@ export function stepSpaceRoomSimulation(
   }
 
   // Step automatic sliding bulkhead doors (corridors auto-open; Orion Hatch is manual)
-  sim.playerInsideOrion = player.y < -4.55 && player.x >= 8.15 && player.x <= 11.85;
+  sim.playerInsideOrion = player.y < -9.60 && player.x >= 9.75 && player.x <= 15.45;
   for (const d of sim.doors) {
     const dist = Math.hypot(player.x - d.x, player.y - d.y);
     const targetOpen = d.id === 'door_orion_hatch' ? (sim.orionHatchOpen ? 1 : 0) : dist < 2.85 ? 1 : 0;
@@ -3331,13 +3358,27 @@ export function interactRoomStation(
           msgEn: 'Close and seal the Orion Side Hatch behind you first (101.3 kPa)',
         };
       }
+      sim.orionCryoPurged = true;
+      sim.objectives.preflightRepaired = true;
+      st.done = true;
+      st.progress = 100;
+      sim.activeRadio = {
+        speakerId: 'KATHERINE',
+        textEs:
+          'PURGA CRIO LOX/LH₂ COMPLETA: Al jalar esta palanca limpiamos humedad/aire con Helio inerte y pre-enfriamos las líneas de Oxígeno Líquido (-183 °C) e Hidrógeno (-253 °C) para evitar cavitación o ruptura térmica en los motores RS-25 al encender. Ahora activa el interruptor GNC en el panel derecho.',
+        textEn:
+          'CRYO PURGE LOX/LH₂ COMPLETE: Pulling this lever flushes moisture/air with inert Helium and chills Liquid Oxygen (-183 °C) & Hydrogen (-253 °C) manifolds so RS-25 turbopumps don’t suffer thermal shock or cavitation at ignition. Next: flip the GNC switch on the starboard panel.',
+        timestampSec: sim.elapsedSec,
+      };
       return {
-        handItem,
+        handItem:
+          handItem && (handItem.itemKey === 'DA_CryoValve' || handItem.itemKey === 'DA_EmergencyFuse')
+            ? null
+            : handItem,
         animType: 'use',
-        tone: 'warn',
-        openOrionPreflight: 'fault_repair',
-        msgEs: 'Abriendo Bahía Crio / Fusible RS-25 de la Cápsula Orion...',
-        msgEn: 'Opening Orion Cryo Valve & RS-25 Fuse Repair Bay...',
+        tone: 'ok',
+        msgEs: 'Palanca 3D Purga Crio jalada (LOX -183 °C / LH₂ -253 °C nominal) — Activa GNC en panel derecho.',
+        msgEn: '3D Cryo Purge lever pulled (LOX -183 °C / LH₂ -253 °C nominal) — Arm GNC on starboard panel.',
       };
     }
 
@@ -3356,17 +3397,29 @@ export function interactRoomStation(
           handItem,
           animType: 'reach',
           tone: 'warn',
-          msgEs: 'Repara primero la fuga criogénica / fusible RS-25 en el panel izquierdo de Orion',
-          msgEn: 'Repair the RS-25 cryo valve & HV fuse on Orion port panel first',
+          msgEs: 'Jala primero la Palanca 3D de Purga Crio (LOX/LH₂) en el panel izquierdo de Orion',
+          msgEn: 'Pull the 3D Cryo Purge lever (LOX/LH₂) on Orion port panel first',
         };
       }
+      sim.orionGncArmed = true;
+      sim.objectives.preflightSystemsOn = true;
+      sim.orionLevelsChecked = true;
+      st.done = true;
+      st.progress = 100;
+      sim.activeRadio = {
+        speakerId: 'KATHERINE',
+        textEs:
+          'GNC ARMADO (Guía, Navegación y Control · Bus 28V DC): El GNC combina giróscopos/acelerómetros IMU, rastreadores estelares y computadoras de vuelo para saber posición/actitud exacta y corregir la trayectoria durante el ascenso (Max-Q). Telemetría 20.9% O₂ · 101.3 kPa verificada. ¡Siéntate en proa para despegar!',
+        textEn:
+          'GNC ARMED (Guidance, Navigation & Control · 28V DC Bus): GNC fuses IMU gyroscopes/accelerometers, star trackers, and flight computers to steer attitude through Max-Q and orbit. Cabin 20.9% O₂ / 101.3 kPa verified. Strap into the Commander seat for 3D liftoff!',
+        timestampSec: sim.elapsedSec,
+      };
       return {
         handItem,
         animType: 'use',
         tone: 'ok',
-        openOrionPreflight: 'power_switches',
-        msgEs: 'Abriendo Verificación de Niveles y 5 Interruptores Orion...',
-        msgEn: 'Opening Orion Telemetry Levels & 5-Switch Overhead Panel...',
+        msgEs: 'Interruptor 3D GNC (Guía, Navegación y Control 28V) ACTIVADO — Ve al Asiento del Comandante.',
+        msgEn: '3D GNC (Guidance, Navigation & Control 28V) switch ARMED — Board Commander Seat.',
       };
     }
 
@@ -4901,7 +4954,7 @@ export function getCurrentGuidedStep(
       if (hasInv('DA_Battery')) {
         const invBat = collectInventoryKeys(handItem, inventoryItems).find((i) => i.itemKey === 'DA_Battery');
         const full = (invBat?.charge ?? 0) >= 95;
-        const tgt = full ? stPos('power_box', 19.68, 4.85) : stPos('power_charger', 19.68, 5.45);
+        const tgt = full ? stPos('power_box', 25.95, 5.95) : stPos('power_charger', 25.95, 6.65);
         return makeStep(
           tgt.x,
           tgt.y,
@@ -4928,8 +4981,8 @@ export function getCurrentGuidedStep(
       if (box && !box.hasBattery) {
         const batItem = sim.worldItems.find((w) => w.itemKey === 'DA_Battery');
         return makeStep(
-          batItem?.x ?? 8.65,
-          batItem?.y ?? 5.55,
+          batItem?.x ?? 10.52,
+          batItem?.y ?? 6.25,
           'Fase 0 (1/10) · Recoger Batería',
           'Phase 0 (1/10) · Grab Battery',
           'Recoge la Batería Li-Ion en la mesa del Pasillo Central [Clic / E] o en el Estante Noreste.',
@@ -4949,15 +5002,15 @@ export function getCurrentGuidedStep(
         }
         const fuseItem = sim.worldItems.find((w) => w.itemKey === 'DA_Fuse');
         return makeStep(
-          fuseItem?.x ?? 8.65,
-          fuseItem?.y ?? 4.82,
+          fuseItem?.x ?? 10.52,
+          fuseItem?.y ?? 5.88,
           'Fase 0 (1/10) · Recoger Fusible',
           'Phase 0 (1/10) · Grab Fuse',
           'Recoge el Fusible en el Pasillo Central (o pídeselo al Ing. Conrad).',
           'Pick up the Fuse on the Central Corridor bench (or ask Eng. Conrad).'
         );
       }
-      const lever = stPos('power_lever', 19.68, 4.22);
+      const lever = stPos('power_lever', 25.95, 5.05);
       return makeStep(
         lever.x,
         lever.y,
@@ -4983,8 +5036,8 @@ export function getCurrentGuidedStep(
         }
         const sdItem = sim.worldItems.find((w) => w.itemKey === 'DA_ScrewDriver');
         return makeStep(
-          sdItem?.x ?? 8.65,
-          sdItem?.y ?? 5.05,
+          sdItem?.x ?? 10.52,
+          sdItem?.y ?? 5.50,
           'Fase 0 (2/10) · Mantenimiento ECLSS',
           'Phase 0 (2/10) · ECLSS Repair',
           'Toma el Destornillador de la mesa central y abre el Conducto CO₂ en el Lab Este.',
@@ -4993,7 +5046,7 @@ export function getCurrentGuidedStep(
       }
       const filterInv = collectInventoryKeys(handItem, inventoryItems).find((i) => i.itemKey === 'DA_VentFilter');
       if (filterInv) {
-        const tgt = filterInv.clean ? stPos('eclss_vent', 15.60, 0.86) : stPos('filter_regenerator', 16.95, 0.86);
+        const tgt = filterInv.clean ? stPos('eclss_vent', 19.65, 0.75) : stPos('filter_regenerator', 21.35, 0.75);
         return makeStep(
           tgt.x,
           tgt.y,
@@ -5007,7 +5060,7 @@ export function getCurrentGuidedStep(
             : 'Equip dirty LiOH Cartridge [1-5] at the adjacent East Lab Regenerator.'
         );
       }
-      const ventP = stPos('eclss_vent', 15.60, 0.86);
+      const ventP = stPos('eclss_vent', 19.65, 0.75);
       return makeStep(
         ventP.x,
         ventP.y,
@@ -5019,7 +5072,7 @@ export function getCurrentGuidedStep(
     }
 
     if (!sim.objectives.mealPrepared) {
-      const heater = stPos('food_heater', 0.52, 1.38);
+      const heater = stPos('food_heater', 0.35, 1.25);
       return makeStep(
         heater.x,
         heater.y,
@@ -5031,7 +5084,7 @@ export function getCurrentGuidedStep(
     }
 
     if (!sim.objectives.exerciseCalibrated) {
-      const tm = stPos('treadmill_station', 2.25, 5.05);
+      const tm = stPos('treadmill_station', 2.32, 5.92);
       return makeStep(
         tm.x,
         tm.y,
@@ -5043,7 +5096,7 @@ export function getCurrentGuidedStep(
     }
 
     if (!sim.objectives.whcInspected) {
-      const whc = stPos('whc_hygiene_station', 5.30, 6.16);
+      const whc = stPos('whc_hygiene_station', 5.96, 7.05);
       return makeStep(
         whc.x,
         whc.y,
@@ -5055,7 +5108,7 @@ export function getCurrentGuidedStep(
     }
 
     if (!sim.objectives.crisisSolved) {
-      const cq = stPos('crisis_quiz_station', 8.92, 5.15);
+      const cq = stPos('crisis_quiz_station', 11.15, 5.95);
       return makeStep(
         cq.x,
         cq.y,
@@ -5067,7 +5120,7 @@ export function getCurrentGuidedStep(
     }
 
     if (!sim.objectives.nblCertified) {
-      const nbl = stPos('nbl_pool_station', 3.85, -4.25);
+      const nbl = stPos('nbl_pool_station', 4.70, -6.40);
       return makeStep(
         nbl.x,
         nbl.y,
@@ -5079,7 +5132,7 @@ export function getCurrentGuidedStep(
     }
 
     if (!sim.objectives.computerCertified) {
-      const cmp = stPos('computer_formulas_station', 16.52, 12.85);
+      const cmp = stPos('computer_formulas_station', 21.35, 16.30);
       return makeStep(
         cmp.x,
         cmp.y,
@@ -5091,7 +5144,7 @@ export function getCurrentGuidedStep(
     }
 
     if (!sim.objectives.centrifugeCertified) {
-      const cen = stPos('centrifuge_station', 18.60, 11.45);
+      const cen = stPos('centrifuge_station', 23.00, 15.70);
       return makeStep(
         cen.x,
         cen.y,
@@ -5103,7 +5156,7 @@ export function getCurrentGuidedStep(
     }
 
     if (!sim.objectives.fireDrillCertified) {
-      const fr = stPos('eclss_fire_station', 18.90, -6.88);
+      const fr = stPos('eclss_fire_station', 25.60, -10.60);
       return makeStep(
         fr.x,
         fr.y,
@@ -5114,7 +5167,7 @@ export function getCurrentGuidedStep(
       );
     }
 
-    const hatch = stPos('hatch_next_mission', 10.0, -7.12);
+    const hatch = stPos('hatch_next_mission', 12.60, -13.45);
     return makeStep(
       hatch.x,
       hatch.y,
@@ -5127,7 +5180,7 @@ export function getCurrentGuidedStep(
 
   if (sim.currentMissionId === 'manifest_launch') {
     if (!sim.objectives.manifestConfigured) {
-      const me = stPos('manifest_eclss', 9.25, 10.80);
+      const me = stPos('manifest_eclss', 11.65, 13.15);
       return makeStep(
         me.x,
         me.y,
@@ -5137,101 +5190,60 @@ export function getCurrentGuidedStep(
         'Go to North MEDS Deck and configure ISS ECLSS, 40 kWe KRUSTY & FSP Rover architectures.'
       );
     }
-    if (!sim.objectives.preflightRepaired) {
-      if (!hasInv('DA_CryoValve')) {
-        const cryo = sim.worldItems.find((w) => w.itemKey === 'DA_CryoValve');
-        if (cryo) {
-          return makeStep(
-            cryo.x,
-            cryo.y,
-            'Fase 1 (2/6) · Recoger Válvula Crio LOX/LH₂',
-            'Phase 1 (2/6) · Collect Cryo Valve',
-            'Ve al banco EVA de la Piscina NBL (Suroeste) y guarda la Válvula Criogénica LOX/LH₂.',
-            'Walk to SW NBL EVA bench and collect the LOX/LH₂ Cryogenic Valve.'
-          );
-        }
-      }
-      if (!hasInv('DA_EmergencyFuse')) {
-        const fuse = sim.worldItems.find((w) => w.itemKey === 'DA_EmergencyFuse');
-        if (fuse) {
-          return makeStep(
-            fuse.x,
-            fuse.y,
-            'Fase 1 (2/6) · Recoger Fusible RS-25',
-            'Phase 1 (2/6) · Collect RS-25 Fuse',
-            'Recoge el Fusible de Emergencia RS-25 en la mesa del Núcleo Central.',
-            'Pick up the RS-25 Emergency Fuse on the Central Hub tool bench.'
-          );
-        }
-      }
-      if (!hasInv('DA_TorqueWrench')) {
-        const wr = sim.worldItems.find((w) => w.itemKey === 'DA_TorqueWrench');
-        if (wr) {
-          return makeStep(
-            wr.x,
-            wr.y,
-            'Fase 1 (2/6) · Recoger Llave EVA',
-            'Phase 1 (2/6) · Collect EVA Wrench',
-            'Recoge la Llave Dinamométrica EVA en el Almacén Sureste (cámara de entrenamiento).',
-            'Pick up the EVA Torque Wrench in the Southeast Storage Wing.'
-          );
-        }
-      }
-    }
-    const hatchSt = stPos('orion_hatch', 10.00, -4.55);
+    const hatchSt = stPos('orion_hatch', 12.60, -9.60);
     if (!sim.playerInsideOrion) {
       if (!sim.orionHatchOpen) {
         return makeStep(
           hatchSt.x,
           hatchSt.y,
-          'Fase 1 (3/6) · Bahía de Lanzamiento -> Abrir Escotilla',
-          'Phase 1 (3/6) · Launch Bay -> Open Hatch',
-          'Camina por la pasarela de la Bahía de Lanzamiento (Hangar Sur) hasta la Escotilla Orion y ábrela [E / Clic].',
-          'Walk along South Hangar Launch Bay Gantry to Orion Side Hatch and open it [E / Click].'
+          'Fase 1 (2/6) · Pasarela LC-39B -> Abrir Escotilla',
+          'Phase 1 (2/6) · LC-39B Gantry -> Open Hatch',
+          'Camina por la pasarela de abordaje del Hangar Sur hasta la Escotilla Orion y ábrela [E / Clic].',
+          'Walk across the South Hangar boarding gantry to the Orion Side Hatch and open it [E / Click].'
         );
       }
       return makeStep(
-        10.00,
-        -5.60,
-        'Fase 1 (3/6) · Abordar Cápsula Orion',
-        'Phase 1 (3/6) · Board Orion Capsule',
-        'Camina hacia el interior de la Cápsula Orion por la escotilla abierta.',
-        'Walk forward through the open hatch into the Orion Crew Module.'
+        12.60,
+        -11.20,
+        'Fase 1 (2/6) · Entrar a Cápsula Orion',
+        'Phase 1 (2/6) · Enter Orion Capsule',
+        'Cruza la escotilla abierta hacia el interior 3D de la Cápsula Orion.',
+        'Step through the open hatch inside the 3D Orion Crew Module.'
       );
     }
     if (!sim.orionHatchSealed) {
       return makeStep(
         hatchSt.x,
         hatchSt.y,
-        'Fase 1 (4/6) · Cerrar y Sellar Escotilla Orion',
-        'Phase 1 (4/6) · Close & Seal Orion Hatch',
-        'Da media vuelta y cierra la Escotilla de Orion atrás tuyo [E / Clic] para sellar la cabina a 101.3 kPa.',
-        'Turn around and close the Orion Side Hatch behind you [E / Click] to seal cabin at 101.3 kPa.'
+        'Fase 1 (3/6) · Cerrar y Girar Volante Escotilla',
+        'Phase 1 (3/6) · Close & Seal Hatch Wheel',
+        'Da media vuelta y presiona [E / Clic] en la Escotilla Orion atrás tuyo para girarla y sellar 101.3 kPa.',
+        'Turn around and press [E / Click] on the Orion Hatch behind you to spin wheel & seal at 101.3 kPa.'
       );
     }
     if (!sim.objectives.preflightRepaired) {
-      const faultSt = stPos('orion_fault_panel', 8.82, -6.10);
+      const faultSt = stPos('orion_fault_panel', 10.78, -12.00);
       return makeStep(
         faultSt.x,
         faultSt.y,
-        'Fase 1 (5/6) · Reparar Falla Crio en Orion',
-        'Phase 1 (5/6) · Repair Orion Cryo Fault',
-        'Repara la falla Crio/RS-25 y aplica torque 28.5 N·m en el panel izquierdo de Orion.',
-        'Repair the Cryo/RS-25 fault and torque 28.5 N·m on the Orion port bay panel.'
+        'Fase 1 (4/6) · Jalar Palanca 3D Purga Crio',
+        'Phase 1 (4/6) · Pull 3D Cryo Purge Lever',
+        'Acércate a la Palanca 3D de Purga Crio (LOX/LH₂, pared izquierda) y jálala [E / Clic].',
+        'Walk to the 3D Cryo Purge Lever (LOX/LH₂, port bulkhead) and pull it [E / Click].'
       );
     }
     if (!sim.objectives.preflightSystemsOn || !sim.orionLevelsChecked) {
-      const pwrSt = stPos('orion_power_panel', 11.18, -6.10);
+      const pwrSt = stPos('orion_power_panel', 14.42, -12.00);
       return makeStep(
         pwrSt.x,
         pwrSt.y,
-        'Fase 1 (5/6) · Comprobar Niveles y 5 Sistemas',
-        'Phase 1 (5/6) · Verify Levels & 5 Buses',
-        'Comprueba todos los niveles (O₂/CO₂/H₂O/kPa) y enciende los 5 interruptores en el panel derecho de Orion.',
-        'Verify all telemetry levels (O₂/CO₂/H₂O/kPa) and switch ON all 5 buses on Orion starboard panel.'
+        'Fase 1 (5/6) · Activar Interruptor 3D GNC 28V',
+        'Phase 1 (5/6) · Arm 3D GNC Switch 28V',
+        'Acércate al Interruptor 3D GNC (Guía, Navegación y Control, pared derecha) y actívalo [E / Clic].',
+        'Walk to the 3D GNC (Guidance, Navigation & Control) switch on starboard bulkhead and arm it [E / Click].'
       );
     }
-    const seatSt = stPos('orion_pilot_seat', 10.00, -7.12);
+    const seatSt = stPos('orion_pilot_seat', 12.60, -13.45);
     return makeStep(
       seatSt.x,
       seatSt.y,
@@ -5244,7 +5256,7 @@ export function getCurrentGuidedStep(
 
   if (sim.currentMissionId === 'act1_2_surface') {
     if (!sim.objectives.thermalFixed) {
-      const th = stPos('skylab_thermal_station', 19.68, 2.05);
+      const th = stPos('skylab_thermal_station', 25.95, 2.25);
       return makeStep(
         th.x,
         th.y,
@@ -5255,7 +5267,7 @@ export function getCurrentGuidedStep(
       );
     }
     if (!sim.objectives.powerBalanced) {
-      const kr = stPos('krusty_reactor_station', 16.25, 6.16);
+      const kr = stPos('krusty_reactor_station', 20.65, 7.25);
       return makeStep(
         kr.x,
         kr.y,
@@ -5265,7 +5277,7 @@ export function getCurrentGuidedStep(
         'Calibrate KRUSTY Stirling FSP & radiators (133.4 / 216.2 m²) in East Lab (North).'
       );
     }
-    const hatch = stPos('hatch_next_mission', 10.0, -7.12);
+    const hatch = stPos('hatch_next_mission', 12.60, -13.45);
     return makeStep(
       hatch.x,
       hatch.y,
@@ -5278,7 +5290,7 @@ export function getCurrentGuidedStep(
 
   if (sim.currentMissionId === 'act3_greenhouse') {
     if (!sim.objectives.aphHarvested) {
-      const aph = stPos('aph_chamber_station', 17.35, 6.16);
+      const aph = stPos('aph_chamber_station', 21.55, 7.25);
       return makeStep(
         aph.x,
         aph.y,
@@ -5289,7 +5301,7 @@ export function getCurrentGuidedStep(
       );
     }
     if (!sim.objectives.compostIsolated) {
-      const cmp = stPos('compost_valve_station', 14.85, 6.16);
+      const cmp = stPos('compost_valve_station', 19.45, 7.25);
       return makeStep(
         cmp.x,
         cmp.y,
@@ -5300,7 +5312,7 @@ export function getCurrentGuidedStep(
       );
     }
     if (!sim.objectives.bios3Activated) {
-      const b3 = stPos('bios3_buffer_station', 19.68, 1.35);
+      const b3 = stPos('bios3_buffer_station', 25.95, 1.35);
       return makeStep(
         b3.x,
         b3.y,
@@ -5310,7 +5322,7 @@ export function getCurrentGuidedStep(
         'Activate the BIOS-3 Buffer Tank (95% water recovery) in the East Lab.'
       );
     }
-    const hatch = stPos('hatch_next_mission', 10.0, -7.12);
+    const hatch = stPos('hatch_next_mission', 12.60, -13.45);
     return makeStep(
       hatch.x,
       hatch.y,
@@ -5323,7 +5335,7 @@ export function getCurrentGuidedStep(
 
   if (sim.currentMissionId === 'apollo13_aquarius') {
     if (!sim.objectives.a13CryoDiagnosed) {
-      const p = stPos('a13_cryo_stir_panel', 11.45, -5.80);
+      const p = stPos('a13_cryo_stir_panel', 16.25, -4.55);
       return makeStep(
         p.x,
         p.y,
@@ -5334,7 +5346,7 @@ export function getCurrentGuidedStep(
       );
     }
     if (!sim.objectives.a13AquariusMigrated) {
-      const a = stPos('a13_aquarius_transfer', 10.00, 12.60);
+      const a = stPos('a13_aquarius_transfer', 12.60, 15.20);
       return makeStep(
         a.x,
         a.y,
@@ -5345,7 +5357,7 @@ export function getCurrentGuidedStep(
       );
     }
     if (!sim.objectives.a13MailboxInstalled) {
-      const mb = stPos('a13_mailbox_bench', 17.35, 3.55);
+      const mb = stPos('a13_mailbox_bench', 22.20, 4.00);
       if (hasInv('DA_MailboxAdapter')) {
         return makeStep(
           mb.x,
@@ -5361,26 +5373,26 @@ export function getCurrentGuidedStep(
           return makeStep(mb.x, mb.y, 'Apollo 13 (3/4) · Cartón en Banco', 'Apollo 13 (3/4) · Place Card', 'Lleva el Cartón Plan de Vuelo al Banco "Mailbox" en Lab Este.', 'Bring Flight Plan Card to East Lab "Mailbox" Bench.');
         }
         const cardItem = sim.worldItems.find((w) => w.itemKey === 'DA_FlightPlanCard');
-        return makeStep(cardItem?.x ?? 2.85, cardItem?.y ?? 6.55, 'Apollo 13 (3/4) · Recoger Plan Vuelo', 'Apollo 13 (3/4) · Grab Flight Plan', 'Recoge el Cartón Plan de Vuelo en el escritorio de Habitación Oeste.', 'Collect Flight Plan Cover at West Hab Desk.');
+        return makeStep(cardItem?.x ?? 2.35, cardItem?.y ?? 8.05, 'Apollo 13 (3/4) · Recoger Plan Vuelo', 'Apollo 13 (3/4) · Grab Flight Plan', 'Recoge el Cartón Plan de Vuelo en el escritorio de Habitación Oeste.', 'Collect Flight Plan Cover at West Hab Desk.');
       }
       if (!sim.a13MailboxParts.hose) {
         if (hasInv('DA_SuitHose')) {
           return makeStep(mb.x, mb.y, 'Apollo 13 (3/4) · Manguera en Banco', 'Apollo 13 (3/4) · Place Hose', 'Lleva la Manguera Umbilical al Banco "Mailbox" en Lab Este.', 'Bring Suit Hose to East Lab "Mailbox" Bench.');
         }
         const hoseItem = sim.worldItems.find((w) => w.itemKey === 'DA_SuitHose');
-        return makeStep(hoseItem?.x ?? 5.35, hoseItem?.y ?? -6.10, 'Apollo 13 (3/4) · Recoger Manguera', 'Apollo 13 (3/4) · Grab Suit Hose', 'Recoge la Manguera Umbilical en el banco Suroeste (NBL).', 'Collect Lunar Suit Hose at SW NBL Bench.');
+        return makeStep(hoseItem?.x ?? 5.85, hoseItem?.y ?? -8.60, 'Apollo 13 (3/4) · Recoger Manguera', 'Apollo 13 (3/4) · Grab Suit Hose', 'Recoge la Manguera Umbilical en el banco Suroeste (NBL).', 'Collect Lunar Suit Hose at SW NBL Bench.');
       }
       if (!sim.a13MailboxParts.tape) {
         if (hasInv('DA_DuctTapeKit')) {
           return makeStep(mb.x, mb.y, 'Apollo 13 (3/4) · Cinta en Banco', 'Apollo 13 (3/4) · Place Duct Tape', 'Lleva la Cinta Duct Tape al Banco "Mailbox" en Lab Este.', 'Bring Duct Tape to East Lab "Mailbox" Bench.');
         }
         const tapeItem = sim.worldItems.find((w) => w.itemKey === 'DA_DuctTapeKit');
-        return makeStep(tapeItem?.x ?? 8.65, tapeItem?.y ?? 5.10, 'Apollo 13 (3/4) · Recoger Duct Tape', 'Apollo 13 (3/4) · Grab Duct Tape', 'Recoge la Cinta Gris Duct Tape en el Núcleo Central.', 'Pick up Duct Tape Roll at Central Hub Bench.');
+        return makeStep(tapeItem?.x ?? 10.52, tapeItem?.y ?? 5.50, 'Apollo 13 (3/4) · Recoger Duct Tape', 'Apollo 13 (3/4) · Grab Duct Tape', 'Recoge la Cinta Gris Duct Tape en el Núcleo Central.', 'Pick up Duct Tape Roll at Central Hub Bench.');
       }
       return makeStep(mb.x, mb.y, 'Apollo 13 (3/4) · Sellar Mailbox', 'Apollo 13 (3/4) · Seal Mailbox', 'Pulsa Banco "Mailbox" en Lab Este para acoplarlo al tambor LM.', 'Interact with East Lab "Mailbox" Bench to seal onto LM canister.');
     }
     if (!sim.objectives.a13ColdPowerup) {
-      const a = stPos('a13_aquarius_transfer', 10.00, 12.60);
+      const a = stPos('a13_aquarius_transfer', 12.60, 15.20);
       return makeStep(
         a.x,
         a.y,
@@ -5390,7 +5402,7 @@ export function getCurrentGuidedStep(
         'Return to North MEDS Deck and run Cold CSM Power-Up before Earth entry.'
       );
     }
-    const hatch = stPos('hatch_next_mission', 10.0, -7.12);
+    const hatch = stPos('hatch_next_mission', 12.60, -13.45);
     return makeStep(
       hatch.x,
       hatch.y,
@@ -5403,7 +5415,7 @@ export function getCurrentGuidedStep(
 
   if (sim.currentMissionId === 'sts120_p6_solar') {
     if (!sim.objectives.stsArrayInspected) {
-      const a = stPos('sts120_array_console', 9.50, 12.58);
+      const a = stPos('sts120_array_console', 11.80, 15.20);
       return makeStep(
         a.x,
         a.y,
@@ -5414,7 +5426,7 @@ export function getCurrentGuidedStep(
       );
     }
     if (!sim.objectives.stsCufflinksCrafted) {
-      const cb = stPos('sts120_cufflink_bench', 17.35, 3.55);
+      const cb = stPos('sts120_cufflink_bench', 22.20, 4.00);
       return makeStep(
         cb.x,
         cb.y,
@@ -5425,7 +5437,7 @@ export function getCurrentGuidedStep(
       );
     }
     if (sim.airlockStep < 5 && sim.airlockPressureKpa > 5.0) {
-      const al = stPos('quest_airlock_console', 12.68, -2.55);
+      const al = stPos('quest_airlock_console', 16.25, -3.95);
       return makeStep(
         al.x,
         al.y,
@@ -5438,8 +5450,8 @@ export function getCurrentGuidedStep(
     if (!sim.objectives.stsWireSnipped && !hasInv('DA_InsulatedCutter')) {
       const cItem = sim.worldItems.find((w) => w.itemKey === 'DA_InsulatedCutter');
       return makeStep(
-        cItem?.x ?? 5.35,
-        cItem?.y ?? -6.20,
+        cItem?.x ?? 5.85,
+        cItem?.y ?? -8.60,
         'STS-120 (4/4) · Pinza Aislada 160V DC',
         'STS-120 (4/4) · Grab HV Cutter',
         'Recoge la Pinza Aislada HV (160V DC) en el Banco Suroeste (NBL) antes de salir por OBSS.',
@@ -5447,7 +5459,7 @@ export function getCurrentGuidedStep(
       );
     }
     if (!sim.objectives.stsArrayDeployed) {
-      const obss = stPos('sts120_obss_repair', 12.35, -3.55);
+      const obss = stPos('sts120_obss_repair', 9.10, -4.30);
       return makeStep(
         obss.x,
         obss.y,
@@ -5457,7 +5469,7 @@ export function getCurrentGuidedStep(
         'Snip snagged wire with HV Cutter, install 5 Cufflinks & redeploy half-bay at a time [5/5].'
       );
     }
-    const hatch = stPos('hatch_next_mission', 10.0, -7.12);
+    const hatch = stPos('hatch_next_mission', 12.60, -13.45);
     return makeStep(
       hatch.x,
       hatch.y,
@@ -5470,7 +5482,7 @@ export function getCurrentGuidedStep(
 
   // act4_storm_rover
   if (!sim.objectives.roverReturned) {
-    const rv = stPos('rover_cockpit_station', 10.85, 12.58);
+    const rv = stPos('rover_cockpit_station', 13.60, 15.20);
     return makeStep(
       rv.x,
       rv.y,
@@ -5481,7 +5493,7 @@ export function getCurrentGuidedStep(
     );
   }
   if (!sim.objectives.regolithDeployed) {
-    const reg = stPos('regolith_shield_station', 19.68, 2.65);
+    const reg = stPos('regolith_shield_station', 25.95, 2.95);
     return makeStep(
       reg.x,
       reg.y,
@@ -5491,7 +5503,7 @@ export function getCurrentGuidedStep(
       'Go to East Lab and deploy the 2.0 m compacted regolith shield (300 g/cm² · 400 t).'
     );
   }
-  const end = stPos('mission_ending_station', 10.0, 12.58);
+  const end = stPos('mission_ending_station', 12.60, 13.15);
   return makeStep(
     end.x,
     end.y,
